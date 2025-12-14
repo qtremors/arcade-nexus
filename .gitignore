@@ -1,0 +1,63 @@
+# Arcade Nexus - .gitignore
+
+# ===== Python / Backend =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+.uv/
+*.egg-info/
+*.egg
+dist/
+build/
+*.db
+*.sqlite
+*.sqlite3
+
+# ===== Node / Frontend =====
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+dist/
+*.tsbuildinfo
+
+# ===== IDE =====
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ===== Testing =====
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# ===== Environment =====
+.env
+.env.local
+.env.*.local
+*.local
+
+# ===== Logs =====
+logs/
+*.log
+
+# ===== Misc =====
+*.bak
+*.tmp
+*.temp

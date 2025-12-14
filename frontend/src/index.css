@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #000;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Design Tokens - Used by App.css */
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #13131a;
+  --bg-card: #1a1a24;
+  --bg-hover: rgba(255, 255, 255, 0.05);
+  --accent-primary: #00f3ff;
+  --accent-secondary: #00cc88;
+  --accent-glow: rgba(0, 243, 255, 0.15);
+  --text-primary: rgba(255, 255, 255, 0.95);
+  --text-secondary: rgba(255, 255, 255, 0.7);
+  --text-muted: rgba(255, 255, 255, 0.4);
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-radius: 12px;
+  --transition-fast: 150ms ease;
+  --error: #ef4444;
+  --success: #22c55e;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Hide scrollbars but allow scrolling */
+* {
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE/Edge */
+}
+
+*::-webkit-scrollbar {
+  display: none;
+  /* Chrome/Safari/Opera */
+}
+
+/* Custom Utilities for 3D */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+
+/* Scrollbar hiding for clean UI */
+::-webkit-scrollbar {
+  display: none;
+}
