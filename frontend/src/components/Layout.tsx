@@ -1,11 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Outlet } from 'react-router-dom';
 import { Settings, Server, CheckCircle, XCircle } from 'lucide-react';
 import { SystemMenu } from './aether/SystemMenu';
 
 interface LayoutProps {
-    children: ReactNode;
+    children?: ReactNode;
 }
 
 export function Layout({ children }: LayoutProps) {
@@ -118,7 +118,7 @@ export function Layout({ children }: LayoutProps) {
                 ${menuOpen ? 'translate-x-64 scale-95 opacity-50' : 'translate-x-0 scale-100'}
                 ${!location.pathname.startsWith('/play') && !location.pathname.startsWith('/game') ? 'pt-20 px-6 pb-6' : ''}`}
             >
-                {children}
+                {children || <Outlet />}
             </div>
 
             {/* System Menu Overlay */}

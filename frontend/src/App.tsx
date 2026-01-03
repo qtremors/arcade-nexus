@@ -4,6 +4,8 @@ import { Dashboard } from './pages/Dashboard';
 import { Store } from './pages/Store';
 import { Library } from './pages/Library';
 import { Profile } from './pages/Profile';
+import { Achievements } from './pages/Achievements';
+import { Settings } from './pages/Settings';
 import { GamePlayer } from './pages/GamePlayer';
 import { Layout } from './components/Layout';
 import { BootSequence } from './components/aether/BootSequence';
@@ -38,30 +40,30 @@ function App() {
 
     // Check if backend is offline (error and no profiles)
     if (error && profiles.length === 0) {
-      setAppState('offline');
+      if (appState !== 'offline') setAppState('offline');
       return;
     }
 
     // If we've already booted this session and have an active profile, go straight to ready
     if (hasBootedThisSession && activeProfile) {
-      setAppState('ready');
+      if (appState !== 'ready') setAppState('ready');
       return;
     }
 
     // First boot this session
     if (!hasBootedThisSession) {
       // Show boot animation first
-      setAppState('booting');
+      if (appState !== 'booting') setAppState('booting');
       return;
     }
 
     // Booted before but no active profile - show selector or setup
     if (profiles.length === 0) {
-      setAppState('profile-setup');
+      if (appState !== 'profile-setup') setAppState('profile-setup');
     } else {
-      setAppState('profile-select');
+      if (appState !== 'profile-select') setAppState('profile-select');
     }
-  }, [profileInitialized, activeProfile, profiles.length, hasBootedThisSession, error]);
+  }, [profileInitialized, activeProfile, profiles.length, hasBootedThisSession, error, appState]);
 
   const handleRetry = () => {
     setAppState('initializing');
@@ -165,11 +167,15 @@ function App() {
         <FocusProvider>
           <Routes>
             <Route path="/play/:slug" element={<GamePlayer />} />
-            <Route element={<Layout><Dashboard /></Layout>} path="/home" />
-            <Route element={<Layout><Store /></Layout>} path="/store" />
-            <Route element={<Layout><Library /></Layout>} path="/library" />
-            <Route element={<Layout><Profile /></Layout>} path="/profile" />
-            <Route path="/" element={<Navigate to="/home" replace />} />
+            <Route path="/" element={<Layout />}>
+              <Route index element={<Navigate to="/home" replace />} />
+              <Route path="home" element={<Dashboard />} />
+              <Route path="store" element={<Store />} />
+              <Route path="library" element={<Library />} />
+              <Route path="profile" element={<Profile />} />
+              <Route path="achievements" element={<Achievements />} />
+              <Route path="settings" element={<Settings />} />
+            </Route>
           </Routes>
         </FocusProvider>
       </BrowserRouter>

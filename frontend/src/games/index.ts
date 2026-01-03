@@ -10,6 +10,7 @@ import { registerGame } from '../sdk';
 import { SnakeGame } from './snake';
 import { RaptorRunGame } from './raptor-run';
 import { SpaceRunnerGame } from './stellar-drift';
+import { SkyAceGame } from './sky-ace';
 
 let registered = false;
 
@@ -21,6 +22,7 @@ export function registerGames(): void {
     registerGame('snake', () => new SnakeGame());
     registerGame('raptor-run', () => new RaptorRunGame());
     registerGame('space-runner', () => new SpaceRunnerGame()); // Changed to match backend slug
+    registerGame('sky-ace', () => new SkyAceGame());
 }
 
 // Auto-register on import

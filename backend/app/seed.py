@@ -6,10 +6,11 @@ from app.database import AsyncSessionLocal, init_db
 from app.models.game import Game, Category
 from app.models.achievement import Achievement
 
-# SVG thumbnails as data URIs
-SNAKE_THUMBNAIL = "https://api.iconify.design/game-icons:snake.svg?color=%2300ff88&width=256&height=256"
-RAPTOR_THUMBNAIL = "https://api.iconify.design/game-icons:velociraptor.svg?color=%23ff7675&width=256&height=256"
-SPACE_THUMBNAIL = "https://api.iconify.design/game-icons:rocket.svg?color=%2300d4ff&width=256&height=256"
+# Local SVG thumbnails
+SNAKE_THUMBNAIL = "/games/snake.svg"
+RAPTOR_THUMBNAIL = "/games/raptor.svg"
+SPACE_THUMBNAIL = "/games/space.svg"
+SKY_ACE_THUMBNAIL = "/games/sky-ace.svg"
 
 INITIAL_GAMES = [
     {
@@ -62,6 +63,23 @@ INITIAL_GAMES = [
             {"slug": "score-500", "title": "Space Cadet", "description": "Score 500 points"},
             {"slug": "score-1000", "title": "Star Pilot", "description": "Score 1000 points"},
             {"slug": "score-2500", "title": "Galaxy Commander", "description": "Score 2500 points"},
+        ]
+    },
+    {
+        "slug": "sky-ace",
+        "title": "Sky Ace",
+        "description": "Take to the skies in this high-altitude flight simulator! Master the controls and dominate the clouds.",
+        "category": Category.SIMULATION,
+        "thumbnail": SKY_ACE_THUMBNAIL,
+        "config": {
+            "world_size": 10000,
+            "max_speed": 400,
+            "rotation_speed": 3.5,
+        },
+        "achievements": [
+            {"slug": "takeoff", "title": "First Flight", "description": "Successfully take off for the first time"},
+            {"slug": "mile-high", "title": "Mile High Club", "description": "Reach a total flight distance of 5000 units"},
+            {"slug": "ace-pilot", "title": "Ace Pilot", "description": "Score 10,000 points in a single flight"},
         ]
     },
 ]

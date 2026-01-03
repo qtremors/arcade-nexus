@@ -38,6 +38,7 @@ export class SpaceRunnerGame implements Game3DInstance {
     private gameOver = false;
     private time = 0;
     private gracePeriod = 2.0; // 2 seconds invulnerability at start
+    private difficulty: 'easy' | 'normal' | 'hard' = 'normal';
 
     // Ship physics
     private shipPosition = new THREE.Vector2();
@@ -61,6 +62,23 @@ export class SpaceRunnerGame implements Game3DInstance {
         // Reset objects
         this.obstacles.forEach(o => o.position.z = -1000 - Math.random() * 2000);
         this.pickups.forEach(p => p.position.z = -500 - Math.random() * 2000);
+
+        // Difficulty adjustments
+        switch (this.difficulty) {
+            case 'easy':
+                this.maxSpeed = 3.0;
+                this.boostSpeed = 5.0;
+                break;
+            case 'hard':
+                this.maxSpeed = 5.5;
+                this.boostSpeed = 7.5;
+                break;
+            case 'normal':
+            default:
+                this.maxSpeed = 4.0;
+                this.boostSpeed = 6.0;
+                break;
+        }
     }
 
     update(dt: number, input: InputState): boolean {
@@ -157,9 +175,13 @@ export class SpaceRunnerGame implements Game3DInstance {
         });
     }
 
-    init(canvas: HTMLCanvasElement, _config?: GameConfig): void {
+    init(canvas: HTMLCanvasElement, config?: GameConfig): void {
         const width = canvas.width;
         const height = canvas.height;
+
+        if (config?.difficulty) {
+            this.difficulty = config.difficulty as 'easy' | 'normal' | 'hard';
+        }
 
         // Renderer
         this.renderer = new THREE.WebGLRenderer({

@@ -75,10 +75,19 @@ export class SnakeGame implements Game2DInstance {
         textDim: 'rgba(255, 255, 255, 0.4)',
     };
 
-    init(canvas: HTMLCanvasElement, _config?: GameConfig): void {
+    init(canvas: HTMLCanvasElement, config?: GameConfig): void {
         this.ctx = canvas.getContext('2d')!;
         this.width = canvas.width;
         this.height = canvas.height;
+
+        // Apply difficulty
+        if (config?.difficulty) {
+            switch (config.difficulty) {
+                case 'easy': this.moveInterval = 150; break;
+                case 'hard': this.moveInterval = 90; break;
+                case 'normal': default: this.moveInterval = 120; break;
+            }
+        }
 
         // Calculate grid
         this.calculateGrid();

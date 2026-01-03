@@ -2,6 +2,27 @@
 
 All notable changes to Arcade Nexus will be documented in this file.
 
+## [1.1.0] - 2026-01-03
+
+### 🔧 Stability & Performance Update
+
+#### Security
+- **Session Persistence** - Fixed `SECRET_KEY` generation to persist across server restarts, preventing user logout
+- **URL Robustness** - Improved API client configuration for better environment compatibility
+
+#### Performance
+- **Backend Optimizations** - Replaced inefficient Python-side filtering with direct SQL `COUNT` and `UPDATE` queries in `profiles.py`
+- **Frontend Caching** - Implemented 60-second stats caching to reduce redundant network requests on tab switches
+
+#### UI/UX
+- **Loading States** - Added proper loading animation for Dashboard game carousel
+- **Local Assets** - Replaced external thumbnail Dependencies with local SVG assets for offline reliability
+- **Mobile Support** - Added basic touch handling for canvases
+
+#### Code Quality
+- **Refactoring** - Extracted utility functions and improved `GameSDK` type definitions
+- **Testing** - Added complete testing infrastructure (`pytest` for backend, `vitest` for frontend)
+
 ## [1.0.0] - 2024-12-14
 
 ### 🎮 Initial Release
@@ -28,6 +49,7 @@ All notable changes to Arcade Nexus will be documented in this file.
 - **Neon Snake** - Classic arcade snake with cyberpunk aesthetics
 - **Raptor Run** - Endless runner with day/night cycle
 - **Stellar Drift** - 3D space adventure with boost mechanics
+- **Sky Ace** - High-altitude flight simulator
 
 #### Backend
 - **FastAPI** - Async Python backend with SQLAlchemy

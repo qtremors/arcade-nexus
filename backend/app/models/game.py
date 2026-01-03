@@ -20,6 +20,7 @@ class Category(str, PyEnum):
     PUZZLE = "puzzle"
     ACTION = "action"
     STRATEGY = "strategy"
+    SIMULATION = "simulation"
 
 
 class Game(Base):

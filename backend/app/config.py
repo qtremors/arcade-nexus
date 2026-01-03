@@ -37,9 +37,24 @@ class Settings(BaseSettings):
     def model_post_init(self, __context) -> None:
         """Generate secret key if not provided."""
         if not self.SECRET_KEY:
-            # For local single-user app, generate a random key per session
-            # In production, this should be set via environment variable
-            object.__setattr__(self, 'SECRET_KEY', _generate_secret_key())
+            # Check if .env file exists and read it manually to see if we missed it or if it's missing
+            import os
+            env_path = ".env"
+            
+            # If in dev mode, try to persist the key
+            if not self.SECRET_KEY:
+                key = _generate_secret_key()
+                object.__setattr__(self, 'SECRET_KEY', key)
+                
+                # Try to append to .env
+                try:
+                    with open(env_path, "a") as f:
+                        f.write(f"\nSECRET_KEY=\"{key}\"\n")
+                    print(f"🔑 Generated and persisted new SECRET_KEY to {env_path}")
+                except Exception as e:
+                    if not self.DEBUG:
+                        print(f"⚠️  WARNING: Could not persist SECRET_KEY: {e}")
+                        print("Sessions will not persist across restarts.")
 
 
 @lru_cache()

@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { gamesApi, libraryApi } from '../api/client';
 import type { Game } from '../api/client';
 import { AetherGameCard } from '../components/aether/AetherGameCard';
-import { Search, Tag, Filter, ShoppingBag, Check } from 'lucide-react';
+import { Search, Filter, ShoppingBag } from 'lucide-react';
 
 export function Store() {
     const [games, setGames] = useState<Game[]>([]);
@@ -14,14 +14,16 @@ export function Store() {
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
     const [addingGameId, setAddingGameId] = useState<number | null>(null);
+    const [categories, setCategories] = useState<{ value: string; label: string }[]>([]);
+    const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
     const navigate = useNavigate();
 
     // Fetch games and library
-    const fetchData = useCallback(async (search?: string) => {
+    const fetchData = useCallback(async (search?: string, category?: string | null) => {
         try {
             setLoading(true);
             const [gamesResponse, libraryResponse] = await Promise.all([
-                gamesApi.list(undefined, search),
+                gamesApi.list(category || undefined, search),
                 libraryApi.list()
             ]);
             setGames(gamesResponse.games);
@@ -33,19 +35,19 @@ export function Store() {
         }
     }, []);
 
-    // Initial load
+    // Load categories on mount
     useEffect(() => {
-        fetchData();
-    }, [fetchData]);
+        gamesApi.getCategories().then(setCategories).catch(console.error);
+    }, []);
 
-    // Debounced search
+    // Initial load and filter changes
     useEffect(() => {
         const timer = setTimeout(() => {
-            fetchData(searchQuery || undefined);
+            fetchData(searchQuery || undefined, selectedCategory);
         }, 300); // 300ms debounce
 
         return () => clearTimeout(timer);
-    }, [searchQuery, fetchData]);
+    }, [searchQuery, selectedCategory, fetchData]);
 
     // Add game to library
     const handleAddToLibrary = async (game: Game) => {
@@ -97,16 +99,27 @@ export function Store() {
                         />
                     </div>
 
-                    {/* Category Dropdown (Stub) */}
-                    <button className="flex items-center gap-2 px-6 py-4 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 hover:border-white/30 transition-all text-white/70">
-                        <Filter size={18} />
-                        <span className="font-mono text-sm uppercase">All Categories</span>
-                    </button>
-
-                    <button className="flex items-center gap-2 px-6 py-4 bg-white/5 rounded-xl border border-white/10 hover:bg-white/10 hover:border-white/30 transition-all text-white/70">
-                        <Tag size={18} />
-                        <span className="font-mono text-sm uppercase">Top Rated</span>
-                    </button>
+                    {/* Category Filter */}
+                    <div className="relative group">
+                        <div className="flex items-center gap-2 px-6 py-4 bg-white/5 rounded-xl border border-white/10 group-hover:bg-white/10 group-hover:border-white/30 transition-all text-white/70 pointer-events-none">
+                            <Filter size={18} />
+                            <span className="font-mono text-sm uppercase">
+                                {selectedCategory ? categories.find(c => c.value === selectedCategory)?.label || selectedCategory : "All Categories"}
+                            </span>
+                        </div>
+                        <select
+                            value={selectedCategory || ''}
+                            onChange={(e) => setSelectedCategory(e.target.value || null)}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer text-sm"
+                        >
+                            <option value="">All Categories</option>
+                            {categories.map((cat) => (
+                                <option key={cat.value} value={cat.value}>
+                                    {cat.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
                 </div>
             </div>
 

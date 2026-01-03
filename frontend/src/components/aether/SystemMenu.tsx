@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, ShoppingBag, Library, User } from 'lucide-react';
+import { ShoppingBag, Library, User, Trophy, Home } from 'lucide-react';
 import { useProfileStore } from '../../stores/profileStore';
 
 interface SystemMenuProps {
@@ -15,8 +15,9 @@ export function SystemMenu({ isOpen, activeColor, onClose }: SystemMenuProps) {
 
     const menuItems = [
         { label: 'Home', path: '/home', icon: Home },
-        { label: 'Library', path: '/library', icon: Library },
         { label: 'Store', path: '/store', icon: ShoppingBag },
+        { label: 'Library', path: '/library', icon: Library },
+        { label: 'Achievements', path: '/achievements', icon: Trophy },
         { label: 'Profile', path: '/profile', icon: User },
     ];
 

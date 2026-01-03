@@ -5,7 +5,7 @@ from datetime import datetime, timezone
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -69,8 +69,8 @@ async def create_profile(
         )
     
     # Check if this is the first profile (make it default)
-    count_result = await db.execute(select(User).where(User.is_active == True))
-    is_first = len(count_result.scalars().all()) == 0
+    count_result = await db.execute(select(func.count()).select_from(User).where(User.is_active == True))
+    is_first = count_result.scalar() == 0
     
     profile = User(
         username=profile_data.username,
@@ -163,9 +163,11 @@ async def activate_profile(
         )
     
     # Deactivate all other profiles
-    all_result = await db.execute(select(User).where(User.is_active == True))
-    for p in all_result.scalars().all():
-        p.is_default = False
+    await db.execute(
+        update(User)
+        .where(User.is_active == True)
+        .values(is_default=False)
+    )
     
     # Activate this profile
     profile.is_default = True

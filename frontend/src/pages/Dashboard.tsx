@@ -65,7 +65,12 @@ export function Dashboard() {
     }, [activeGame]);
 
     if (isLoading) {
-        return <div className="flex items-center justify-center h-full text-white font-mono">INITIALIZING...</div>;
+        return (
+            <div className="flex flex-col items-center justify-center h-full gap-4">
+                <div className="w-12 h-12 border-4 border-cyan-500/30 border-t-cyan-500 rounded-full animate-spin" />
+                <div className="text-cyan-400 font-mono text-sm tracking-widest animate-pulse">SYSTEM INITIALIZING...</div>
+            </div>
+        );
     }
 
     if (games.length === 0) {

@@ -4,30 +4,32 @@
 import { useEffect, useState } from 'react';
 import { User, Trophy, Clock, Gamepad2, Activity, Pencil, Check, X, Plus, LogOut } from 'lucide-react';
 import { useProfileStore } from '../stores/profileStore';
-import { statsApi } from '../api/client';
-import type { OverallStats } from '../api/client';
+import { formatPlaytime } from '../utils/formatting';
 
 export function Profile() {
-    const { activeProfile, profiles, updateProfile, switchProfile, createProfile, fetchProfiles } = useProfileStore();
-    const [stats, setStats] = useState<OverallStats | null>(null);
+    const {
+        activeProfile,
+        profiles,
+        updateProfile,
+        switchProfile,
+        createProfile,
+        fetchProfiles,
+        overallStats,
+        fetchOverallStats
+    } = useProfileStore();
+
     const [isEditing, setIsEditing] = useState(false);
     const [editName, setEditName] = useState('');
     const [showProfiles, setShowProfiles] = useState(false);
     const [showNewProfile, setShowNewProfile] = useState(false);
     const [newProfileName, setNewProfileName] = useState('');
 
-    // Fetch real stats from backend
+    // Fetch stats on mount if needed
     useEffect(() => {
-        const loadStats = async () => {
-            try {
-                const data = await statsApi.getOverall();
-                setStats(data);
-            } catch (err) {
-                console.error('Failed to load stats:', err);
-            }
-        };
-        loadStats();
-    }, [activeProfile?.id]);
+        if (activeProfile) {
+            fetchOverallStats();
+        }
+    }, [activeProfile?.id, fetchOverallStats]);
 
     // Refresh profiles on mount
     useEffect(() => {
@@ -75,14 +77,7 @@ export function Profile() {
         }
     };
 
-    const formatPlaytime = (seconds: number) => {
-        const hours = Math.floor(seconds / 3600);
-        const mins = Math.floor((seconds % 3600) / 60);
-        const secs = Math.floor(seconds % 60);
-        if (hours > 0) return `${hours}h ${mins}m`;
-        if (mins > 0) return `${mins}m ${secs}s`;
-        return `${secs}s`;
-    };
+
 
     return (
         <div className="h-full w-full overflow-y-auto p-12 pt-24 pb-32 animate-in fade-in zoom-in-95 duration-500">
@@ -153,22 +148,22 @@ export function Profile() {
                     <StatCard
                         icon={<Gamepad2 className="text-purple-400" />}
                         label="Games Played"
-                        value={stats?.total_games_played ?? 0}
+                        value={overallStats?.total_games_played ?? 0}
                     />
                     <StatCard
                         icon={<Clock className="text-blue-400" />}
                         label="Play Time"
-                        value={stats ? formatPlaytime(stats.total_playtime_seconds) : '0m'}
+                        value={overallStats ? formatPlaytime(overallStats.total_playtime_seconds) : '0m'}
                     />
                     <StatCard
                         icon={<Activity className="text-green-400" />}
                         label="Sessions"
-                        value={stats?.total_sessions ?? 0}
+                        value={overallStats?.total_sessions ?? 0}
                     />
                     <StatCard
                         icon={<Trophy className="text-yellow-400" />}
                         label="High Scores Set"
-                        value={stats?.games.filter(g => g.high_score > 0).length ?? 0}
+                        value={overallStats?.games.filter(g => g.high_score > 0).length ?? 0}
                     />
                 </div>
             </div>
@@ -185,14 +180,14 @@ export function Profile() {
                             <button
                                 key={profile.id}
                                 onClick={() => handleSwitchProfile(profile.id)}
-                                className={`p-4 rounded-xl text-center transition-all ${profile.is_default
+                                className={`p-4 rounded-xl text-center transition-all ${activeProfile?.id === profile.id
                                     ? 'bg-cyan-500/20 border-2 border-cyan-500'
                                     : 'bg-white/5 border border-white/10 hover:bg-white/10'
                                     }`}
                             >
                                 <div className="text-3xl mb-2">{profile.avatar || '👤'}</div>
                                 <div className="text-white font-medium">{profile.username}</div>
-                                {profile.is_default && (
+                                {activeProfile?.id === profile.id && (
                                     <div className="text-cyan-400 text-xs font-mono mt-1">ACTIVE</div>
                                 )}
                             </button>
@@ -239,14 +234,14 @@ export function Profile() {
             )}
 
             {/* Game Stats */}
-            {stats && stats.games.length > 0 && (
+            {overallStats && overallStats.games.length > 0 && (
                 <div className="mt-12">
                     <h3 className="text-xl font-bold text-white mb-6 uppercase tracking-wider flex items-center gap-2">
                         <Activity size={20} className="text-white/50" />
                         Game Statistics
                     </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {stats.games.map((game) => (
+                        {overallStats.games.map((game) => (
                             <div key={game.game_slug} className="bg-white/5 border border-white/10 rounded-xl p-4">
                                 <h4 className="font-bold text-white mb-2">{game.game_title}</h4>
                                 <div className="grid grid-cols-2 gap-2 text-sm">

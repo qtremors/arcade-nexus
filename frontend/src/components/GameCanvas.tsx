@@ -6,7 +6,9 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GameEngine, getGame } from '../sdk';
 import type { GameConfig } from '../sdk';
-import { statsApi } from '../api/client';
+import { statsApi, savesApi } from '../api/client';
+import type { SaveData } from '../api/client';
+import { Clock, Save, Download, Trash2, X } from 'lucide-react';
 import '../games';
 
 interface Props {
@@ -15,7 +17,7 @@ interface Props {
     onGameOver?: (score: number) => void;
 }
 
-type State = 'loading' | 'ready' | 'playing' | 'paused' | 'gameover';
+type State = 'loading' | 'ready' | 'playing' | 'paused' | 'gameover' | 'save_menu' | 'load_menu';
 type Difficulty = 'easy' | 'normal' | 'hard';
 
 // Game-specific control hints
@@ -37,6 +39,20 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
     const [highScore, setHighScore] = useState(0);
     const [isNewHigh, setIsNewHigh] = useState(false);
     const [difficulty, setDifficulty] = useState<Difficulty>('normal');
+    const [saves, setSaves] = useState<SaveData[]>([]);
+    const [isLoadingSaves, setIsLoadingSaves] = useState(false);
+
+    const loadSaves = useCallback(async () => {
+        setIsLoadingSaves(true);
+        try {
+            const data = await savesApi.list(slug);
+            setSaves(data.saves);
+        } catch (e) {
+            console.error('Failed to load saves:', e);
+        } finally {
+            setIsLoadingSaves(false);
+        }
+    }, [slug]);
 
     // Use ref for canvas size to avoid re-triggering init effect
     const sizeRef = useRef({ width: 800, height: 600 });
@@ -64,23 +80,7 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
         return () => window.removeEventListener('resize', updateSize);
     }, []);
 
-    // Initialize engine
-    useEffect(() => {
-        if (initRef.current) return;
-        initRef.current = true;
-
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const game = getGame(slug);
-        if (!game) {
-            console.error('Game not found:', slug);
-            return;
-        }
-
-        const engine = new GameEngine();
-        engineRef.current = engine;
-
+    const setupCallbacks = useCallback((engine: GameEngine) => {
         engine.onPause(() => {
             if (playStartTimeRef.current) {
                 totalPlaytimeRef.current += (Date.now() - playStartTimeRef.current) / 1000;
@@ -109,6 +109,26 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
             }
             onGameOver?.(finalScore);
         });
+    }, [slug, onGameOver]);
+
+    // Initialize engine
+    useEffect(() => {
+        if (initRef.current) return;
+        initRef.current = true;
+
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        const game = getGame(slug);
+        if (!game) {
+            console.error('Game not found:', slug);
+            return;
+        }
+
+        const engine = new GameEngine();
+        engineRef.current = engine;
+
+        setupCallbacks(engine);
 
         const config: GameConfig = {
             slug,
@@ -126,7 +146,7 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
             engineRef.current = null;
             initRef.current = false;
         };
-    }, [slug, title, onGameOver, difficulty]);
+    }, [slug, title, difficulty, setupCallbacks]);
 
     // Start game
     const start = useCallback(() => {
@@ -167,32 +187,7 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
         const engine = new GameEngine();
         engineRef.current = engine;
 
-        engine.onPause(() => {
-            if (playStartTimeRef.current) {
-                totalPlaytimeRef.current += (Date.now() - playStartTimeRef.current) / 1000;
-                playStartTimeRef.current = null;
-            }
-            setState('paused');
-        });
-        engine.onGameOver(async (finalScore) => {
-            if (playStartTimeRef.current) {
-                totalPlaytimeRef.current += (Date.now() - playStartTimeRef.current) / 1000;
-                playStartTimeRef.current = null;
-            }
-            setState('gameover');
-            setScore(finalScore);
-            try {
-                if (totalPlaytimeRef.current > 0) {
-                    await statsApi.recordSession(slug, Math.floor(totalPlaytimeRef.current));
-                }
-                const result = await statsApi.submitScore(slug, finalScore);
-                setHighScore(result.high_score);
-                setIsNewHigh(result.is_new_high_score);
-            } catch (e) {
-                console.error('Failed to submit stats:', e);
-            }
-            onGameOver?.(finalScore);
-        });
+        setupCallbacks(engine);
 
         const config: GameConfig = {
             slug,
@@ -208,13 +203,68 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
             setState('playing');
             initRef.current = true;
         });
-    }, [slug, title, onGameOver, difficulty]);
+    }, [slug, title, difficulty, setupCallbacks]);
 
     // Quit - go back to previous page
     const quit = useCallback(() => {
         engineRef.current?.destroy();
         navigate(-1); // Go back to previous page
     }, [navigate]);
+
+    // Save/Load handlers
+    const onSaveClick = () => {
+        setState('save_menu');
+        loadSaves();
+    };
+
+    const onLoadClick = () => {
+        setState('load_menu');
+        loadSaves();
+    };
+
+    const handleSave = async (slot: number) => {
+        if (!engineRef.current) return;
+        const gameState = engineRef.current.getState();
+
+        // Simple validation - ensure we have something to save
+        if (Object.keys(gameState).length === 0) {
+            console.warn('Game state is empty');
+        }
+
+        try {
+            // Default name with timestamp
+            const date = new Date().toLocaleDateString(undefined, { hour: '2-digit', minute: '2-digit' });
+            await savesApi.create(slug, slot, gameState, `${title} - ${date}`);
+            await loadSaves();
+        } catch (e) {
+            console.error('Failed to save:', e);
+        }
+    };
+
+    const handleLoad = async (slot: number) => {
+        const save = saves.find(s => s.slot === slot);
+        if (!save || !engineRef.current) return;
+
+        try {
+            engineRef.current.setState(save.data);
+            setState('paused');
+        } catch (e) {
+            console.error('Failed to load:', e);
+        }
+    };
+
+    const handleDelete = async (slot: number, e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!confirm('Delete this save?')) return;
+        try {
+            await savesApi.delete(slug, slot);
+            await loadSaves();
+        } catch (error) {
+            console.error('Failed to delete:', error);
+        }
+    };
+
+    const backToPause = () => setState('paused');
 
     // Keyboard controls
     useEffect(() => {
@@ -236,12 +286,12 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
     const controlHint = CONTROL_HINTS[slug] || 'Arrow Keys to move';
 
     return (
-        <div ref={containerRef} style={containerStyle}>
+        <div ref={containerRef} className="absolute inset-0 bg-[#0a0a0f] overflow-hidden">
             <canvas
                 ref={canvasRef}
                 width={sizeRef.current.width}
                 height={sizeRef.current.height}
-                style={{ display: 'block', width: '100%', height: '100%' }}
+                className="block w-full h-full"
             />
 
             {state === 'loading' && <Overlay><p>Loading...</p></Overlay>}
@@ -249,7 +299,9 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
             {state === 'ready' && (
                 <Overlay>
                     {/* Game Title */}
-                    <h1 style={titleStyle}>{title}</h1>
+                    <h1 className="text-5xl font-extrabold bg-gradient-to-br from-[#00ff88] to-[#00ccff] bg-clip-text text-transparent mb-2">
+                        {title}
+                    </h1>
 
                     {/* Controls */}
                     <p style={{ opacity: 0.5, marginBottom: '1.5rem', fontSize: '0.9rem' }}>
@@ -291,14 +343,7 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
                     {/* Back Button */}
                     <button
                         onClick={quit}
-                        style={{
-                            marginTop: '1rem',
-                            background: 'none',
-                            border: 'none',
-                            color: 'rgba(255,255,255,0.4)',
-                            fontSize: '0.85rem',
-                            cursor: 'pointer',
-                        }}
+                        className="mt-4 bg-transparent border-none text-white/40 text-sm cursor-pointer hover:text-white/60 transition-colors"
                     >
                         ← Back
                     </button>
@@ -311,20 +356,103 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
 
             {state === 'paused' && (
                 <Overlay>
-                    <h2>PAUSED</h2>
-                    <Button onClick={resume}>▶ Resume</Button>
+                    <h2 className="text-2xl font-bold mb-6 tracking-widest">PAUSED</h2>
+                    <Button onClick={resume} primary>▶ Resume</Button>
+                    <div className="flex gap-2 my-2">
+                        <Button onClick={onSaveClick}>Save Game</Button>
+                        <Button onClick={onLoadClick}>Load Game</Button>
+                    </div>
                     <Button onClick={quit}>← Quit</Button>
+                </Overlay>
+            )}
+
+            {(state === 'save_menu' || state === 'load_menu') && (
+                <Overlay>
+                    <div className="w-full max-w-md bg-[#1a1a20] p-6 rounded-xl border border-white/10 shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="flex items-center justify-between mb-6">
+                            <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                {state === 'save_menu' ? <Save className="text-cyan-400" /> : <Download className="text-green-400" />}
+                                {state === 'save_menu' ? 'SAVE GAME' : 'LOAD GAME'}
+                            </h2>
+                            <button onClick={backToPause} className="text-white/50 hover:text-white transition-colors">
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-3">
+                            {[1, 2, 3].map(slot => {
+                                const save = saves.find(s => s.slot === slot);
+                                const isEmpty = !save;
+
+                                return (
+                                    <div key={slot} className="flex items-center gap-2 group">
+                                        <button
+                                            onClick={() => state === 'save_menu' ? handleSave(slot) : handleLoad(slot)}
+                                            disabled={state === 'load_menu' && isEmpty}
+                                            className={`
+                                                flex-1 flex items-center justify-between p-4 rounded-lg border transition-all text-left
+                                                ${!isEmpty
+                                                    ? 'bg-white/5 border-white/10 hover:bg-white/10'
+                                                    : 'bg-black/30 border-white/5 text-white/30 hover:bg-white/5 hover:border-white/10'}
+                                                ${isLoadingSaves ? 'opacity-50 pointer-events-none' : ''}
+                                                ${state === 'load_menu' && isEmpty ? 'opacity-30 cursor-not-allowed' : ''}
+                                            `}
+                                        >
+                                            <div className="flex items-center gap-4">
+                                                <span className={`
+                                                    w-8 h-8 rounded-full flex items-center justify-center font-mono text-sm border
+                                                    ${!isEmpty ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400' : 'bg-white/5 border-white/10'}
+                                                `}>
+                                                    {slot}
+                                                </span>
+                                                <div>
+                                                    <div className={`font-bold text-sm ${!isEmpty ? 'text-white' : 'text-white/30'}`}>
+                                                        {save ? save.name || 'Untitled Save' : 'Empty Slot'}
+                                                    </div>
+                                                    {save && (
+                                                        <div className="text-xs text-white/40 flex items-center gap-1 mt-1">
+                                                            <Clock size={10} />
+                                                            {new Date(save.updated_at).toLocaleString()}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            {state === 'save_menu' ? (
+                                                <span className="opacity-0 group-hover:opacity-100 transition-opacity text-xs font-mono uppercase bg-white/10 px-2 py-1 rounded">
+                                                    Overwrite
+                                                </span>
+                                            ) : (save && (
+                                                <span className="opacity-0 group-hover:opacity-100 transition-opacity text-xs font-mono uppercase bg-green-500/20 text-green-400 px-2 py-1 rounded">
+                                                    Load
+                                                </span>
+                                            ))}
+                                        </button>
+
+                                        {save && (
+                                            <button
+                                                onClick={(e) => handleDelete(slot, e)}
+                                                className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 hover:bg-red-500/20 transition-all opacity-0 group-hover:opacity-100"
+                                                title="Delete Save"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
                 </Overlay>
             )}
 
             {state === 'gameover' && (
                 <Overlay>
-                    <h2 style={isNewHigh ? { color: '#ffd700' } : {}}>
+                    <h2 className={isNewHigh ? 'text-[#ffd700]' : ''}>
                         {isNewHigh ? '🏆 NEW HIGH SCORE!' : 'GAME OVER'}
                     </h2>
-                    <div style={{ fontSize: '3rem', fontWeight: 800, margin: '1rem 0' }}>{score}</div>
+                    <div className="text-5xl font-extrabold my-4">{score}</div>
                     {highScore > 0 && !isNewHigh && (
-                        <p style={{ opacity: 0.5 }}>High Score: {highScore}</p>
+                        <p className="opacity-50">High Score: {highScore}</p>
                     )}
                     <Button onClick={restart}>🔄 Play Again</Button>
                     <Button onClick={quit}>← Back</Button>
@@ -335,54 +463,25 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
 }
 
 function Overlay({ children }: { children: React.ReactNode }) {
-    return <div style={overlayStyle}>{children}</div>;
+    return (
+        <div className="absolute inset-0 bg-[#0a0a0f]/95 flex flex-col items-center justify-center text-white text-center">
+            {children}
+        </div>
+    );
 }
 
 function Button({ children, onClick, primary }: { children: React.ReactNode; onClick: () => void; primary?: boolean }) {
     return (
         <button
             onClick={onClick}
-            style={{
-                padding: '0.75rem 2rem',
-                margin: '0.5rem',
-                background: primary ? 'linear-gradient(135deg, #00ff88, #00cc66)' : '#333',
-                border: 'none',
-                borderRadius: '8px',
-                color: '#fff',
-                fontSize: primary ? '1.2rem' : '1rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-            }}
+            className={`
+                px-8 py-3 m-2 rounded-lg text-white transition-all
+                ${primary
+                    ? 'bg-gradient-to-br from-[#00ff88] to-[#00cc66] text-xl font-bold hover:opacity-90'
+                    : 'bg-[#333] text-base font-semibold hover:bg-[#444]'}
+            `}
         >
             {children}
         </button>
     );
 }
-
-const containerStyle: React.CSSProperties = {
-    position: 'absolute',
-    inset: 0,
-    background: '#0a0a0f',
-    overflow: 'hidden',
-};
-
-const overlayStyle: React.CSSProperties = {
-    position: 'absolute',
-    inset: 0,
-    background: 'rgba(10, 10, 15, 0.95)',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: '#fff',
-    textAlign: 'center',
-};
-
-const titleStyle: React.CSSProperties = {
-    fontSize: '2.5rem',
-    fontWeight: 800,
-    background: 'linear-gradient(135deg, #00ff88, #00ccff)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    marginBottom: '0.5rem',
-};

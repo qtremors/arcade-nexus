@@ -20,6 +20,7 @@ A premium local arcade gaming console built with React, FastAPI, and a custom Ga
 | 🐍 Neon Snake | 2D | Classic arcade snake with cyberpunk aesthetics |
 | 🦖 Raptor Run | 2D | Endless runner with day/night cycle |
 | 🚀 Stellar Drift | 3D | Space adventure with boost mechanics |
+| ✈️ Sky Ace | 3D | High-altitude flight simulator |
 
 ## Quick Start
 
@@ -114,6 +115,14 @@ registerGame('my-game', () => new MyGame());
 | `POST /api/stats/{game}/session` | Record play session |
 | `POST /api/stats/{game}/score` | Submit score |
 | `GET /api/stats/overall` | Get all stats |
+
+## Troubleshooting
+
+### Backend Session Errors
+If you are logged out on every restart, check your `.env` file for `SECRET_KEY`. If missing, the server generates a new one on every boot.
+
+### 3D Games not loading
+Ensure WebGL is enabled in your browser settings.
 
 ## License
 
