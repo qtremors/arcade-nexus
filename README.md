@@ -25,7 +25,7 @@
 
 | Feature | Description |
 |---------|-------------|
-| 🎮 **Aether OS Interface** | Console-style UI with glassmorphism and dynamic theming |
+| 🎮 **Arcus Interface** | Console-style UI with glassmorphism and dynamic theming |
 | 🕹️ **Custom Game SDK** | Build 2D (Canvas) and 3D (Three.js) games with unified API |
 | 👤 **Local Profiles** | Netflix-style profile selection with avatars |
 | 📊 **Statistics Tracking** | Playtime, high scores, sessions per game |
@@ -42,7 +42,7 @@
 |------|------|-------------|
 | 🐍 **Neon Snake** | 2D | Classic arcade snake with cyberpunk aesthetics and particle effects |
 | 🦖 **Raptor Run** | 2D | Endless runner with obstacles and day/night cycle |
-| ✈️ **Aether Flight** | 3D | Flight simulator with multiple atmospheres (Earth, Mars, Space) |
+| ✈️ **Stellar Flight** | 3D | Flight simulator (Coming Soon) |
 
 ---
 

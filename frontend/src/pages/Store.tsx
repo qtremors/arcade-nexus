@@ -1,12 +1,13 @@
 /**
- * Store Page - Aether OS
+ * Store Page - Arcus
  */
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { gamesApi, libraryApi } from '../api/client';
 import type { Game } from '../api/client';
 import { AetherGameCard } from '../components/aether/AetherGameCard';
-import { Search, Filter, ShoppingBag } from 'lucide-react';
+import { LoadingSpinner } from '../components/LoadingSpinner';
+import { Search, Filter, ShoppingBag, Construction } from 'lucide-react';
 
 export function Store() {
     const [games, setGames] = useState<Game[]>([]);
@@ -69,7 +70,7 @@ export function Store() {
     };
 
     if (loading && games.length === 0) {
-        return <div className="flex h-full items-center justify-center text-white/50 font-mono">ESTABLISHING UPLINK...</div>;
+        return <div className="flex h-full items-center justify-center"><LoadingSpinner text="Connecting..." /></div>;
     }
 
     return (
@@ -81,8 +82,8 @@ export function Store() {
                     <ShoppingBag className="text-cyan-400" size={48} />
                     <h1 className="text-6xl font-black uppercase tracking-tighter text-white">Store</h1>
                 </div>
-                <p className="text-white/50 font-mono uppercase tracking-widest text-sm mb-8 pl-16">
-                    Discover new neural experiences.
+                <p className="text-white/50 font-mono uppercase tracking-widest text-sm mb-8">
+                    Browse all available games
                 </p>
 
                 {/* Filter Bar */}
@@ -138,14 +139,16 @@ export function Store() {
                     {games.map((game) => {
                         const isInLibrary = libraryGameIds.has(game.id);
                         const isAdding = addingGameId === game.id;
+                        const isComingSoon = game.slug === 'stellar-flight';
 
                         return (
                             <AetherGameCard
                                 key={game.id}
                                 game={game}
                                 variant="store"
-                                actionLabel={isAdding ? "ADDING..." : isInLibrary ? "PLAY" : "INSTALL"}
-                                onClick={() => handleAddToLibrary(game)}
+                                actionLabel={isComingSoon ? "COMING SOON" : (isAdding ? "ADDING..." : isInLibrary ? "PLAY" : "INSTALL")}
+                                onClick={isComingSoon ? () => { } : () => handleAddToLibrary(game)}
+                                icon={isComingSoon ? <Construction size={16} /> : undefined}
                             />
                         );
                     })}

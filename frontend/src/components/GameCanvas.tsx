@@ -25,7 +25,7 @@ type Difficulty = 'easy' | 'normal' | 'hard';
 const CONTROL_HINTS: Record<string, string> = {
     'snake': 'Arrow Keys / WASD to move',
     'raptor-run': 'UP / SPACE to Jump • DOWN to Duck',
-    'aether-flight': 'WASD / Arrows: Pitch & Roll • Q/E: Yaw • Shift/Ctrl: Throttle',
+    'stellar-flight': 'WASD / Arrows: Pitch & Roll • Q/E: Yaw • Shift/Ctrl: Throttle',
 };
 
 export function GameCanvas({ slug, title, onGameOver }: Props) {
@@ -135,7 +135,7 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
 
             try {
                 if (totalPlaytimeRef.current > 0) {
-                    await statsApi.recordSession(slug, Math.floor(totalPlaytimeRef.current));
+                    await statsApi.recordSession(slug, Math.floor(totalPlaytimeRef.current), finalScore, difficulty);
                 }
                 const result = await statsApi.submitScore(slug, finalScore);
                 setHighScore(result.high_score);
@@ -148,7 +148,7 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
             }
             onGameOver?.(finalScore);
         });
-    }, [slug, onGameOver, checkAchievements]);
+    }, [slug, onGameOver, checkAchievements, difficulty]);
 
     // Initialize engine
     useEffect(() => {
@@ -218,7 +218,23 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
     }, []);
 
     // Restart
-    const restart = useCallback(() => {
+    const restart = useCallback(async () => {
+        // Record session if restarting mid-game
+        if (state === 'playing' || state === 'paused') {
+            if (playStartTimeRef.current) {
+                totalPlaytimeRef.current += (Date.now() - playStartTimeRef.current) / 1000;
+                playStartTimeRef.current = null;
+            }
+            if (totalPlaytimeRef.current > 0) {
+                try {
+                    const currentScore = engineRef.current?.getScore() || 0;
+                    await statsApi.recordSession(slug, Math.floor(totalPlaytimeRef.current), currentScore, difficulty);
+                } catch (e) {
+                    console.error('Failed to record session on restart:', e);
+                }
+            }
+        }
+
         const canvas = canvasRef.current;
         if (!canvas) return;
 
@@ -252,13 +268,29 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
             setState('playing');
             initRef.current = true;
         });
-    }, [slug, title, difficulty, setupCallbacks]);
+    }, [slug, title, difficulty, setupCallbacks, state]);
 
     // Quit - go back to previous page
-    const quit = useCallback(() => {
+    const quit = useCallback(async () => {
+        // Record session if we played
+        if (state === 'playing' || state === 'paused') {
+            if (playStartTimeRef.current) {
+                totalPlaytimeRef.current += (Date.now() - playStartTimeRef.current) / 1000;
+                playStartTimeRef.current = null;
+            }
+            if (totalPlaytimeRef.current > 0) {
+                try {
+                    const currentScore = engineRef.current?.getScore() || 0;
+                    await statsApi.recordSession(slug, Math.floor(totalPlaytimeRef.current), currentScore, difficulty);
+                } catch (e) {
+                    console.error('Failed to record session on quit:', e);
+                }
+            }
+        }
+
         engineRef.current?.destroy();
         navigate(-1); // Go back to previous page
-    }, [navigate]);
+    }, [navigate, state, slug, difficulty]);
 
     // Save/Load handlers
     const onSaveClick = () => {
@@ -412,6 +444,7 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
                 <Overlay>
                     <h2 className="text-2xl font-bold mb-6 tracking-widest">PAUSED</h2>
                     <Button onClick={resume} primary>▶ Resume</Button>
+                    <Button onClick={restart}>🔄 Restart</Button>
                     <div className="flex gap-2 my-2">
                         <Button onClick={onSaveClick}>Save Game</Button>
                         <Button onClick={onLoadClick}>Load Game</Button>

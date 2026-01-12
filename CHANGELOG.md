@@ -1,8 +1,26 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus  
-> **Version:** 1.2.0  
+> **Version:** 1.3.0  
 > **Last Updated:** 2026-01-12
+
+---
+
+## [1.3.0] - 2026-01-12
+
+### Added
+- **Home Page Carousel**: Now dynamically displays Top 5 Recently Played games.
+- **Session History Sorting**: Users can now sort history by Date, Score, or Duration.
+- **Improved Modal**: "Recent Activity" and "High Scores" cards open tailored history views.
+
+### Changed
+- **Store**: "Stellar Flight" is now marked as "COMING SOON" with a construction icon.
+- **Store**: Installation/Play disabled for incomplete games.
+
+### Fixed
+- **Score Logging**: Scores are now correctly recorded in database (previously 0).
+- **Difficulty Tracking**: Difficulty setting (Easy/Normal/Hard) is now correctly logged for sessions.
+- **Dashboard**: Fixed UI overlay clutter and improved navigation logic.
 
 ---
 
@@ -11,7 +29,7 @@
 ### Added
 - Toast notification system for user feedback
 - Snake game border for visible play area
-- Control hints for Aether Flight game
+- Control hints for Stellar Flight game
 - All 5 save slots now visible in UI (previously 3)
 
 ### Fixed
@@ -53,7 +71,7 @@
 ### Added
 
 #### Core Platform
-- **Aether OS Interface** - Console-style UI with glassmorphism and dynamic theming
+- **Arcus Interface** - Console-style UI with glassmorphism and dynamic theming
 - **Profile System** - Local profiles with Netflix-style selector
 - **Game Library** - Personal collection with favorites and play tracking
 - **Statistics Dashboard** - Track playtime, high scores, and sessions per game
@@ -69,7 +87,7 @@
 #### Games Included
 - **Neon Snake** - Classic arcade snake with cyberpunk aesthetics
 - **Raptor Run** - Endless runner with day/night cycle
-- **Aether Flight** - 3D flight simulator with multiple atmospheres
+- **Stellar Flight** - 3D flight simulator with multiple atmospheres
 
 #### Backend
 - **FastAPI** - Async Python backend with SQLAlchemy

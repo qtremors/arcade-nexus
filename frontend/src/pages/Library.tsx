@@ -1,5 +1,5 @@
 /**
- * Library Page - Aether OS
+ * Library Page - Arcus
  * Shows games the user has added to their library
  */
 import { useEffect, useState, useCallback } from 'react';
@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { libraryApi } from '../api/client';
 import type { LibraryEntry } from '../api/client';
 import { AetherGameCard } from '../components/aether/AetherGameCard';
+import { LoadingSpinner } from '../components/LoadingSpinner';
 import { Library as LibraryIcon, Plus, Trash2 } from 'lucide-react';
 
 export function Library() {
@@ -45,7 +46,7 @@ export function Library() {
     };
 
     if (loading) {
-        return <div className="flex h-full items-center justify-center text-white/50 font-mono">SCANNING MEMORY BANKS...</div>;
+        return <div className="flex h-full items-center justify-center"><LoadingSpinner text="Loading Library..." /></div>;
     }
 
     return (
@@ -53,11 +54,11 @@ export function Library() {
             {/* Header */}
             <div className="mb-12">
                 <div className="flex items-center gap-4 mb-2">
-                    <LibraryIcon className="text-purple-400" size={48} />
+                    <LibraryIcon className="text-cyan-400" size={48} />
                     <h1 className="text-6xl font-black uppercase tracking-tighter text-white">Library</h1>
                 </div>
-                <p className="text-white/50 font-mono uppercase tracking-widest text-sm pl-16">
-                    Your installed neural experiences.
+                <p className="text-white/50 font-mono uppercase tracking-widest text-sm">
+                    Your installed games
                 </p>
             </div>
 

@@ -1,11 +1,7 @@
-/**
- * Dashboard - Aether OS Home Screen
- */
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { gamesApi } from '../api/client';
-import type { Game } from '../api/client';
+import { gamesApi, statsApi } from '../api/client';
+import type { Game, GameStats } from '../api/client';
 import { GameCarousel } from '../components/aether/GameCarousel';
-
 
 // Helper to get theme for current game
 const getGameTheme = (gameId: number) => {
@@ -19,39 +15,56 @@ const getGameTheme = (gameId: number) => {
     return themes[gameId % themes.length];
 };
 
-
 export function Dashboard() {
     const [games, setGames] = useState<Game[]>([]);
+    const [recentStats, setRecentStats] = useState<GameStats[]>([]);
     const [activeIndex, setActiveIndex] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
 
     // Initial Load
     useEffect(() => {
-        const loadGames = async () => {
+        const loadData = async () => {
             try {
-                const response = await gamesApi.list();
-                setGames(response.games);
+                const [gamesRes, statsRes] = await Promise.all([
+                    gamesApi.list(),
+                    statsApi.getOverall()
+                ]);
+                setGames(gamesRes.games);
+                setRecentStats(statsRes.games);
                 // Clamp activeIndex to valid range
-                setActiveIndex(prev => Math.min(prev, Math.max(0, response.games.length - 1)));
+                setActiveIndex(prev => Math.min(prev, Math.max(0, gamesRes.games.length - 1)));
             } catch (err) {
-                console.error('Failed to load games:', err);
+                console.error('Failed to load data:', err);
             } finally {
                 setIsLoading(false);
             }
         };
-        loadGames();
+        loadData();
     }, []);
+
+    // Compute recent games with full details
+    const recentGames = useMemo(() => {
+        return recentStats
+            .filter(s => s.last_session)
+            .sort((a, b) => new Date(b.last_session!).getTime() - new Date(a.last_session!).getTime())
+            .slice(0, 5)
+            .map(stat => games.find(g => g.slug === stat.game_slug))
+            .filter((g): g is Game => !!g);
+    }, [recentStats, games]);
+
+    // Determine games to show in carousel
+    const displayGames = recentGames.length > 0 ? recentGames : games;
 
     // Keyboard Nav (Arrow Keys) for Carousel
     const handleKeyDown = useCallback((e: KeyboardEvent) => {
-        if (games.length === 0) return;
+        if (displayGames.length === 0) return;
 
         if (e.key === 'ArrowRight') {
-            setActiveIndex((prev) => (prev + 1) % games.length);
+            setActiveIndex((prev) => (prev + 1) % displayGames.length);
         } else if (e.key === 'ArrowLeft') {
-            setActiveIndex((prev) => (prev - 1 + games.length) % games.length);
+            setActiveIndex((prev) => (prev - 1 + displayGames.length) % displayGames.length);
         }
-    }, [games]);
+    }, [displayGames]);
 
     useEffect(() => {
         window.addEventListener('keydown', handleKeyDown);
@@ -59,7 +72,7 @@ export function Dashboard() {
     }, [handleKeyDown]);
 
     // Memoize theme to prevent recalculation on every render
-    const activeGame = games[activeIndex];
+    const activeGame = displayGames[activeIndex];
     const theme = useMemo(() => {
         return activeGame ? getGameTheme(activeGame.id) : { bg: 'linear-gradient(135deg, #0f0c29, #302b63)', color: '#00f3ff' };
     }, [activeGame]);
@@ -73,7 +86,7 @@ export function Dashboard() {
         );
     }
 
-    if (games.length === 0) {
+    if (displayGames.length === 0) {
         return <div className="flex items-center justify-center h-full text-white font-mono">NO GAMES FOUND</div>;
     }
 
@@ -89,7 +102,7 @@ export function Dashboard() {
             </div>
 
             <GameCarousel
-                games={games}
+                games={displayGames}
                 activeIndex={activeIndex}
                 onSelect={setActiveIndex}
             />
@@ -98,13 +111,13 @@ export function Dashboard() {
             <div className="absolute bottom-12 left-0 right-0 flex justify-center items-center gap-8 text-white/30 z-20">
                 <button
                     className="flex items-center gap-2 hover:text-white transition-colors group"
-                    onClick={() => setActiveIndex((prev) => (prev - 1 + games.length) % games.length)}
+                    onClick={() => setActiveIndex((prev) => (prev - 1 + displayGames.length) % displayGames.length)}
                 >
                     <div className="px-3 py-1 border border-white/20 rounded-lg text-xs font-mono group-hover:border-white">←</div>
                 </button>
 
                 <div className="flex gap-2">
-                    {games.map((g, i) => (
+                    {displayGames.map((g, i) => (
                         <div
                             key={g.id}
                             className={`w-12 h-1 rounded-full transition-all duration-300 ${i === activeIndex ? 'bg-white' : 'bg-white/10'}`}
@@ -114,7 +127,7 @@ export function Dashboard() {
 
                 <button
                     className="flex items-center gap-2 hover:text-white transition-colors group"
-                    onClick={() => setActiveIndex((prev) => (prev + 1) % games.length)}
+                    onClick={() => setActiveIndex((prev) => (prev + 1) % displayGames.length)}
                 >
                     <div className="px-3 py-1 border border-white/20 rounded-lg text-xs font-mono group-hover:border-white">→</div>
                 </button>

@@ -2,7 +2,7 @@
 
 > Comprehensive documentation for developers working on Arcade Nexus.
 
-**Version:** 1.2.0 | **Last Updated:** 2026-01-12
+**Version:** 1.3.0 | **Last Updated:** 2026-01-12
 
 ---
 
@@ -75,7 +75,7 @@ arcade-nexus/
 │   │   ├── games/            # Game implementations
 │   │   │   ├── snake/            # 2D Canvas game
 │   │   │   ├── raptor-run/       # 2D Canvas game
-│   │   │   └── aether-flight/    # 3D Three.js game
+│   │   │   └── stellar-flight/    # 3D Three.js game
 │   │   ├── pages/            # Route pages
 │   │   ├── sdk/              # Game SDK
 │   │   │   ├── GameSDK.ts        # Interfaces & registry

@@ -3,7 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import type { Game3DInstance, InputState } from '../../sdk/GameSDK';
 import { FlightController } from './FlightController';
 
-export class AetherFlightGame implements Game3DInstance {
+export class StellarFlightGame implements Game3DInstance {
     readonly type = '3d' as const;
 
     private scene!: THREE.Scene;

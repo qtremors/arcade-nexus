@@ -1,7 +1,7 @@
 # Arcade Nexus - Tasks
 
 > **Project:** Arcade Nexus  
-> **Version:** 1.2.0  
+> **Version:** 1.3.0  
 > **Last Updated:** 2026-01-12
 
 ---
@@ -10,7 +10,7 @@
 
 ### Games
 
-- [/] **Aether Flight** - 3D flight game (partially implemented)
+- [/] **Stellar Flight** - 3D flight game (Marked "Coming Soon" in Store)
   - [x] Three.js scene setup with GLTF loader
   - [x] Map switching (Earth, Mars, Space)
   - [x] Basic flight controller with 6-DOF
@@ -26,7 +26,7 @@
 
 ### High Priority
 
-- [ ] Complete Aether Flight game loop
+- [ ] Complete Stellar Flight game loop
   - [ ] Add actual game over condition (crash into ground, fly out of bounds)
   - [ ] Implement proper scoring (distance, time, rings)
   - [ ] Add collision detection with terrain

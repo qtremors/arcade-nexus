@@ -31,6 +31,7 @@ class User(Base):
     saves = relationship("GameSave", back_populates="user", cascade="all, delete-orphan")
     stats = relationship("PlayStats", back_populates="user", cascade="all, delete-orphan")
     achievements = relationship("AchievementUnlocked", back_populates="user", cascade="all, delete-orphan")
+    sessions = relationship("GameSession", back_populates="user", cascade="all, delete-orphan")
     
     def __repr__(self) -> str:
         return f"<User(id={self.id}, username='{self.username}', is_default={self.is_default})>"

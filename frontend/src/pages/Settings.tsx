@@ -1,12 +1,15 @@
 /**
  * Settings Page
  */
-import { Server, Monitor, Volume2, Shield } from 'lucide-react';
+import { Settings as SettingsIcon, Server, Monitor, Volume2, Shield } from 'lucide-react';
 
 export function Settings() {
     return (
         <div className="h-full w-full overflow-y-auto p-12 pt-24 pb-32 animate-in fade-in zoom-in-95 duration-500">
-            <h1 className="text-6xl font-black uppercase tracking-tighter text-white mb-2">Settings</h1>
+            <div className="flex items-center gap-4 mb-2">
+                <SettingsIcon className="text-cyan-400" size={48} />
+                <h1 className="text-6xl font-black uppercase tracking-tighter text-white">Settings</h1>
+            </div>
             <p className="text-white/50 font-mono uppercase tracking-widest text-sm mb-12">
                 System Configuration
             </p>
@@ -30,7 +33,7 @@ export function Settings() {
                 </Section>
 
                 <Section icon={<Shield />} title="Account" description="Privacy and security settings">
-                    <button className="px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-500 rounded hover:bg-red-500/20 transition-colors">
+                    <button className="px-4 py-2 bg-red-500/10 border border-red-500/20 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors">
                         Clear Local Data
                     </button>
                 </Section>

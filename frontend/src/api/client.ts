@@ -73,6 +73,17 @@ export interface GameStats {
   last_session: string | null;
 }
 
+export interface GameSession {
+  id: number;
+  game_slug: string;
+  game_title: string;
+  start_time: string;
+  end_time: string;
+  duration_seconds: number;
+  score: number;
+  difficulty?: string;
+}
+
 export interface OverallStats {
   total_playtime_seconds: number;
   total_games_played: number;
@@ -216,9 +227,11 @@ export const statsApi = {
     return data;
   },
 
-  recordSession: async (gameSlug: string, playtimeSeconds: number) => {
+  recordSession: async (gameSlug: string, playtimeSeconds: number, score: number, difficulty?: string) => {
     const { data } = await api.post(`/stats/${gameSlug}/session`, {
       playtime_seconds: playtimeSeconds,
+      score,
+      difficulty
     });
     return data;
   },
@@ -228,6 +241,12 @@ export const statsApi = {
       `/stats/${gameSlug}/score`,
       { score }
     );
+    return data;
+  },
+
+  getHistory: async (gameId?: number) => {
+    const params = gameId ? { game_id: gameId } : {};
+    const { data } = await api.get<GameSession[]>('/stats/sessions', { params });
     return data;
   },
 };

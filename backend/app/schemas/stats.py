@@ -8,6 +8,8 @@ from pydantic import BaseModel, Field
 class SessionRecord(BaseModel):
     """Schema for recording a play session."""
     playtime_seconds: int = Field(..., ge=0)
+    score: int = Field(default=0, ge=0)
+    difficulty: str | None = None
 
 
 class ScoreSubmit(BaseModel):

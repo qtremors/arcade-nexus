@@ -13,6 +13,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.game import Game
 from app.models.stats import PlayStats
+from app.models.session import GameSession
 from app.models.library import UserLibrary
 from app.schemas.stats import StatsResponse, GameStatsResponse, SessionRecord, ScoreSubmit
 from app.utils.local_user import get_default_user
@@ -87,6 +88,39 @@ async def get_overall_stats(
         total_sessions=total_sessions or 0,
         games=game_stats
     )
+
+
+@router.get("/sessions", response_model=list)
+async def get_session_history(
+    game_id: int | None = None,
+    current_user: Annotated[User, Depends(get_default_user)] = None,
+    db: Annotated[AsyncSession, Depends(get_db)] = None,
+    limit: int = 50
+):
+    """Get detailed session history."""
+    query = select(GameSession).where(GameSession.user_id == current_user.id)
+    
+    if game_id:
+        query = query.where(GameSession.game_id == game_id)
+        
+    query = query.order_by(GameSession.end_time.desc()).limit(limit).options(selectinload(GameSession.game))
+    
+    result = await db.execute(query)
+    sessions = result.scalars().all()
+    
+    return [
+        {
+            "id": s.id,
+            "game_slug": s.game.slug,
+            "game_title": s.game.title,
+            "start_time": s.start_time,
+            "end_time": s.end_time,
+            "duration_seconds": s.duration_seconds,
+            "score": s.score,
+            "difficulty": s.difficulty
+        }
+        for s in sessions
+    ]
 
 
 @router.get("/{game_slug}", response_model=GameStatsResponse)
@@ -201,11 +235,31 @@ async def record_session(
     # Atomic update
     stats.total_playtime_seconds = PlayStats.total_playtime_seconds + session_data.playtime_seconds
     stats.last_session = datetime.now(timezone.utc)
+    # Create detailed game session record
+    # Note: We assume session_data.playtime_seconds is the duration
+    # In a more complex system, start/end calls would track precise timestamps
+    now = datetime.now(timezone.utc)
+    # Estimate start time based on duration
+    start_time = datetime.fromtimestamp(now.timestamp() - session_data.playtime_seconds, tz=timezone.utc)
+    
+    session = GameSession(
+        user_id=current_user.id,
+        game_id=game.id,
+        start_time=start_time,
+        end_time=now,
+        duration_seconds=session_data.playtime_seconds,
+        score=session_data.score,
+        difficulty=session_data.difficulty
+    )
+    db.add(session)
     
     await db.commit()
     await db.refresh(stats)
     
     return {"message": "Playtime recorded", "total_playtime": stats.total_playtime_seconds}
+
+
+
 
 
 @router.post("/{game_slug}/score")

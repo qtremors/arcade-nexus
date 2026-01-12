@@ -17,14 +17,10 @@ from app.routers import games, library, saves, stats, achievements, profiles
 settings = get_settings()
 
 
-async def auto_seed_if_needed():
-    """Auto-seed database with games if none exist."""
-    async with AsyncSessionLocal() as db:
-        result = await db.execute(select(Game).limit(1))
-        if result.scalar_one_or_none() is None:
-            print("📦 No games found, auto-seeding...")
-            from app.seed import seed_games
-            await seed_games(skip_init=True)
+async def sync_games_on_startup():
+    """Smart sync: always sync games with code definitions on startup."""
+    from app.seed import sync_games
+    await sync_games(skip_init=True)
 
 
 @asynccontextmanager
@@ -32,7 +28,7 @@ async def lifespan(app: FastAPI):
     """Application lifespan events."""
     # Startup
     await init_db()
-    await auto_seed_if_needed()
+    await sync_games_on_startup()
     
     # Security Checks
     # We check if strict secret key persistence is needed

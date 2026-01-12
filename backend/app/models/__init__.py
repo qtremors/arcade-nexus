@@ -7,6 +7,7 @@ from app.models.library import UserLibrary
 from app.models.save import GameSave
 from app.models.stats import PlayStats
 from app.models.achievement import Achievement, AchievementUnlocked
+from app.models.session import GameSession
 
 __all__ = [
     "User",
@@ -16,5 +17,6 @@ __all__ = [
     "GameSave",
     "PlayStats",
     "Achievement",
-    "AchievementUnlocked"
+    "AchievementUnlocked",
+    "GameSession"
 ]

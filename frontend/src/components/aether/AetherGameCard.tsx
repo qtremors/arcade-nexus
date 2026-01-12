@@ -6,9 +6,10 @@ interface AetherGameCardProps {
     onClick: () => void;
     actionLabel?: string;
     variant?: 'store' | 'library';
+    icon?: React.ReactNode;
 }
 
-export function AetherGameCard({ game, onClick, actionLabel = "Play", variant = 'store' }: AetherGameCardProps) {
+export function AetherGameCard({ game, onClick, actionLabel = "Play", variant = 'store', icon }: AetherGameCardProps) {
     return (
         <div
             onClick={onClick}
@@ -48,7 +49,7 @@ export function AetherGameCard({ game, onClick, actionLabel = "Play", variant = 
                     </p>
 
                     <button className="flex w-full items-center justify-center gap-2 rounded-lg bg-white/10 py-3 text-sm font-bold uppercase tracking-wider text-white border border-white/10 transition-colors hover:bg-cyan-600 hover:text-white hover:border-cyan-500">
-                        {variant === 'library' ? <Play size={16} fill="currentColor" /> : <Download size={16} />}
+                        {icon ? icon : (variant === 'library' ? <Play size={16} fill="currentColor" /> : <Download size={16} />)}
                         {actionLabel}
                     </button>
                 </div>

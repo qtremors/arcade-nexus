@@ -32,7 +32,13 @@ export function Achievements() {
         <div className="h-full w-full overflow-y-auto p-12 pt-24 pb-32 animate-in fade-in zoom-in-95 duration-500">
             {/* Header */}
             <div className="mb-12">
-                <h1 className="text-6xl font-black uppercase tracking-tighter text-white mb-2">Achievements</h1>
+                <div className="flex items-center gap-4 mb-2">
+                    <Trophy className="text-yellow-400" size={48} />
+                    <h1 className="text-6xl font-black uppercase tracking-tighter text-white">Achievements</h1>
+                </div>
+                <p className="text-white/50 font-mono uppercase tracking-widest text-sm mb-6">
+                    Unlock rewards through gameplay
+                </p>
 
                 {/* Progress Bar */}
                 <div className="w-full max-w-xl mt-6">
