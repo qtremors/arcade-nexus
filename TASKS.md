@@ -9,45 +9,44 @@
 ## 🚧 In Progress
 
 ### Games
-
-- [/] **Stellar Flight** - 3D flight game (Marked "Coming Soon" in Store)
-  - [x] Three.js scene setup with GLTF loader
-  - [x] Map switching (Earth, Mars, Space)
-  - [x] Basic flight controller with 6-DOF
-  - [x] Keyboard controls fixed
-  - [x] Control hints added
-  - [ ] **Scoring system** - Currently just speed-based placeholder
-  - [ ] **Collision detection** - None implemented
-  - [ ] **Game over condition** - Always returns `true` in update()
+- [/] **Stellar Flight** - 3D flight game
+  - [x] Scene setup, map switching, 6-DOF controller
+  - [x] Keyboard controls and hints
+  - [ ] **Collision Detection**: Implement terrain and boundary collision (CRITICAL: currently fly through ground).
+  - [ ] **Scoring System**: Replace speed placeholder with distance/time/objective scoring.
+  - [ ] **Game Over Loop**: Implement crash state and score submission integration.
 
 ---
 
 ## 📋 To Do
 
-### High Priority
+### 🔴 High Priority
+- [ ] **Test Coverage Expansion**:
+  - [ ] Backend: Add unit tests for `GameSave` logic and `Achievement` unlocking.
+  - [ ] Frontend: Implement `vitest` for SDK core (GameEngine, InputManager).
+- [ ] **Accessibility Audit**:
+  - [ ] Add ARIA labels to Dashboard carousel and Game HUD.
+  - [ ] Implement keyboard-only navigation for Profile selector.
+- [ ] **Error Resilience**:
+  - [ ] Improved backend error handling for SQLite "Database Locked" scenarios.
+  - [ ] Frontend "Safe Mode" for WebGL failures.
 
-- [ ] Complete Stellar Flight game loop
-  - [ ] Add actual game over condition (crash into ground, fly out of bounds)
-  - [ ] Implement proper scoring (distance, time, rings)
-  - [ ] Add collision detection with terrain
+### 🟡 Medium Priority
+- [ ] **UI Refinement**:
+  - [ ] Add sound effects (SFX) and background music (BGM) system to SDK.
+  - [ ] Implement responsive viewport scaling for 2D games on smaller screens.
+- [ ] **Persistence Improvements**:
+  - [ ] Game-specific settings persistence (e.g., volume, custom keybinds).
+  - [ ] Profile avatar upload support.
 
-### Low Priority
-
-- [ ] Sound effects and background music
-- [ ] Custom profile avatars upload
-- [ ] Game-specific settings persistence
-
----
-
-## 🏗️ Architecture Notes
-
-### Current Strengths
-- Clean separation between SDK and game implementations
-- Proper async/await patterns in backend
-- Zustand stores are well-structured with caching
-- Both 2D games (Snake, RaptorRun) properly wire difficulty settings
-- Fully offline-capable
-- Toast notification system for user feedback
-- Snake game has visible border for play area
+### 🟢 Low Priority
+- [ ] **Visual Polish**:
+  - [ ] Particle systems for Raptor Run (dust, jump effects).
+  - [ ] More variety in Stellar Flight maps (e.g., Saturn Rings).
 
 ---
+
+## 🏗️ Technical Debt & Notes
+- **SDK**: `LegacyGameInstance` should be deprecated once all games are updated to `Game2DInstance`/`Game3DInstance`.
+- **Security**: Ensure `SECRET_KEY` is enforced in production environments.
+- **Complexity**: Game registration in `frontend/src/games/index.ts` works but could be dynamic for auto-discovery.

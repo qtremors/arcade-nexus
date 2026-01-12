@@ -1,8 +1,22 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus  
-> **Version:** 1.3.0  
+> **Version:** 1.3.1  
 > **Last Updated:** 2026-01-12
+
+---
+
+## [1.3.1] - 2026-01-12
+
+### Changed
+- **UI Simplification Overhaul**: Transitioned from "Neo-Retro" to a clean, color-forward console aesthetic.
+- **Terminology Update**: Replaced technical jargon with user-friendly English across the entire UI and documentation (e.g., `THE_VAULT` -> **Library**, `IDENTITY_CORE` -> **Profile**).
+- **Reduced Visual Noise**: Removed `AtmosphereOverlay` (film grain/vignette) and simplified `Background` to a static radial gradient.
+- **Consistent Design**: Standardized rounded corners and improved layout spacing.
+
+### Fixed
+- **Profile Stat Cards**: Resolved duplicate display logic and fixed repetitive data visualization.
+- **Linting**: Fixed duplicate imports and CSS syntax errors in global styles.
 
 ---
 

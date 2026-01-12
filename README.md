@@ -5,7 +5,7 @@
 <h1 align="center">Arcade Nexus</h1>
 
 <p align="center">
-  A premium local & offline arcade gaming console built with React, FastAPI, and a custom Game SDK.
+  A Premium local & offline arcade gaming console built with React, FastAPI, and a custom Game SDK.
 </p>
 
 <p align="center">
@@ -25,7 +25,7 @@
 
 | Feature | Description |
 |---------|-------------|
-| 🎮 **Arcus Interface** | Console-style UI with glassmorphism and dynamic theming |
+| 🎮 **Console UI** | Clean, direct interface with glassmorphism and soft rounded corners |
 | 🕹️ **Custom Game SDK** | Build 2D (Canvas) and 3D (Three.js) games with unified API |
 | 👤 **Local Profiles** | Netflix-style profile selection with avatars |
 | 📊 **Statistics Tracking** | Playtime, high scores, sessions per game |

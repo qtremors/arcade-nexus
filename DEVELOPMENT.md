@@ -2,7 +2,7 @@
 
 > Comprehensive documentation for developers working on Arcade Nexus.
 
-**Version:** 1.3.0 | **Last Updated:** 2026-01-12
+**Version:** 1.3.1 | **Last Updated:** 2026-01-12
 
 ---
 
@@ -70,7 +70,7 @@ arcade-nexus/
 │   │   ├── components/       # UI components
 │   │   │   ├── GameCanvas.tsx    # Core game rendering
 │   │   │   ├── Layout.tsx        # App shell
-│   │   │   └── aether/           # Boot/Profile components
+│   │   │   └── arcus/           # Common UI components
 │   │   ├── contexts/         # React contexts
 │   │   ├── games/            # Game implementations
 │   │   │   ├── snake/            # 2D Canvas game
