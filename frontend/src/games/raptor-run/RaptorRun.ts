@@ -24,7 +24,6 @@ interface Particle {
 export class RaptorRunGame implements Game2DInstance {
     readonly type = '2d' as const;
 
-    private ctx!: CanvasRenderingContext2D;
     private width = 0;
     private height = 0;
 
@@ -59,9 +58,6 @@ export class RaptorRunGame implements Game2DInstance {
     private difficulty: 'easy' | 'normal' | 'hard' = 'normal';
 
     init(canvas: HTMLCanvasElement, config?: GameConfig): void {
-        const context = canvas.getContext('2d');
-        if (!context) throw new Error('Could not get 2D context');
-        this.ctx = context;
         this.width = canvas.width;
         this.height = canvas.height;
         this.groundY = this.height * 0.8;

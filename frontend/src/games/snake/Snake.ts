@@ -278,6 +278,16 @@ export class SnakeGame implements Game2DInstance {
             ctx.lineTo(this.gridOffsetX + this.cols * this.cellSize, this.gridOffsetY + y * this.cellSize);
             ctx.stroke();
         }
+
+        // Border around play area
+        ctx.strokeStyle = 'rgba(88, 166, 255, 0.3)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(
+            this.gridOffsetX,
+            this.gridOffsetY,
+            this.cols * this.cellSize,
+            this.rows * this.cellSize
+        );
     }
 
     private renderFood(): void {

@@ -124,15 +124,17 @@ export const useProfileStore = create<ProfileState>()((set, get) => ({
     },
 
     fetchOverallStats: async (force = false) => {
-        const { lastStatsFetch, activeProfile } = get();
+        const { activeProfile } = get();
         const CACHE_DURATION = 60 * 1000; // 1 minute cache
 
         // Skip if cached and recent (unless forced)
-        if (!force && Date.now() - lastStatsFetch < CACHE_DURATION && get().overallStats) {
+        if (!activeProfile) return;
+
+        // Use local variable for check to avoid state drift during async
+        const state = get();
+        if (!force && state.overallStats && (Date.now() - state.lastStatsFetch < CACHE_DURATION)) {
             return;
         }
-
-        if (!activeProfile) return;
 
         try {
             const stats = await statsApi.getOverall();

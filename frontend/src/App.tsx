@@ -11,6 +11,7 @@ import { Layout } from './components/Layout';
 import { BootSequence } from './components/aether/BootSequence';
 import { ProfileSetup } from './components/aether/ProfileSetup';
 import { ProfileSelector } from './components/aether/ProfileSelector';
+import { ToastProvider } from './components/Toast';
 import { FocusProvider } from './contexts/FocusContext';
 import { useProfileStore } from './stores/profileStore';
 import { Server, RefreshCw } from 'lucide-react';
@@ -28,6 +29,36 @@ function App() {
 
   // Check if we've already booted in this session
   const hasBootedThisSession = sessionStorage.getItem(SESSION_KEY) === 'true';
+
+  // Periodic health check to detect offline/online status
+  useEffect(() => {
+    const checkHealth = async () => {
+      try {
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/health`);
+        if (res.ok && appState === 'offline') {
+          setAppState('initializing');
+          initialize(); // Retry init if we were offline
+        }
+      } catch (e) {
+        if (appState !== 'offline' && profileInitialized) {
+          // Only switch to offline if we definitely can't reach backend
+          // strict check might be annoying during dev reloads, so we'll rely on profiles failure for now
+          // but this structure is here for future robust handling
+        }
+      }
+    };
+
+    // Initial check on mount
+    checkHealth();
+
+    // Poll every 10s if offline
+    let interval: number | undefined;
+    if (appState === 'offline') {
+      interval = window.setInterval(checkHealth, 5000);
+    }
+
+    return () => clearInterval(interval);
+  }, [appState, initialize, profileInitialized]);
 
   // Initialize profile store on mount
   useEffect(() => {
@@ -163,22 +194,24 @@ function App() {
   // Main app
   return (
     <div className="app-root">
-      <BrowserRouter>
-        <FocusProvider>
-          <Routes>
-            <Route path="/play/:slug" element={<GamePlayer />} />
-            <Route path="/" element={<Layout />}>
-              <Route index element={<Navigate to="/home" replace />} />
-              <Route path="home" element={<Dashboard />} />
-              <Route path="store" element={<Store />} />
-              <Route path="library" element={<Library />} />
-              <Route path="profile" element={<Profile />} />
-              <Route path="achievements" element={<Achievements />} />
-              <Route path="settings" element={<Settings />} />
-            </Route>
-          </Routes>
-        </FocusProvider>
-      </BrowserRouter>
+      <ToastProvider>
+        <BrowserRouter>
+          <FocusProvider>
+            <Routes>
+              <Route path="/play/:slug" element={<GamePlayer />} />
+              <Route path="/" element={<Layout />}>
+                <Route index element={<Navigate to="/home" replace />} />
+                <Route path="home" element={<Dashboard />} />
+                <Route path="store" element={<Store />} />
+                <Route path="library" element={<Library />} />
+                <Route path="profile" element={<Profile />} />
+                <Route path="achievements" element={<Achievements />} />
+                <Route path="settings" element={<Settings />} />
+              </Route>
+            </Routes>
+          </FocusProvider>
+        </BrowserRouter>
+      </ToastProvider>
     </div>
   );
 }

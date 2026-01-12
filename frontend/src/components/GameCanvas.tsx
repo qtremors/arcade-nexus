@@ -6,8 +6,9 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GameEngine, getGame } from '../sdk';
 import type { GameConfig } from '../sdk';
-import { statsApi, savesApi } from '../api/client';
-import type { SaveData } from '../api/client';
+import { statsApi, savesApi, achievementsApi } from '../api/client';
+import type { SaveData, Achievement } from '../api/client';
+import { useToast } from './Toast';
 import { Clock, Save, Download, Trash2, X } from 'lucide-react';
 import '../games';
 
@@ -24,7 +25,7 @@ type Difficulty = 'easy' | 'normal' | 'hard';
 const CONTROL_HINTS: Record<string, string> = {
     'snake': 'Arrow Keys / WASD to move',
     'raptor-run': 'UP / SPACE to Jump • DOWN to Duck',
-    'space-runner': 'Arrow Keys to move • SPACE to Boost',
+    'aether-flight': 'WASD / Arrows: Pitch & Roll • Q/E: Yaw • Shift/Ctrl: Throttle',
 };
 
 export function GameCanvas({ slug, title, onGameOver }: Props) {
@@ -33,6 +34,7 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
     const engineRef = useRef<GameEngine | null>(null);
     const initRef = useRef(false);
     const navigate = useNavigate();
+    const { showToast } = useToast();
 
     const [state, setState] = useState<State>('loading');
     const [score, setScore] = useState(0);
@@ -80,6 +82,40 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
         return () => window.removeEventListener('resize', updateSize);
     }, []);
 
+    const checkAchievements = useCallback(async (finalScore: number) => {
+        try {
+            const { achievements } = await achievementsApi.getForGame(slug);
+            const locked = achievements.filter((a: Achievement) => !a.unlocked);
+
+            for (const achievement of locked) {
+                let shouldUnlock = false;
+                // Simple score-based unlock logic for now
+                // In a more complex app, the game might send specific event slugs
+                if (achievement.slug.startsWith('score-')) {
+                    const requiredScore = parseInt(achievement.slug.split('-')[1]);
+                    if (finalScore >= requiredScore) shouldUnlock = true;
+                } else if (achievement.slug === 'first-bite' && finalScore > 0) {
+                    shouldUnlock = true;
+                } else if (achievement.slug === 'first-jump' && finalScore > 0) {
+                    shouldUnlock = true;
+                } else if (achievement.slug === 'first-dodge' && finalScore > 0) {
+                    shouldUnlock = true;
+                } else if (achievement.slug === 'takeoff' && finalScore > 0) {
+                    shouldUnlock = true;
+                }
+
+                if (shouldUnlock) {
+                    await achievementsApi.unlock(slug, achievement.slug);
+                    if (import.meta.env.DEV) {
+                        console.log(`[GameCanvas] Achievement unlocked: ${achievement.title}`);
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Failed to check achievements:', e);
+        }
+    }, [slug]);
+
     const setupCallbacks = useCallback((engine: GameEngine) => {
         engine.onPause(() => {
             if (playStartTimeRef.current) {
@@ -104,12 +140,15 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
                 const result = await statsApi.submitScore(slug, finalScore);
                 setHighScore(result.high_score);
                 setIsNewHigh(result.is_new_high_score);
+
+                // Achievement check
+                await checkAchievements(finalScore);
             } catch (e) {
-                console.error('Failed to submit stats:', e);
+                console.error('Failed to submit stats/achievements:', e);
             }
             onGameOver?.(finalScore);
         });
-    }, [slug, onGameOver]);
+    }, [slug, onGameOver, checkAchievements]);
 
     // Initialize engine
     useEffect(() => {
@@ -149,13 +188,18 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
     }, [slug, title, difficulty, setupCallbacks]);
 
     // Start game
-    const start = useCallback(() => {
+    const start = useCallback(async () => {
         if (state !== 'ready') return;
+        try {
+            await statsApi.startSession(slug);
+        } catch (e) {
+            console.error('Failed to start session:', e);
+        }
         playStartTimeRef.current = Date.now();
         totalPlaytimeRef.current = 0;
         engineRef.current?.start();
         setState('playing');
-    }, [state]);
+    }, [state, slug]);
 
     // Pause/Resume
     const pause = useCallback(() => {
@@ -196,7 +240,12 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
             height: sizeRef.current.height,
             difficulty
         };
-        engine.init(canvas, game, config).then(() => {
+        engine.init(canvas, game, config).then(async () => {
+            try {
+                await statsApi.startSession(slug);
+            } catch (e) {
+                console.error('Failed to start session on restart:', e);
+            }
             playStartTimeRef.current = Date.now();
             totalPlaytimeRef.current = 0;
             engine.start();
@@ -228,7 +277,8 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
 
         // Simple validation - ensure we have something to save
         if (Object.keys(gameState).length === 0) {
-            console.warn('Game state is empty');
+            showToast('Game state is empty', 'error');
+            return;
         }
 
         try {
@@ -236,8 +286,10 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
             const date = new Date().toLocaleDateString(undefined, { hour: '2-digit', minute: '2-digit' });
             await savesApi.create(slug, slot, gameState, `${title} - ${date}`);
             await loadSaves();
+            showToast(`Game saved to slot ${slot}`, 'success');
         } catch (e) {
             console.error('Failed to save:', e);
+            showToast('Failed to save game', 'error');
         }
     };
 
@@ -248,8 +300,10 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
         try {
             engineRef.current.setState(save.data);
             setState('paused');
+            showToast(`Loaded save from slot ${slot}`, 'success');
         } catch (e) {
             console.error('Failed to load:', e);
+            showToast('Failed to load save', 'error');
         }
     };
 
@@ -380,7 +434,7 @@ export function GameCanvas({ slug, title, onGameOver }: Props) {
                         </div>
 
                         <div className="space-y-3">
-                            {[1, 2, 3].map(slot => {
+                            {[1, 2, 3, 4, 5].map(slot => {
                                 const save = saves.find(s => s.slot === slot);
                                 const isEmpty = !save;
 

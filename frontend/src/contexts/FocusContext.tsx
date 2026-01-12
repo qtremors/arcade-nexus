@@ -81,50 +81,33 @@ export function FocusProvider({ children }: { children: ReactNode }) {
     }, [focusedId, items]);
 
     const navigate = (dir: Direction, current: FocusableItem) => {
-        // Get all items in the same group?
-        // Or finding nearest neighbor.
-        // For the "Ribbon" MVP, Left/Right moves in group, Up/Down changes group.
-
         const allItems = Array.from(items.values());
+        const groupItems = allItems.filter(i => i.group === current.group);
 
-        // Filter by group for horizontal nav
+        // Find index in current group
+        const currentIndex = groupItems.findIndex(i => i.id === current.id);
+
         if (dir === 'left' || dir === 'right') {
-            // Sort by ID or DOM position? ID might be random.
-            // Let's rely on registration order or assume the ID contains index like 'game-0', 'game-1'
-            // Better: Let's assume the consumer handles "next/prev" logic? 
-            // No, centralized is better.
-            // Let's try to find DOM nodes to determine order.
+            let nextIndex = dir === 'right' ? currentIndex + 1 : currentIndex - 1;
 
-            // Fallback: If IDs are strictly numeric-suffixed 'item-0', 'item-1'
-            const currentIndex = parseInt(current.id.split('-').pop() || '0');
-            const nextIndex = dir === 'right' ? currentIndex + 1 : currentIndex - 1;
+            // Wrapping
+            if (nextIndex >= groupItems.length) nextIndex = 0;
+            if (nextIndex < 0) nextIndex = groupItems.length - 1;
 
-            const targetId = `${current.id.split('-').slice(0, -1).join('-')}-${nextIndex}`;
-            if (items.has(targetId)) {
-                setFocusedId(targetId);
+            const nextItem = groupItems[nextIndex];
+            if (nextItem) setFocusedId(nextItem.id);
+        }
+
+        // Up/Down changes groups
+        if (dir === 'up') {
+            if (current.group === 'ribbon') {
+                const navItem = allItems.find(i => i.group === 'nav');
+                if (navItem) setFocusedId(navItem.id);
             }
-        }
-
-        // Up/Down changes groups (e.g., Nav -> Ribbon -> Details)
-        // This requires knowing group adjacency. Hardcoded for MVP "Nexus OS" layout:
-        // Nav (top) <-> Ribbon (middle)
-        if (dir === 'up' && current.group === 'ribbon') {
-            // Find any item in 'nav'
-            const navItem = allItems.find(i => i.group === 'nav');
-            if (navItem) setFocusedId(navItem.id);
-        }
-        else if (dir === 'down' && current.group === 'nav') {
-            // Find active or first item in 'ribbon'
-            // We could remember last focused item in group. For now, first ribbon item.
-            // Or try to find 'game-0'
-            const ribbonItem = allItems.find(i => i.group === 'ribbon'); // Just pick one
-            // Better: pick the middle text one.
-            if (ribbonItem) {
-                // Try to recover the ribbon item with index 0
-                const firstParams = ribbonItem.id.split('-');
-                firstParams[firstParams.length - 1] = '0';
-                const firstId = firstParams.join('-');
-                setFocusedId(items.has(firstId) ? firstId : ribbonItem.id);
+        } else if (dir === 'down') {
+            if (current.group === 'nav') {
+                const ribbonItem = allItems.find(i => i.group === 'ribbon');
+                if (ribbonItem) setFocusedId(ribbonItem.id);
             }
         }
     };

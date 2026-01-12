@@ -9,8 +9,7 @@ import { registerGame } from '../sdk';
 // Import games from modular folders
 import { SnakeGame } from './snake';
 import { RaptorRunGame } from './raptor-run';
-import { SpaceRunnerGame } from './stellar-drift';
-import { SkyAceGame } from './sky-ace';
+import { AetherFlightGame } from './aether-flight/AetherFlight';
 
 let registered = false;
 
@@ -21,8 +20,7 @@ export function registerGames(): void {
     // Register each game with its slug (matches backend seed data)
     registerGame('snake', () => new SnakeGame());
     registerGame('raptor-run', () => new RaptorRunGame());
-    registerGame('space-runner', () => new SpaceRunnerGame()); // Changed to match backend slug
-    registerGame('sky-ace', () => new SkyAceGame());
+    registerGame('aether-flight', () => new AetherFlightGame());
 }
 
 // Auto-register on import

@@ -39,7 +39,7 @@ export interface InputState {
 export type GameType = '2d' | '3d';
 
 /** Base interface for all games */
-interface GameInstanceBase<TConfig extends GameConfig = GameConfig> {
+export interface GameInstanceBase {
     /** Game type - '2d' for Canvas, '3d' for Three.js */
     readonly type: GameType;
 
@@ -66,7 +66,7 @@ interface GameInstanceBase<TConfig extends GameConfig = GameConfig> {
 }
 
 /** 2D Canvas game interface */
-export interface Game2DInstance<TConfig extends GameConfig = GameConfig> extends GameInstanceBase<TConfig> {
+export interface Game2DInstance<TConfig extends GameConfig = GameConfig> extends GameInstanceBase {
     readonly type: '2d';
 
     /** Called once when game starts - receives canvas for 2D context */
@@ -77,7 +77,7 @@ export interface Game2DInstance<TConfig extends GameConfig = GameConfig> extends
 }
 
 /** 3D WebGL game interface */
-export interface Game3DInstance<TConfig extends GameConfig = GameConfig> extends GameInstanceBase<TConfig> {
+export interface Game3DInstance<TConfig extends GameConfig = GameConfig> extends GameInstanceBase {
     readonly type: '3d';
 
     /** Called once when game starts - receives canvas for WebGL */

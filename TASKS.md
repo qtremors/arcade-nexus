@@ -1,21 +1,53 @@
-# Arcade Nexus - Task Board
+# Arcade Nexus - Tasks
 
-## 🔴 Critical Priority
-*Action immediately to prevent data loss or crashes.*
+> **Project:** Arcade Nexus  
+> **Version:** 1.2.0  
+> **Last Updated:** 2026-01-12
 
-- [ ] (No critical issues identified)
+---
 
-## 🟠 High Priority
-*Important fixes for performance and maintainability.*
+## 🚧 In Progress
 
-- [ ] (No high priority issues identified)
+### Games
 
-## 🟡 Medium Priority
-*Improvements to code quality and user experience.*
+- [/] **Aether Flight** - 3D flight game (partially implemented)
+  - [x] Three.js scene setup with GLTF loader
+  - [x] Map switching (Earth, Mars, Space)
+  - [x] Basic flight controller with 6-DOF
+  - [x] Keyboard controls fixed
+  - [x] Control hints added
+  - [ ] **Scoring system** - Currently just speed-based placeholder
+  - [ ] **Collision detection** - None implemented
+  - [ ] **Game over condition** - Always returns `true` in update()
 
-- [ ] (No medium priority issues identified)
+---
 
-## 🔵 Low Priority
-*Nice-to-haves and minor cleanups.*
+## 📋 To Do
 
-- [ ] (No low priority issues identified)
+### High Priority
+
+- [ ] Complete Aether Flight game loop
+  - [ ] Add actual game over condition (crash into ground, fly out of bounds)
+  - [ ] Implement proper scoring (distance, time, rings)
+  - [ ] Add collision detection with terrain
+
+### Low Priority
+
+- [ ] Sound effects and background music
+- [ ] Custom profile avatars upload
+- [ ] Game-specific settings persistence
+
+---
+
+## 🏗️ Architecture Notes
+
+### Current Strengths
+- Clean separation between SDK and game implementations
+- Proper async/await patterns in backend
+- Zustand stores are well-structured with caching
+- Both 2D games (Snake, RaptorRun) properly wire difficulty settings
+- Fully offline-capable
+- Toast notification system for user feedback
+- Snake game has visible border for play area
+
+---

@@ -7,10 +7,11 @@ from app.models.game import Game, Category
 from app.models.achievement import Achievement
 
 # Local SVG thumbnails
-SNAKE_THUMBNAIL = "/games/snake.svg"
-RAPTOR_THUMBNAIL = "/games/raptor.svg"
-SPACE_THUMBNAIL = "/games/space.svg"
-SKY_ACE_THUMBNAIL = "/games/sky-ace.svg"
+GAME_ASSETS = {
+    "snake": "/games/snake.svg",
+    "raptor": "/games/raptor.svg",
+    "jet": "/games/aether-flight.svg"
+}
 
 INITIAL_GAMES = [
     {
@@ -18,7 +19,7 @@ INITIAL_GAMES = [
         "title": "Neon Snake",
         "description": "Classic snake game with a cyberpunk twist. Consume data packets to grow longer!",
         "category": Category.ARCADE,
-        "thumbnail": SNAKE_THUMBNAIL,
+        "thumbnail": GAME_ASSETS["snake"],
         "config": {
             "grid_size": 20,
             "initial_speed": 120,
@@ -35,7 +36,7 @@ INITIAL_GAMES = [
         "title": "Raptor Run",
         "description": "Run, jump, and dodge obstacles in this prehistoric endless runner!",
         "category": Category.ACTION,
-        "thumbnail": RAPTOR_THUMBNAIL,
+        "thumbnail": GAME_ASSETS["raptor"],
         "config": {
             "gravity": 1500,
             "jump_force": 600,
@@ -49,39 +50,21 @@ INITIAL_GAMES = [
         ]
     },
     {
-        "slug": "space-runner",
-        "title": "Stellar Drift",
-        "description": "Navigate through asteroid fields in this endless space adventure!",
-        "category": Category.ACTION,
-        "thumbnail": SPACE_THUMBNAIL,
-        "config": {
-            "ship_speed": 300,
-            "asteroid_spawn_rate": 1.5,
-        },
-        "achievements": [
-            {"slug": "first-dodge", "title": "Close Call", "description": "Dodge your first asteroid"},
-            {"slug": "score-500", "title": "Space Cadet", "description": "Score 500 points"},
-            {"slug": "score-1000", "title": "Star Pilot", "description": "Score 1000 points"},
-            {"slug": "score-2500", "title": "Galaxy Commander", "description": "Score 2500 points"},
-        ]
-    },
-    {
-        "slug": "sky-ace",
-        "title": "Sky Ace",
-        "description": "Take to the skies in this high-altitude flight simulator! Master the controls and dominate the clouds.",
+        "slug": "aether-flight",
+        "title": "Aether Flight",
+        "description": "Piloting advanced aircraft across multiple atmospheres. Master 6-DOF flight controls in this high-fidelity simulation.",
         "category": Category.SIMULATION,
-        "thumbnail": SKY_ACE_THUMBNAIL,
+        "thumbnail": GAME_ASSETS["jet"],
         "config": {
-            "world_size": 10000,
-            "max_speed": 400,
-            "rotation_speed": 3.5,
+            "model_path": "/models/Jet.glb",
+            "initial_speed": 50,
         },
         "achievements": [
-            {"slug": "takeoff", "title": "First Flight", "description": "Successfully take off for the first time"},
-            {"slug": "mile-high", "title": "Mile High Club", "description": "Reach a total flight distance of 5000 units"},
-            {"slug": "ace-pilot", "title": "Ace Pilot", "description": "Score 10,000 points in a single flight"},
+            {"slug": "mach-1", "title": "Supersonic", "description": "Reach speed of 340 units"},
+            {"slug": "orbit", "title": "Sub-orbital", "description": "Reach altitude of 5000 units"},
+            {"slug": "ace", "title": "Ace Pilot", "description": "Complete a flight of 10 minutes without crashing"},
         ]
-    },
+    }
 ]
 
 

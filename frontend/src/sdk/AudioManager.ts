@@ -15,11 +15,11 @@ export class AudioManager {
     }
 
     playSfx(id: string): void {
-        console.log(`[Audio] Playing SFX: ${id}`);
+        console.log(`[Audio] Playing SFX: ${id} (vol: ${this.volume})`);
     }
 
     playMusic(id: string): void {
-        console.log(`[Audio] Playing Music: ${id}`);
+        console.log(`[Audio] Playing Music: ${id} (vol: ${this.volume})`);
     }
 
     setVolume(value: number): void {

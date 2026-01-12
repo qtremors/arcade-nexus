@@ -2,6 +2,7 @@
 Arcade Nexus - FastAPI Application
 """
 from contextlib import asynccontextmanager
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import select
@@ -32,6 +33,16 @@ async def lifespan(app: FastAPI):
     # Startup
     await init_db()
     await auto_seed_if_needed()
+    
+    # Security Checks
+    # We check if strict secret key persistence is needed
+    if not os.environ.get("SECRET_KEY"):
+         if not settings.DEBUG:
+            print("⚠️  CRITICAL: SECRET_KEY not found in environment!")
+            print("⚠️  Sessions will NOT persist across restarts. Provide SECRET_KEY in .env for production.")
+         else:
+            print("🔑 Using temporary SECRET_KEY for development (restarts will invalidate sessions).")
+
     print(f"🎮 {settings.APP_NAME} v{settings.APP_VERSION} started!")
     yield
     # Shutdown

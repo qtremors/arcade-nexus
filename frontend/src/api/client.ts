@@ -40,7 +40,7 @@ export interface Game {
   title: string;
   description: string | null;
   thumbnail: string | null;
-  category: 'arcade' | 'puzzle' | 'action' | 'strategy';
+  category: 'arcade' | 'puzzle' | 'action' | 'strategy' | 'simulation';
   version: string;
   is_active: boolean;
   created_at: string;
@@ -208,6 +208,11 @@ export const statsApi = {
 
   getForGame: async (gameSlug: string) => {
     const { data } = await api.get<GameStats>(`/stats/${gameSlug}`);
+    return data;
+  },
+
+  startSession: async (gameSlug: string) => {
+    const { data } = await api.post(`/stats/${gameSlug}/start`);
     return data;
   },
 
