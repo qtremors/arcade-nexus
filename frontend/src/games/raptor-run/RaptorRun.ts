@@ -24,7 +24,6 @@ interface Particle {
 export class RaptorRunGame implements Game2DInstance {
     readonly type = '2d' as const;
 
-    private ctx!: CanvasRenderingContext2D;
     private width = 0;
     private height = 0;
 
@@ -56,14 +55,15 @@ export class RaptorRunGame implements Game2DInstance {
     private dayTime = 0;
     private spawnTimer = 0;
     private spawnInterval = 1500;
+    private difficulty: 'easy' | 'normal' | 'hard' = 'normal';
 
-    init(canvas: HTMLCanvasElement, _config?: GameConfig): void {
-        const context = canvas.getContext('2d');
-        if (!context) throw new Error('Could not get 2D context');
-        this.ctx = context;
+    init(canvas: HTMLCanvasElement, config?: GameConfig): void {
         this.width = canvas.width;
         this.height = canvas.height;
         this.groundY = this.height * 0.8;
+        if (config?.difficulty) {
+            this.difficulty = config.difficulty as 'easy' | 'normal' | 'hard';
+        }
         this.reset();
     }
 
@@ -79,7 +79,17 @@ export class RaptorRunGame implements Game2DInstance {
         this.distance = 0;
         this.gameOver = false;
         this.spawnTimer = 0;
-        this.spawnInterval = 1500;
+
+        // Difficulty adjustments
+        let speedMod = 1.0;
+        let spawnMod = 1.0;
+        switch (this.difficulty) {
+            case 'easy': speedMod = 0.8; spawnMod = 1.2; break;
+            case 'hard': speedMod = 1.2; spawnMod = 0.8; break;
+        }
+
+        this.gameSpeed = this.INITIAL_SPEED * speedMod;
+        this.spawnInterval = 1500 * spawnMod;
     }
 
     update(deltaTime: number, input: InputState): boolean {

@@ -1,37 +1,62 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Rajdhani:wght@400;500;600;700&family=Press+Start+2P&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Rajdhani', sans-serif;
   line-height: 1.5;
-  font-weight: 400;
+  font-weight: 500;
 
   color-scheme: dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #000;
+  color: #ffffff;
+  background-color: #121214;
+  /* Lifted from #020205 */
 
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  /* Design Tokens - Used by App.css */
-  --bg-primary: #0a0a0f;
-  --bg-secondary: #13131a;
-  --bg-card: #1a1a24;
-  --bg-hover: rgba(255, 255, 255, 0.05);
-  --accent-primary: #00f3ff;
-  --accent-secondary: #00cc88;
-  --accent-glow: rgba(0, 243, 255, 0.15);
-  --text-primary: rgba(255, 255, 255, 0.95);
-  --text-secondary: rgba(255, 255, 255, 0.7);
-  --text-muted: rgba(255, 255, 255, 0.4);
-  --border-color: rgba(255, 255, 255, 0.1);
-  --border-radius: 12px;
-  --transition-fast: 150ms ease;
+  /* Premium Console Design Tokens (Solid, High Contrast) */
+  --bg-primary: #121214;
+  /* Deep Charcoal - Main Background */
+  --bg-secondary: #1c1c1f;
+  /* Lighter Charcoal - Secondary Areas */
+  --bg-panel: #252529;
+  /* Solid Panel Background */
+  --bg-card: #202023;
+  /* Card Background */
+  --bg-hover: #2a2a2e;
+  /* Hover State */
+
+  /* Accents - Electrified */
+  --accent-cyan: #00fff2;
+  --accent-blue: #2563eb;
+  --accent-purple: #9333ea;
+
+  /* Mappings for App.css compatibility */
+  --accent-primary: var(--accent-cyan);
+  --accent-secondary: var(--accent-blue);
+
+  --accent-glow: rgba(0, 255, 242, 0.15);
+  /* Slight glow for active states only */
+
   --error: #ef4444;
-  --success: #22c55e;
+
+  --text-primary: #ffffff;
+  --text-secondary: #a1a1aa;
+  /* Light Gray */
+  --text-muted: #52525b;
+  /* Darker Gray */
+
+  --border-color: #27272a;
+  /* Solid Border */
+  --radius-xl: 32px;
+  --radius-lg: 16px;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 body {
@@ -40,31 +65,56 @@ body {
   width: 100vw;
   height: 100vh;
   overflow: hidden;
+  background-color: var(--bg-primary);
+}
+
+/* Console Utilities - Solid & Premium */
+@layer components {
+  .glass-panel {
+    /* Renamed functionality but kept class name for compatibility during refactor */
+    @apply border border-[var(--border-color)] bg-[var(--bg-panel)] shadow-xl;
+  }
+
+  .neon-border-cyan {
+    @apply border-cyan-400;
+    filter: drop-shadow(0 0 10px rgba(34, 211, 238, 0.5));
+  }
+}
+
+/* Global Styles */
+canvas {
+  touch-action: none;
+  user-select: none;
+}
+
+/* Animation Utilities */
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
+  }
 }
 
 /* Hide scrollbars but allow scrolling */
 * {
   scrollbar-width: none;
-  /* Firefox */
   -ms-overflow-style: none;
-  /* IE/Edge */
 }
 
 *::-webkit-scrollbar {
   display: none;
-  /* Chrome/Safari/Opera */
 }
 
-/* Custom Utilities for 3D */
-.perspective-1000 {
-  perspective: 1000px;
-}
 
-.transform-style-3d {
-  transform-style: preserve-3d;
-}
-
-/* Scrollbar hiding for clean UI */
-::-webkit-scrollbar {
-  display: none;
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
 }

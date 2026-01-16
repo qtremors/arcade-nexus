@@ -39,7 +39,7 @@ export interface InputState {
 export type GameType = '2d' | '3d';
 
 /** Base interface for all games */
-interface GameInstanceBase {
+export interface GameInstanceBase {
     /** Game type - '2d' for Canvas, '3d' for Three.js */
     readonly type: GameType;
 
@@ -66,29 +66,29 @@ interface GameInstanceBase {
 }
 
 /** 2D Canvas game interface */
-export interface Game2DInstance extends GameInstanceBase {
+export interface Game2DInstance<TConfig extends GameConfig = GameConfig> extends GameInstanceBase {
     readonly type: '2d';
 
     /** Called once when game starts - receives canvas for 2D context */
-    init(canvas: HTMLCanvasElement, config: GameConfig): void | Promise<void>;
+    init(canvas: HTMLCanvasElement, config: TConfig): void | Promise<void>;
 
     /** Called every frame after update to render (2D context) */
     render(ctx: CanvasRenderingContext2D): void;
 }
 
 /** 3D WebGL game interface */
-export interface Game3DInstance extends GameInstanceBase {
+export interface Game3DInstance<TConfig extends GameConfig = GameConfig> extends GameInstanceBase {
     readonly type: '3d';
 
     /** Called once when game starts - receives canvas for WebGL */
-    init(canvas: HTMLCanvasElement, config: GameConfig): void | Promise<void>;
+    init(canvas: HTMLCanvasElement, config: TConfig): void | Promise<void>;
 
     /** Called every frame after update (3D games handle their own rendering) */
     render(): void;
 }
 
 /** Union type for any game instance */
-export type GameInstance = Game2DInstance | Game3DInstance;
+export type GameInstance<TConfig extends GameConfig = GameConfig> = Game2DInstance<TConfig> | Game3DInstance<TConfig>;
 
 /** Legacy backwards-compatible interface (defaults to 2D) */
 export interface LegacyGameInstance {
@@ -122,7 +122,9 @@ const gameRegistry: Map<string, GameFactory> = new Map();
 /** Register a game with the SDK */
 export function registerGame(slug: string, factory: GameFactory): void {
     gameRegistry.set(slug, factory);
-    console.log(`[GameSDK] Registered game: ${slug}`);
+    if (import.meta.env.DEV) {
+        console.log(`[GameSDK] Registered game: ${slug}`);
+    }
 }
 
 /** Get a game instance by slug */

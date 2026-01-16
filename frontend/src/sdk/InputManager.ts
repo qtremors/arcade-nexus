@@ -72,12 +72,16 @@ export class InputManager {
     }
 
     private handleGamepadConnected(e: GamepadEvent): void {
-        console.log(`[InputManager] Gamepad connected: ${e.gamepad.id}`);
+        if (import.meta.env.DEV) {
+            console.log(`[InputManager] Gamepad connected: ${e.gamepad.id}`);
+        }
         this.gamepadIndex = e.gamepad.index;
     }
 
     private handleGamepadDisconnected(e: GamepadEvent): void {
-        console.log(`[InputManager] Gamepad disconnected: ${e.gamepad.id}`);
+        if (import.meta.env.DEV) {
+            console.log(`[InputManager] Gamepad disconnected: ${e.gamepad.id}`);
+        }
         if (this.gamepadIndex === e.gamepad.index) {
             this.gamepadIndex = null;
         }

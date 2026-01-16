@@ -1,13 +1,9 @@
-/**
- * Library Page - Aether OS
- * Shows games the user has added to their library
- */
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { libraryApi } from '../api/client';
 import type { LibraryEntry } from '../api/client';
-import { AetherGameCard } from '../components/aether/AetherGameCard';
-import { Library as LibraryIcon, Plus, Trash2 } from 'lucide-react';
+import { GameCard } from '../components/arcus/GameCard';
+import { Library as LibraryIcon, Search, Download } from 'lucide-react';
 
 export function Library() {
     const [entries, setEntries] = useState<LibraryEntry[]>([]);
@@ -33,6 +29,8 @@ export function Library() {
 
     const handleRemove = async (gameId: number, e: React.MouseEvent) => {
         e.stopPropagation();
+        if (!confirm('Are you sure you want to remove this CORE from your local storage?')) return;
+
         setRemovingId(gameId);
         try {
             await libraryApi.remove(gameId);
@@ -45,68 +43,83 @@ export function Library() {
     };
 
     if (loading) {
-        return <div className="flex h-full items-center justify-center text-white/50 font-mono">SCANNING MEMORY BANKS...</div>;
+        return (
+            <div className="flex flex-col items-center justify-center h-full gap-6">
+                <div className="w-16 h-16 border-2 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
+                <div className="text-cyan-400 font-mono text-[10px] tracking-widest animate-pulse">Loading games...</div>
+            </div>
+        );
     }
 
     return (
-        <div className="h-full w-full overflow-y-auto p-12 pt-24 pb-32 animate-in fade-in zoom-in-95 duration-500">
-            {/* Header */}
-            <div className="mb-12">
-                <div className="flex items-center gap-4 mb-2">
-                    <LibraryIcon className="text-purple-400" size={48} />
-                    <h1 className="text-6xl font-black uppercase tracking-tighter text-white">Library</h1>
+        <div className="h-full w-full overflow-y-auto px-12 pt-32 pb-32">
+            {/* Header: Command Center Style */}
+            <div className="relative mb-20 flex flex-col md:flex-row md:items-end justify-between gap-8">
+                <div className="flex items-center gap-8">
+                    <div className="w-24 h-24 glass-panel border-cyan-400/30 flex items-center justify-center relative group">
+                        <div className="absolute inset-0 bg-cyan-400/10 blur-xl group-hover:bg-cyan-400/20 transition-all" />
+                        <LibraryIcon className="text-cyan-400 relative z-10" size={40} />
+                    </div>
+                    <div>
+                        <h1 className="text-5xl font-bold text-white tracking-tight leading-none">My Library</h1>
+                        <p className="text-white/40 font-mono text-xs mt-3 tracking-wide">
+                            Stored Games // <span className="text-cyan-400/50">{entries.length} items</span> in your vault
+                        </p>
+                    </div>
                 </div>
-                <p className="text-white/50 font-mono uppercase tracking-widest text-sm pl-16">
-                    Your installed neural experiences.
-                </p>
+
+                {/* Filter/Search Bar Hook */}
+                <div className="flex items-center gap-4">
+                    <div className="glass-panel h-12 px-6 flex items-center gap-3 border-white/5 focus-within:border-cyan-400/30 transition-all">
+                        <Search size={16} className="text-white/20" />
+                        <input
+                            type="text"
+                            placeholder="Search games..."
+                            className="bg-transparent border-none text-white font-mono text-xs placeholder-white/10 focus:outline-none w-48"
+                        />
+                    </div>
+                </div>
             </div>
 
             {entries.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                    <div className="w-24 h-24 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mb-6">
-                        <Plus className="text-white/30" size={40} />
+                <div className="flex flex-col items-center justify-center py-32 glass-panel border-white/5 bg-white/[0.02] rounded-[48px]">
+                    <div className="w-32 h-32 rounded-full glass-panel border-white/5 flex items-center justify-center mb-10 relative">
+                        <div className="absolute inset-0 bg-white/5 blur-3xl" />
+                        <Download className="text-white/10 relative z-10" size={48} />
                     </div>
-                    <h3 className="text-xl font-bold text-white/70 mb-2">Library Empty</h3>
-                    <p className="text-white/40 font-mono text-sm mb-6 max-w-md">
-                        Visit the Store to discover and install neural experiences.
+                    <h3 className="text-2xl font-bold text-white tracking-tight uppercase mb-4">Library Empty</h3>
+                    <p className="text-white/40 font-mono text-[11px] mb-12 max-w-sm text-center leading-relaxed">
+                        No games found in your library. <br /> Add games from the Store to get started.
                     </p>
                     <button
                         onClick={() => navigate('/store')}
-                        className="px-6 py-3 bg-cyan-500 hover:bg-cyan-400 text-white font-bold uppercase tracking-wider rounded-lg transition-colors"
+                        className="glass-panel px-12 py-5 border-cyan-400/50 hover:neon-border-cyan group"
                     >
-                        Browse Store
+                        <span className="text-[10px] font-bold tracking-widest text-cyan-400 group-hover:text-white transition-colors uppercase">Go to Store</span>
                     </button>
                 </div>
             ) : (
-                <>
-                    <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-lg font-mono text-white/50 uppercase tracking-wider">
-                            {entries.length} {entries.length === 1 ? 'Game' : 'Games'} Installed
-                        </h2>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        {entries.map((entry) => (
-                            <div key={entry.id} className="relative group/card">
-                                <AetherGameCard
-                                    game={entry.game}
-                                    variant="library"
-                                    actionLabel="LAUNCH"
-                                    onClick={() => navigate(`/play/${entry.game.slug}`)}
-                                />
-                                {/* Remove button - appears on hover */}
-                                <button
-                                    onClick={(e) => handleRemove(entry.game.id, e)}
-                                    disabled={removingId === entry.game.id}
-                                    className="absolute top-4 right-4 p-2 bg-red-500/80 hover:bg-red-500 text-white rounded-lg opacity-0 group-hover/card:opacity-100 transition-all disabled:opacity-50"
-                                    title="Remove from library"
-                                >
-                                    <Trash2 size={16} />
-                                </button>
-                            </div>
-                        ))}
-                    </div>
-                </>
+                <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+                    {entries.map((entry) => (
+                        <div key={entry.id} className="relative group/card">
+                            <GameCard
+                                game={entry.game}
+                                variant="library"
+                                actionLabel="PLAY"
+                                onClick={() => navigate(`/play/${entry.game.slug}`)}
+                            />
+                            {/* Premium Remove Action */}
+                            <button
+                                onClick={(e) => handleRemove(entry.game.id, e)}
+                                disabled={removingId === entry.game.id}
+                                className="absolute top-6 right-6 w-10 h-10 glass-panel border-red-500/20 hover:border-red-500 hover:bg-red-500/10 text-red-500/50 hover:text-red-500 rounded-full flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-all duration-300 backdrop-blur-md"
+                                title="Terminate Core"
+                            >
+                                <span className="text-[8px] font-black">X</span>
+                            </button>
+                        </div>
+                    ))}
+                </div>
             )}
         </div>
     );

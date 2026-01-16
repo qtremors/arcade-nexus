@@ -41,36 +41,34 @@ export class ErrorBoundary extends Component<Props, State> {
             }
 
             return (
-                <div style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    height: '100%',
-                    padding: '2rem',
-                    textAlign: 'center',
-                    background: 'var(--bg-primary)',
-                    color: 'var(--text-primary)',
-                }}>
-                    <h2 style={{ color: 'var(--error)', marginBottom: '1rem' }}>
-                        Something went wrong
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 backdrop-blur-xl z-[100] p-8 text-center animate-in fade-in duration-700">
+                    <div className="w-24 h-24 rounded-full bg-red-500/10 flex items-center justify-center mb-8 border-2 border-red-500/30 animate-pulse">
+                        <div className="text-red-500 font-bold text-4xl">!</div>
+                    </div>
+
+                    <h2 className="text-4xl font-black mb-2 text-white tracking-widest uppercase italic">
+                        System Panic
                     </h2>
-                    <p style={{ color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                        {this.state.error?.message || 'An unexpected error occurred'}
+                    <p className="text-gray-500 mb-10 max-w-md font-mono text-sm leading-relaxed">
+                        A critical kernel error occurred in the game engine.
+                        State dump has been recorded for calibration.
                     </p>
-                    <button
-                        onClick={this.handleReset}
-                        style={{
-                            padding: '0.75rem 1.5rem',
-                            background: 'var(--accent-primary)',
-                            border: 'none',
-                            borderRadius: '8px',
-                            color: 'white',
-                            cursor: 'pointer',
-                        }}
-                    >
-                        Try Again
-                    </button>
+
+                    <div className="bg-red-950/20 border border-red-500/20 rounded-lg p-6 mb-10 w-full max-w-xl overflow-hidden shadow-[0_0_30px_rgba(239,68,68,0.1)]">
+                        <div className="text-red-500/50 text-[10px] font-mono mb-2 text-left uppercase tracking-tighter">Stack Trace / Exception</div>
+                        <p className="text-red-400 font-mono text-xs text-left whitespace-pre-wrap break-all leading-tight">
+                            {this.state.error?.message || 'NULL_POINTER_RESET'}
+                        </p>
+                    </div>
+
+                    <div className="flex gap-6">
+                        <button
+                            onClick={this.handleReset}
+                            className="px-10 py-4 bg-white text-black font-black uppercase tracking-widest hover:bg-gray-200 transition-all rounded-sm shadow-[4px_4px_0_rgba(255,255,255,0.2)] active:translate-x-1 active:translate-y-1 active:shadow-none"
+                        >
+                            Cold Reboot
+                        </button>
+                    </div>
                 </div>
             );
         }

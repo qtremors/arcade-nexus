@@ -44,14 +44,18 @@ export class GameEngine {
         if (this.is3D) {
             // 3D games manage their own WebGL context
             this.ctx = null;
-            console.log('[GameEngine] Initializing 3D game');
+            if (import.meta.env.DEV) {
+                console.log('[GameEngine] Initializing 3D game');
+            }
         } else {
             // 2D games use Canvas 2D context
             this.ctx = canvas.getContext('2d');
             if (!this.ctx) {
                 throw new Error('Failed to get 2D context from canvas');
             }
-            console.log('[GameEngine] Initializing 2D game');
+            if (import.meta.env.DEV) {
+                console.log('[GameEngine] Initializing 2D game');
+            }
         }
 
         // Initialize the game

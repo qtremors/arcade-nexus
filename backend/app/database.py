@@ -13,8 +13,8 @@ engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.DEBUG,
     future=True,
-    pool_size=5,        # Maximum persistent connections
-    max_overflow=10,    # Maximum additional connections under load
+    pool_size=20,       # Increased for better concurrency
+    max_overflow=30,    # Allow more burst connections
     pool_pre_ping=True  # Verify connections are alive
 )
 

@@ -1,11 +1,13 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { ReactNode } from 'react';
-import { useLocation } from 'react-router-dom';
-import { Settings, Server, CheckCircle, XCircle } from 'lucide-react';
-import { SystemMenu } from './aether/SystemMenu';
+import { useLocation, Outlet, Link } from 'react-router-dom';
+import { Home, ShoppingBag, Library as LibraryIcon, Trophy, LayoutGrid } from 'lucide-react';
+import { SystemMenu } from './arcus/SystemMenu';
+import { Background } from './Background';
+import { useGamepad } from '../hooks/useGamepad';
 
 interface LayoutProps {
-    children: ReactNode;
+    children?: ReactNode;
 }
 
 export function Layout({ children }: LayoutProps) {
@@ -16,7 +18,6 @@ export function Layout({ children }: LayoutProps) {
     // Live clock state
     const [time, setTime] = useState(() => new Date());
 
-    // Update clock every minute
     useEffect(() => {
         const timer = setInterval(() => {
             setTime(new Date());
@@ -40,21 +41,17 @@ export function Layout({ children }: LayoutProps) {
         };
 
         checkBackend();
-        // Check every 30 seconds
         const interval = setInterval(checkBackend, 30000);
         return () => clearInterval(interval);
     }, []);
 
-    const activeColor = "#00f3ff";
-
-    // Close menu on route change
-    useEffect(() => {
-        setMenuOpen(false);
-    }, [location.pathname]);
-
-    // Keyboard shortcuts for menu
+    // Keyboard/Gamepad shortcuts
     const handleKeyDown = useCallback((e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
+        if (e.key === 'Escape') setMenuOpen(prev => !prev);
+    }, []);
+
+    useGamepad((button) => {
+        if (button === 'Start' || button === 'Guide' || button === 'Back') {
             setMenuOpen(prev => !prev);
         }
     }, []);
@@ -64,80 +61,88 @@ export function Layout({ children }: LayoutProps) {
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [handleKeyDown]);
 
+    const isGaming = location.pathname.startsWith('/play') || location.pathname.startsWith('/game');
+
     return (
-        <div className="relative w-full h-screen overflow-hidden bg-black font-sans select-none text-white">
+        <div className="relative w-full h-screen overflow-hidden bg-[var(--bg-primary)] font-sans select-none text-white">
 
-            {/* Dynamic Background */}
-            <div className="absolute inset-0 bg-black z-0">
-                {location.pathname !== '/home' && !location.pathname.startsWith('/play') && (
-                    <div className="absolute inset-0 bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] opacity-50" />
-                )}
-            </div>
+            <Background />
 
-            {/* Top Status Bar */}
-            {!location.pathname.startsWith('/play') && !location.pathname.startsWith('/game') && (
-                <div className={`absolute top-0 left-0 right-0 p-6 flex justify-between items-start z-30 transition-all duration-500 ${menuOpen ? 'blur-sm opacity-50' : 'blur-0 opacity-100'}`}>
-                    <div className="flex gap-6">
-                        <div
-                            className="flex items-center gap-2 text-white/70 hover:text-white cursor-pointer transition-colors"
-                            onClick={() => setMenuOpen(!menuOpen)}
-                        >
-                            <Settings size={20} className={menuOpen ? "animate-spin" : ""} />
-                            <span className="text-xs font-mono tracking-widest hidden sm:block">SYSTEM</span>
+            {/* Premium Header - Console Style */}
+            {!isGaming && (
+                <header className={`absolute top-0 left-0 right-0 h-24 px-12 flex justify-between items-center z-30 transition-all duration-500 ${menuOpen ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
+                    {/* Left: System Status & Branding */}
+                    <div className="flex items-center gap-8">
+                        <div className="flex flex-col">
+                            <span className="text-2xl font-bold tracking-tight text-white">Arcade Nexus</span>
+                            <span className="text-[10px] text-emerald-500 mt-1 uppercase tracking-widest font-bold">Online</span>
                         </div>
+
+                        <nav className="flex gap-4 ml-12">
+                            <Link to="/home" className={`p-2 rounded-xl transition-all ${location.pathname === '/home' ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white'}`}>
+                                <Home size={20} />
+                            </Link>
+                            <Link to="/store" className={`p-2 rounded-xl transition-all ${location.pathname === '/store' ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white'}`}>
+                                <ShoppingBag size={20} />
+                            </Link>
+                            <Link to="/library" className={`p-2 rounded-xl transition-all ${location.pathname === '/library' ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white'}`}>
+                                <LibraryIcon size={20} />
+                            </Link>
+                            <Link to="/achievements" className={`p-2 rounded-xl transition-all ${location.pathname === '/achievements' ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white'}`}>
+                                <Trophy size={20} />
+                            </Link>
+                        </nav>
                     </div>
 
-                    <div className="flex items-center gap-6">
-                        {/* Backend Status */}
-                        <div className={`flex items-center gap-2 ${backendStatus === 'online' ? 'text-green-400' :
-                            backendStatus === 'offline' ? 'text-red-400' : 'text-white/50'
-                            }`}>
-                            {backendStatus === 'online' ? (
-                                <CheckCircle size={14} />
-                            ) : backendStatus === 'offline' ? (
-                                <XCircle size={14} />
-                            ) : (
-                                <Server size={14} className="animate-pulse" />
-                            )}
-                            <span className="text-xs font-mono uppercase">
-                                {backendStatus === 'checking' ? 'Checking...' : backendStatus}
+                    {/* Right: Clock & User Info */}
+                    <div className="flex items-center gap-8">
+                        {/* Backend indicator */}
+                        <div className={`flex items-center gap-2 font-mono text-[10px] ${backendStatus === 'online' ? 'text-green-500' : 'text-red-500'}`}>
+                            <div className={`w-1.5 h-1.5 rounded-full ${backendStatus === 'online' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500 animate-pulse'}`} />
+                            {backendStatus === 'online' ? 'SECURE' : 'OFFLINE'}
+                        </div>
+
+                        {/* Beautiful Clock */}
+                        <div className="flex flex-col items-end">
+                            <span className="text-3xl font-light tracking-widest leading-none text-white">
+                                {time.getHours().toString().padStart(2, '0')}:{time.getMinutes().toString().padStart(2, '0')}
                             </span>
+                            <span className="text-[10px] text-zinc-500 uppercase tracking-tighter mt-1">Clock</span>
                         </div>
 
-                        {/* Clock */}
-                        <div className="text-white font-mono text-xl tracking-widest">
-                            {time.getHours()}:{time.getMinutes().toString().padStart(2, '0')}
-                        </div>
+                        {/* System Button */}
+                        <button
+                            onClick={() => setMenuOpen(!menuOpen)}
+                            className="w-12 h-12 glass-panel rounded-2xl flex items-center justify-center hover:neon-border-cyan transition-all"
+                        >
+                            <LayoutGrid size={20} className={menuOpen ? "animate-spin" : ""} />
+                        </button>
                     </div>
-                </div>
+                </header>
             )}
 
-            {/* Main Content Layer */}
-            <div
-                className={`relative z-10 w-full h-full flex flex-col transition-all duration-300 origin-left
-                ${menuOpen ? 'translate-x-64 scale-95 opacity-50' : 'translate-x-0 scale-100'}
-                ${!location.pathname.startsWith('/play') && !location.pathname.startsWith('/game') ? 'pt-20 px-6 pb-6' : ''}`}
+            {/* Main Interactive Stage */}
+            <main
+                className={`relative z-10 w-full h-full flex flex-col transition-all duration-700 ease-[var(--ease-out-expo)]
+                ${menuOpen ? 'scale-90 opacity-20 pointer-events-none' : 'scale-100 opacity-100'}
+                ${!isGaming ? 'pt-24 pb-8' : ''}`}
             >
-                {children}
-            </div>
+                {children || <Outlet />}
+            </main>
 
-            {/* System Menu Overlay */}
+            {/* System Menu */}
             <SystemMenu
                 isOpen={menuOpen}
-                activeColor={activeColor}
                 onClose={() => setMenuOpen(false)}
             />
 
-            {/* Version Watermark */}
-            {!location.pathname.startsWith('/play') && !location.pathname.startsWith('/game') && (
-                <div className="absolute bottom-6 left-6 z-20 pointer-events-none">
-                    <div className="flex flex-col gap-1">
-                        <div className="w-1 h-20 bg-gradient-to-b from-white/0 via-white/20 to-white/0" />
-                        <div className="text-[10px] text-white/20 font-mono rotate-180" style={{ writingMode: 'vertical-rl' }}>
-                            ARCADE NEXUS // v1.2
-                        </div>
+            {/* Footer Context / Watermark */}
+            {!isGaming && (
+                <footer className="absolute bottom-8 left-12 right-12 flex justify-between items-end z-20 pointer-events-none opacity-10">
+                    <div className="text-[10px] font-mono tracking-widest">
+                        Arcade Nexus v1.2
                     </div>
-                </div>
+                </footer>
             )}
         </div>
     );

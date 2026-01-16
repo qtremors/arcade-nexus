@@ -1,118 +1,133 @@
-/**
- * Dashboard - Aether OS Home Screen
- */
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { gamesApi } from '../api/client';
-import type { Game } from '../api/client';
-import { GameCarousel } from '../components/aether/GameCarousel';
+import { gamesApi, statsApi } from '../api/client';
+import type { Game, GameStats } from '../api/client';
+import { GameCarousel } from '../components/arcus/GameCarousel';
 
-
-// Helper to get theme for current game
 const getGameTheme = (gameId: number) => {
     const themes = [
-        { bg: "linear-gradient(135deg, #0f0c29, #302b63, #24243e)", color: "#00f3ff" },
-        { bg: "linear-gradient(135deg, #200122, #6f0000)", color: "#ff0055" },
-        { bg: "linear-gradient(135deg, #134e5e, #71b280)", color: "#00ff9d" },
-        { bg: "linear-gradient(135deg, #23074d, #cc5333)", color: "#ffaa00" },
-        { bg: "linear-gradient(135deg, #000000, #434343)", color: "#ffffff" },
+        { bg: "#00f3ff", opacity: 0.15 },
+        { bg: "#ff00ff", opacity: 0.15 },
+        { bg: "#00ff88", opacity: 0.15 },
+        { bg: "#ffcc00", opacity: 0.15 },
     ];
     return themes[gameId % themes.length];
 };
 
-
 export function Dashboard() {
     const [games, setGames] = useState<Game[]>([]);
+    const [recentStats, setRecentStats] = useState<GameStats[]>([]);
     const [activeIndex, setActiveIndex] = useState(0);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Initial Load
     useEffect(() => {
-        const loadGames = async () => {
+        const loadData = async () => {
             try {
-                const response = await gamesApi.list();
-                setGames(response.games);
-                // Clamp activeIndex to valid range
-                setActiveIndex(prev => Math.min(prev, Math.max(0, response.games.length - 1)));
+                const [gamesRes, statsRes] = await Promise.all([
+                    gamesApi.list(),
+                    statsApi.getOverall()
+                ]);
+                setGames(gamesRes.games);
+                setRecentStats(statsRes.games);
+                setActiveIndex(0);
             } catch (err) {
-                console.error('Failed to load games:', err);
+                console.error('Failed to load data:', err);
             } finally {
                 setIsLoading(false);
             }
         };
-        loadGames();
+        loadData();
     }, []);
 
-    // Keyboard Nav (Arrow Keys) for Carousel
-    const handleKeyDown = useCallback((e: KeyboardEvent) => {
-        if (games.length === 0) return;
+    const recentGames = useMemo(() => {
+        return recentStats
+            .filter(s => s.last_session)
+            .sort((a, b) => new Date(b.last_session!).getTime() - new Date(a.last_session!).getTime())
+            .slice(0, 5)
+            .map(stat => games.find(g => g.slug === stat.game_slug))
+            .filter((g): g is Game => !!g);
+    }, [recentStats, games]);
 
+    const displayGames = recentGames.length > 0 ? recentGames : games;
+
+    const handleKeyDown = useCallback((e: KeyboardEvent) => {
+        if (displayGames.length === 0) return;
         if (e.key === 'ArrowRight') {
-            setActiveIndex((prev) => (prev + 1) % games.length);
+            setActiveIndex((prev) => (prev + 1) % displayGames.length);
         } else if (e.key === 'ArrowLeft') {
-            setActiveIndex((prev) => (prev - 1 + games.length) % games.length);
+            setActiveIndex((prev) => (prev - 1 + displayGames.length) % displayGames.length);
         }
-    }, [games]);
+    }, [displayGames]);
 
     useEffect(() => {
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
     }, [handleKeyDown]);
 
-    // Memoize theme to prevent recalculation on every render
-    const activeGame = games[activeIndex];
+    const activeGame = displayGames[activeIndex];
     const theme = useMemo(() => {
-        return activeGame ? getGameTheme(activeGame.id) : { bg: 'linear-gradient(135deg, #0f0c29, #302b63)', color: '#00f3ff' };
+        return activeGame ? getGameTheme(activeGame.id) : { bg: '#00f3ff', opacity: 0.15 };
     }, [activeGame]);
 
     if (isLoading) {
-        return <div className="flex items-center justify-center h-full text-white font-mono">INITIALIZING...</div>;
+        return (
+            <div className="flex flex-col items-center justify-center h-full gap-6">
+                <div className="w-16 h-16 border-2 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
+                <div className="text-cyan-400 font-pixel text-[10px] tracking-widest animate-pulse">CONNECTING TO NEXUS...</div>
+            </div>
+        );
     }
 
-    if (games.length === 0) {
-        return <div className="flex items-center justify-center h-full text-white font-mono">NO GAMES FOUND</div>;
+    if (displayGames.length === 0) {
+        return <div className="flex items-center justify-center h-full text-zinc-600 font-mono tracking-[1em]">NO DATA FOUND</div>;
     }
 
     return (
-        <div className="relative w-full h-full flex flex-col justify-center">
-            {/* Dynamic Ambient Background - Optimized with CSS transitions */}
+        <div className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden">
+            {/* Immersive Ambient Glow */}
+            {/* Immersive Ambient Glow - Subtle & Solid feel */}
             <div
-                className="fixed inset-0 transition-[background] duration-700 ease-out z-[-1]"
-                style={{ background: theme.bg }}
-            >
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent" />
-                <div className="absolute inset-0 bg-black/20" />
-            </div>
-
-            <GameCarousel
-                games={games}
-                activeIndex={activeIndex}
-                onSelect={setActiveIndex}
+                className="fixed inset-0 transition-opacity duration-1000 ease-in-out z-[-1] opacity-50"
+                style={{
+                    background: `radial-gradient(circle at 50% 50%, ${theme.bg}40 0%, transparent 60%)`,
+                }}
             />
 
-            {/* Navigation Hints */}
-            <div className="absolute bottom-12 left-0 right-0 flex justify-center items-center gap-8 text-white/30 z-20">
-                <button
-                    className="flex items-center gap-2 hover:text-white transition-colors group"
-                    onClick={() => setActiveIndex((prev) => (prev - 1 + games.length) % games.length)}
-                >
-                    <div className="px-3 py-1 border border-white/20 rounded-lg text-xs font-mono group-hover:border-white">←</div>
-                </button>
-
-                <div className="flex gap-2">
-                    {games.map((g, i) => (
+            <div className="w-full flex flex-col items-center gap-12">
+                <div className="flex flex-col items-center gap-2">
+                    <span className="text-[10px] font-pixel text-zinc-500 tracking-widest uppercase italic">Select Experience</span>
+                    <div className="w-12 h-1 bg-zinc-800 rounded-full overflow-hidden">
                         <div
-                            key={g.id}
-                            className={`w-12 h-1 rounded-full transition-all duration-300 ${i === activeIndex ? 'bg-white' : 'bg-white/10'}`}
+                            className="h-full bg-cyan-400 transition-all duration-500 ease-out"
+                            style={{ width: `${((activeIndex + 1) / displayGames.length) * 100}%` }}
                         />
-                    ))}
+                    </div>
                 </div>
 
-                <button
-                    className="flex items-center gap-2 hover:text-white transition-colors group"
-                    onClick={() => setActiveIndex((prev) => (prev + 1) % games.length)}
-                >
-                    <div className="px-3 py-1 border border-white/20 rounded-lg text-xs font-mono group-hover:border-white">→</div>
-                </button>
+                <GameCarousel
+                    games={displayGames}
+                    activeIndex={activeIndex}
+                    onSelect={setActiveIndex}
+                />
+
+                {/* Navigation Hint */}
+                <div className="flex items-center gap-12 text-zinc-600">
+                    <div className="flex flex-col items-end gap-1">
+                        <span className="text-[9px] font-mono tracking-widest">PREV</span>
+                        <div className="w-8 h-[1px] bg-zinc-800" />
+                    </div>
+                    <div className="flex gap-4">
+                        {displayGames.map((_, i) => (
+                            <div
+                                key={i}
+                                className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ${i === activeIndex ? 'bg-cyan-400 scale-125 shadow-lg shadow-cyan-500/50' : 'bg-zinc-800'}`}
+                            />
+                        ))}
+                    </div>
+                    <div className="flex flex-col items-start gap-1">
+                        <span className="text-[9px] font-mono tracking-widest">NEXT</span>
+                        <div className="w-8 h-[1px] bg-zinc-800" />
+                    </div>
+                </div>
             </div>
         </div>
     );

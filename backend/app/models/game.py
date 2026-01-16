@@ -20,6 +20,7 @@ class Category(str, PyEnum):
     PUZZLE = "puzzle"
     ACTION = "action"
     STRATEGY = "strategy"
+    SIMULATION = "simulation"
 
 
 class Game(Base):
@@ -43,6 +44,7 @@ class Game(Base):
     saves = relationship("GameSave", back_populates="game", cascade="all, delete-orphan")
     stats = relationship("PlayStats", back_populates="game", cascade="all, delete-orphan")
     achievements = relationship("Achievement", back_populates="game", cascade="all, delete-orphan")
+    sessions = relationship("GameSession", back_populates="game", cascade="all, delete-orphan")
     
     def __repr__(self) -> str:
         return f"<Game(id={self.id}, slug='{self.slug}', title='{self.title}')>"

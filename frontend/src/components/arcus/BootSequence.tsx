@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Cpu } from 'lucide-react';
+import { AudioManager } from '../../sdk/AudioManager';
 
 interface BootSequenceProps {
     onComplete: () => void;
@@ -9,6 +10,9 @@ export function BootSequence({ onComplete }: BootSequenceProps) {
     const [stage, setStage] = useState(0);
 
     useEffect(() => {
+        // Play boot sound
+        AudioManager.getInstance().playBoot();
+
         // Timeline of the boot animation
         // Adjusted timing for a snappy feel
         const t1 = setTimeout(() => setStage(1), 500); // Line expand

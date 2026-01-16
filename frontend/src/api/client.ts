@@ -40,7 +40,7 @@ export interface Game {
   title: string;
   description: string | null;
   thumbnail: string | null;
-  category: 'arcade' | 'puzzle' | 'action' | 'strategy';
+  category: 'arcade' | 'puzzle' | 'action' | 'strategy' | 'simulation';
   version: string;
   is_active: boolean;
   created_at: string;
@@ -71,6 +71,17 @@ export interface GameStats {
   sessions_count: number;
   high_score: number;
   last_session: string | null;
+}
+
+export interface GameSession {
+  id: number;
+  game_slug: string;
+  game_title: string;
+  start_time: string;
+  end_time: string;
+  duration_seconds: number;
+  score: number;
+  difficulty?: string;
 }
 
 export interface OverallStats {
@@ -211,9 +222,16 @@ export const statsApi = {
     return data;
   },
 
-  recordSession: async (gameSlug: string, playtimeSeconds: number) => {
+  startSession: async (gameSlug: string) => {
+    const { data } = await api.post(`/stats/${gameSlug}/start`);
+    return data;
+  },
+
+  recordSession: async (gameSlug: string, playtimeSeconds: number, score: number, difficulty?: string) => {
     const { data } = await api.post(`/stats/${gameSlug}/session`, {
       playtime_seconds: playtimeSeconds,
+      score,
+      difficulty
     });
     return data;
   },
@@ -223,6 +241,12 @@ export const statsApi = {
       `/stats/${gameSlug}/score`,
       { score }
     );
+    return data;
+  },
+
+  getHistory: async (gameId?: number) => {
+    const params = gameId ? { game_id: gameId } : {};
+    const { data } = await api.get<GameSession[]>('/stats/sessions', { params });
     return data;
   },
 };
