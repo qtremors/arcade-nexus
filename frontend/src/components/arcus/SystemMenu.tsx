@@ -34,18 +34,18 @@ export function SystemMenu({ isOpen, onClose }: SystemMenuProps) {
 
     return (
         <div
-            className={`fixed inset-0 z-50 flex justify-end transition-all duration-500 ${isOpen ? 'bg-black/40 backdrop-blur-sm' : 'pointer-events-none'}`}
+            className={`fixed inset-0 z-50 flex justify-end transition-all duration-500 ${isOpen ? 'bg-black/80' : 'pointer-events-none'}`}
             onClick={onClose}
         >
             <div
-                className={`w-96 glass-panel h-full transform transition-transform duration-700 ease-[var(--ease-out-expo)] flex flex-col p-10 border-l border-white/10 ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+                className={`w-96 bg-[#161618] h-full transform transition-transform duration-700 ease-[var(--ease-out-expo)] flex flex-col p-10 border-l border-zinc-800 shadow-2xl ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
                 onClick={e => e.stopPropagation()}
             >
                 {/* Header: User Profile Segment */}
-                <div className="flex flex-col items-center gap-6 mb-12 py-6 border-b border-white/5">
+                <div className="flex flex-col items-center gap-6 mb-12 py-6 border-b border-zinc-800">
                     <div className="relative group">
-                        <div className="absolute -inset-4 bg-cyan-400/20 rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <div className="w-24 h-24 rounded-full glass-panel border-white/20 overflow-hidden flex items-center justify-center text-5xl relative z-10 shadow-[0_0_30px_rgba(0,243,255,0.1)]">
+                        <div className="absolute -inset-4 bg-cyan-900/40 rounded-full blur-xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                        <div className="w-24 h-24 rounded-full bg-zinc-800 border-2 border-zinc-700 overflow-hidden flex items-center justify-center text-5xl relative z-10 shadow-lg">
                             {activeProfile?.avatar || '👤'}
                         </div>
                     </div>
@@ -55,8 +55,8 @@ export function SystemMenu({ isOpen, onClose }: SystemMenuProps) {
                             {activeProfile?.username?.toUpperCase() || 'ANONYMOUS'}
                         </h3>
                         <div className="flex items-center justify-center gap-2 mt-2">
-                            <div className="w-2 h-2 rounded-full bg-cyan-400 shadow-[0_0_10px_#00f3ff]" />
-                            <span className="text-[10px] text-cyan-400 uppercase">Active</span>
+                            <div className="w-2 h-2 rounded-full bg-cyan-500 shadow-sm shadow-cyan-500" />
+                            <span className="text-[10px] text-cyan-500 uppercase">Active</span>
                         </div>
                     </div>
                 </div>
@@ -75,10 +75,10 @@ export function SystemMenu({ isOpen, onClose }: SystemMenuProps) {
                                     handleNav(item.path);
                                 }}
                                 onMouseEnter={() => AudioManager.getInstance().playHover()}
-                                className={`group flex items-center gap-5 w-full p-4 rounded-2xl transition-all border
+                                className={`group flex items-center gap-5 w-full p-4 rounded-xl transition-all border
                                     ${isActive
-                                        ? 'bg-white/10 border-cyan-400/30 text-white shadow-[0_0_20px_rgba(0,243,255,0.1)]'
-                                        : 'border-transparent text-white/30 hover:text-white hover:bg-white/5'
+                                        ? 'bg-zinc-800 border-cyan-500/50 text-white shadow-lg shadow-cyan-900/20'
+                                        : 'border-transparent text-zinc-500 hover:text-white hover:bg-zinc-800/50'
                                     }`}
                             >
                                 <Icon size={20} className={`transition-colors ${isActive ? 'text-cyan-400' : 'group-hover:text-cyan-400'}`} />
@@ -94,13 +94,13 @@ export function SystemMenu({ isOpen, onClose }: SystemMenuProps) {
                 </div>
 
                 {/* Footer Actions */}
-                <div className="pt-10 border-t border-white/5 flex flex-col gap-4">
-                    <div className="flex items-center justify-between text-[10px] font-mono text-white/20 px-2">
+                <div className="pt-10 border-t border-zinc-800 flex flex-col gap-4">
+                    <div className="flex items-center justify-between text-[10px] font-mono text-zinc-600 px-2">
                         <span>LATENCY</span>
-                        <span className="text-cyan-400/50">12MS</span>
+                        <span className="text-emerald-500">12MS</span>
                     </div>
 
-                    <button onClick={() => navigate('/settings')} className="flex items-center gap-3 text-white/30 hover:text-white transition-all px-2 group">
+                    <button onClick={() => navigate('/settings')} className="flex items-center gap-3 text-zinc-500 hover:text-white transition-all px-2 group">
                         <SettingsIcon size={16} className="group-hover:rotate-90 transition-transform duration-500" />
                         <span className="text-[10px] font-bold tracking-widest uppercase">Settings</span>
                     </button>

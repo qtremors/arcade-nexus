@@ -16,7 +16,7 @@ class Settings(BaseSettings):
     
     # App
     APP_NAME: str = "Arcade Nexus"
-    APP_VERSION: str = "1.2.0"
+    APP_VERSION: str = "1.4.0"
     DEBUG: bool = True
     
     # Database

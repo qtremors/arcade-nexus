@@ -78,23 +78,24 @@ export function Dashboard() {
     }
 
     if (displayGames.length === 0) {
-        return <div className="flex items-center justify-center h-full text-white/20 font-mono tracking-[1em]">NO DATA FOUND</div>;
+        return <div className="flex items-center justify-center h-full text-zinc-600 font-mono tracking-[1em]">NO DATA FOUND</div>;
     }
 
     return (
         <div className="relative w-full h-full flex flex-col items-center justify-center overflow-hidden">
             {/* Immersive Ambient Glow */}
+            {/* Immersive Ambient Glow - Subtle & Solid feel */}
             <div
-                className="fixed inset-0 transition-colors duration-1000 ease-in-out z-[-1]"
+                className="fixed inset-0 transition-opacity duration-1000 ease-in-out z-[-1] opacity-50"
                 style={{
-                    background: `radial-gradient(circle at 50% 50%, ${theme.bg}22 0%, transparent 70%)`,
+                    background: `radial-gradient(circle at 50% 50%, ${theme.bg}40 0%, transparent 60%)`,
                 }}
             />
 
             <div className="w-full flex flex-col items-center gap-12">
                 <div className="flex flex-col items-center gap-2">
-                    <span className="text-[10px] font-pixel text-white/30 tracking-widest uppercase italic">Select Experience</span>
-                    <div className="w-12 h-1 bg-white/10 rounded-full overflow-hidden">
+                    <span className="text-[10px] font-pixel text-zinc-500 tracking-widest uppercase italic">Select Experience</span>
+                    <div className="w-12 h-1 bg-zinc-800 rounded-full overflow-hidden">
                         <div
                             className="h-full bg-cyan-400 transition-all duration-500 ease-out"
                             style={{ width: `${((activeIndex + 1) / displayGames.length) * 100}%` }}
@@ -109,22 +110,22 @@ export function Dashboard() {
                 />
 
                 {/* Navigation Hint */}
-                <div className="flex items-center gap-12 text-white/20">
+                <div className="flex items-center gap-12 text-zinc-600">
                     <div className="flex flex-col items-end gap-1">
                         <span className="text-[9px] font-mono tracking-widest">PREV</span>
-                        <div className="w-8 h-[1px] bg-white/10" />
+                        <div className="w-8 h-[1px] bg-zinc-800" />
                     </div>
                     <div className="flex gap-4">
                         {displayGames.map((_, i) => (
                             <div
                                 key={i}
-                                className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ${i === activeIndex ? 'bg-cyan-400 scale-125 shadow-[0_0_8px_#00f3ff]' : 'bg-white/10'}`}
+                                className={`w-1.5 h-1.5 rounded-full transition-all duration-500 ${i === activeIndex ? 'bg-cyan-400 scale-125 shadow-lg shadow-cyan-500/50' : 'bg-zinc-800'}`}
                             />
                         ))}
                     </div>
                     <div className="flex flex-col items-start gap-1">
                         <span className="text-[9px] font-mono tracking-widest">NEXT</span>
-                        <div className="w-8 h-[1px] bg-white/10" />
+                        <div className="w-8 h-[1px] bg-zinc-800" />
                     </div>
                 </div>
             </div>

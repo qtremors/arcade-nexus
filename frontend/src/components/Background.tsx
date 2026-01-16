@@ -1,9 +1,9 @@
 export function Background() {
     return (
         <div
-            className="fixed inset-0 z-0 bg-[#0a0a0f] pointer-events-none"
+            className="fixed inset-0 z-0 bg-[var(--bg-primary)] pointer-events-none"
             style={{
-                background: 'radial-gradient(circle at center, #10101a 0%, #050508 100%)'
+                background: 'radial-gradient(circle at center, var(--bg-secondary) 0%, var(--bg-primary) 100%)'
             }}
         />
     );

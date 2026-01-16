@@ -1,8 +1,19 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus  
-> **Version:** 1.3.1  
-> **Last Updated:** 2026-01-12
+> **Version:** 1.4.0  
+> **Last Updated:** 2026-01-16
+
+---
+
+## [1.4.0] - 2026-01-16
+
+### Changed
+- **Premium Console Theme**: Complete redesign from transparency/glassmorphism to a solid "Premium Console" aesthetic (Charcoal/Zinc/Cyan).
+- **Game Cards**: Replaced full-image gradient cards with a structured Split-View layout (Image Top / Solid Info Panel Bottom) for better readability.
+- **System Menu**: Updated to a solid slate sidebar with crisp borders and high-contrast styling.
+- **Global Palette**: Abandoned `#020205` (void black) for richer `#121214` (deep charcoal) to reduce visual fatigue and increase premium feel.
+- **Removed**: All blur filters and glassmorphism effects have been removed to prioritize performance and visual clarity.
 
 ---
 

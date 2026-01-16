@@ -129,8 +129,8 @@ function App() {
   // Initializing
   if (appState === 'initializing') {
     return (
-      <div className="app-root bg-black flex items-center justify-center">
-        <div className="text-white/30 font-mono text-sm">INITIALIZING...</div>
+      <div className="app-root bg-[#121214] flex items-center justify-center">
+        <div className="text-zinc-500 font-mono text-sm">INITIALIZING...</div>
       </div>
     );
   }
@@ -138,17 +138,17 @@ function App() {
   // Backend offline
   if (appState === 'offline') {
     return (
-      <div className="app-root bg-gradient-to-br from-[#0f0c29] via-[#302b63] to-[#24243e] flex items-center justify-center">
+      <div className="app-root bg-zinc-900 flex items-center justify-center">
         <div className="text-center max-w-md p-8">
-          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-red-500/10 flex items-center justify-center">
+          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-red-900/20 flex items-center justify-center">
             <Server className="text-red-400" size={40} />
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">Backend Offline</h1>
-          <p className="text-white/50 mb-6">
+          <p className="text-zinc-500 mb-6">
             Cannot connect to the Arcade Nexus backend server.
             Please start the backend and try again.
           </p>
-          <div className="text-xs font-mono text-white/30 mb-6 p-4 bg-black/30 rounded-lg text-left">
+          <div className="text-xs font-mono text-zinc-600 mb-6 p-4 bg-black rounded-lg text-left">
             <p className="mb-2">Run this command:</p>
             <code className="text-cyan-400">cd backend && uv run uvicorn app.main:app --reload</code>
           </div>
