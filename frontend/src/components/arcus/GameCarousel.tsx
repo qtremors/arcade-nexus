@@ -4,15 +4,7 @@ import { Play } from 'lucide-react';
 import { statsApi } from '../../api/client';
 import type { Game, GameStats } from '../../api/client';
 import { useGamepad } from '../../hooks/useGamepad';
-
-const formatPlaytime = (seconds: number) => {
-    if (seconds === 0) return '--';
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    if (hours > 0) return `${hours}h ${mins}m`;
-    if (mins > 0) return `${mins}m`;
-    return `${seconds}s`;
-};
+import { formatPlaytime } from '../../utils/formatting';
 
 interface GameCarouselProps {
     games: Game[];
@@ -25,6 +17,7 @@ export function GameCarousel({ games, activeIndex, onSelect }: GameCarouselProps
     const [gameStats, setGameStats] = useState<Record<string, GameStats>>({});
 
     useGamepad((button) => {
+        if (games.length === 0) return;
         if (button === 'Left') {
             onSelect((activeIndex - 1 + games.length) % games.length);
         } else if (button === 'Right') {

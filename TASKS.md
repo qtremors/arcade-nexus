@@ -1,7 +1,7 @@
 # Arcade Nexus - Tasks
 
 > **Project:** Arcade Nexus  
-> **Version:** 1.4.0
+> **Version:** 1.4.1
 > **Last Updated:** 2026-02-11
 
 ---
@@ -21,12 +21,11 @@
 ### 🟡 High Priority
 
 #### Dead & Unused Code
-- [ ] **Unused Import in games.py**: `import re` (line 4) is never used—remove it.
-- [ ] **Duplicate `utc_now()` Functions**: Defined in `user.py`, `game.py`, and `stats.py`. Extract to `utils/datetime.py` for DRY.
-- [ ] **Duplicate `formatPlaytime()` Function**: Defined in both `utils/formatting.ts` (canonical) and inline in `GameCarousel.tsx` (with slightly different logic). Remove the inline duplicate.
-- [ ] **Legacy `add_column.py`**: Standalone migration script in backend root—consider removing or integrating into migrations.
-- [ ] **AtmosphereOverlay.tsx Empty Export**: File contains only `export {};`—dead code that should be removed.
-- [ ] **`LegacyGameInstance` Unused**: The legacy game interface in `GameSDK.ts` and `is2DGame` fallback are never used by any game. Remove dead abstraction.
+- [x] **Unused Import in games.py**: `import re` (line 4) is never used—remove it.
+- [x] **Duplicate `utc_now()` Functions**: Defined in 6+ model files. Extracted to `app/datetime_utils.py` for DRY.
+- [x] **Duplicate `formatPlaytime()` Function**: Defined in both `utils/formatting.ts` (canonical) and inline in `GameCarousel.tsx`. Removed the inline duplicate.
+- [x] **Legacy `add_column.py`**: Standalone migration script in backend root—removed.
+- [x] **AtmosphereOverlay.tsx Dead Code**: Component returned `null` with zero imports—removed.
 
 #### Code Quality Issues
 - [ ] **Profile.tsx is 718 lines**: Extract components (RadarChart, TinyLineChart, SystemBar, modals) into separate files for maintainability.
@@ -35,10 +34,10 @@
   - Lines 479-485: Storage values (`4.2 GB`, `72%`) are static
   - Line 400: Firmware version hardcoded
   - Line 241: `skillMatrix.LUCK` uses `Math.random()` — changes every render
-- [ ] **Old Log Name**: `StellarFlight.ts:77` logs `[AetherFlight]` instead of `[StellarFlight]`.
+- [x] **Old Log Name**: `StellarFlight.ts:77` logs `[AetherFlight]` instead of `[StellarFlight]`—fixed.
 - [ ] **Missing Error Boundaries**: Pages lack error boundaries for component-level errors.
 - [ ] **`useGamepad` Hook Stale Closure Risk**: `useGamepad.ts` passes raw `deps` array to `useEffect` bypassing ESLint `exhaustive-deps`. Callback not in deps can cause stale closures.
-- [ ] **`@types/three` in Production Dependencies**: Type-only dev dependency listed under `dependencies` in `package.json`. Move to `devDependencies`.
+- [x] **`@types/three` in Production Dependencies**: Type-only dev dependency moved to `devDependencies` in `package.json`.
 
 #### API Design
 - [ ] **Inconsistent API Response Types**: Some endpoints return raw objects, others return wrapped responses (`{ message, entry }`). Standardize.
@@ -94,22 +93,22 @@
 ### 🐇 PR Review Feedback (CodeRabbit)
 
 #### Critical Fixes
-- [ ] **Unsafe Debug Default**: `backend/app/config.py`: Change `DEBUG` default to `False` and load from env `DEBUG`.
-- [ ] **Unsafe API Defaults**: `backend/app/routers/stats.py`: Remove dangerous `= None` defaults for dependencies. Use `Query(50, ge=1)` for limit. Fix `response_model`.
-- [ ] **React Hook Rules**: `frontend/src/components/SessionHistoryModal.tsx`: Move early return `if (!isOpen)` below hooks to prevent order violations.
+- [x] **Unsafe Debug Default**: `backend/app/config.py`: Changed `DEBUG` default to `False`.
+- [x] **Unsafe API Defaults**: `backend/app/routers/stats.py`: Removed dangerous `= ...` defaults for dependencies.
+- [x] **React Hook Rules**: `frontend/src/components/SessionHistoryModal.tsx`: Moved early return below hooks.
 - [ ] **Infinite Retry Block**: `frontend/src/App.tsx`: `profileStore.initialize()` short-circuits if already init (even if failed). Add `force=true` param to allow retries.
 
 #### Quality & Logic
 - [ ] **Raptor Run Difficulty Reset**: `frontend/src/games/raptor-run/RaptorRun.ts`: Modifiers are overwritten in `update()`. Persist `speedModifier`/`spawnModifier` in class fields.
 - [ ] **AudioManager Race Condition**: `frontend/src/sdk/AudioManager.ts`: `playBoot()` checks `ctx` before `init()`. Move `init()` call up.
-- [ ] **Gamepad Crash**: `frontend/src/components/arcus/GameCarousel.tsx`: Guard against empty `games` array in gamepad handler to prevent NaN/crash.
+- [x] **Gamepad Crash**: `frontend/src/components/arcus/GameCarousel.tsx`: Added guard for empty `games` array.
 
 #### Testing & Tooling
 - [ ] **Vitest Setup**: `frontend/src/__tests__/setup.ts`: Add `vitest.config.ts`, include setup file, use `vitest` compatible `jest-dom` import.
 
 #### Accessibility & UX
 - [ ] **GameCard Keyboard Support**: `frontend/src/components/arcus/GameCard.tsx`: Add `tabIndex={0}`, `role="button"`, `onKeyDown` (Space/Enter). Add ARIA labels.
-- [ ] **Prod Error Leaks**: `frontend/src/components/ErrorBoundary.tsx`: Only show raw error message in `dev`. Show 'SYSTEM_PANIC' in prod.
+- [x] **Prod Error Leaks**: `frontend/src/components/ErrorBoundary.tsx`: Raw error hidden in production.
 
 ---
 
@@ -135,7 +134,7 @@
 - Add indexes for frequently queried columns (`last_played`, `last_session`).
 
 ### Code Consistency
-- Standardize datetime handling (all should use `timezone.utc`).
+- ~~Standardize datetime handling~~ — Consolidated to `app/datetime_utils.py`.
 - Unify error handling patterns across routers.
 - Add ESLint rules for import ordering.
 

@@ -25,8 +25,6 @@ export function SessionHistoryModal({
     loading = false,
     initialSort = 'date'
 }: SessionHistoryModalProps & { initialSort?: 'date' | 'score' | 'duration' }) {
-    if (!isOpen) return null;
-
     const [sortConfig, setSortConfig] = useState<{ key: keyof GameSession; direction: 'asc' | 'desc' }>({
         key: initialSort === 'score' ? 'score' : initialSort === 'duration' ? 'duration_seconds' : 'end_time',
         direction: 'desc'
@@ -83,6 +81,8 @@ export function SessionHistoryModal({
         window.addEventListener('keydown', handleEsc);
         return () => window.removeEventListener('keydown', handleEsc);
     }, [onClose]);
+
+    if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">

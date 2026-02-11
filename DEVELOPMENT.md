@@ -2,7 +2,7 @@
 
 > Comprehensive documentation for developers working on Arcade Nexus.
 
-**Version:** 1.4.0 | **Last Updated:** 2026-01-16
+**Version:** 1.4.1 | **Last Updated:** 2026-02-11
 
 ---
 

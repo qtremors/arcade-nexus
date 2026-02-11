@@ -93,8 +93,8 @@ async def get_overall_stats(
 @router.get("/sessions", response_model=list)
 async def get_session_history(
     game_id: int | None = None,
-    current_user: Annotated[User, Depends(get_default_user)] = ...,
-    db: Annotated[AsyncSession, Depends(get_db)] = ...,
+    current_user: Annotated[User, Depends(get_default_user)] = None,
+    db: Annotated[AsyncSession, Depends(get_db)] = None,
     limit: int = Query(50, ge=1, le=200)
 ):
     """Get detailed session history."""

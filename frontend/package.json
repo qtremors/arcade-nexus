@@ -1,7 +1,7 @@
 {
   "name": "frontend",
   "private": true,
-  "version": "1.4.0",
+  "version": "1.4.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@types/three": "^0.181.0",
     "axios": "^1.13.2",
     "framer-motion": "^12.23.25",
     "lucide-react": "^0.556.0",
@@ -22,6 +21,7 @@
     "zustand": "^5.0.9"
   },
   "devDependencies": {
+    "@types/three": "^0.181.0",
     "@eslint/js": "^9.39.1",
     "@types/node": "^24.10.2",
     "@types/react": "^19.2.5",

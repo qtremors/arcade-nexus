@@ -1,17 +1,13 @@
 """
 Game Model
 """
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import Enum as PyEnum
 from sqlalchemy import String, DateTime, Boolean, Text, Enum, JSON
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-
-
-def utc_now() -> datetime:
-    """Get current UTC time as timezone-aware datetime."""
-    return datetime.now(timezone.utc)
+from app.datetime_utils import utc_now
 
 
 class Category(str, PyEnum):

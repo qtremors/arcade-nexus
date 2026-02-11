@@ -16,8 +16,8 @@ class Settings(BaseSettings):
     
     # App
     APP_NAME: str = "Arcade Nexus"
-    APP_VERSION: str = "1.4.0"
-    DEBUG: bool = True
+    APP_VERSION: str = "1.4.1"
+    DEBUG: bool = False
     
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./arcade_nexus.db"

@@ -57,7 +57,9 @@ export class ErrorBoundary extends Component<Props, State> {
                     <div className="bg-red-950/20 border border-red-500/20 rounded-lg p-6 mb-10 w-full max-w-xl overflow-hidden shadow-[0_0_30px_rgba(239,68,68,0.1)]">
                         <div className="text-red-500/50 text-[10px] font-mono mb-2 text-left uppercase tracking-tighter">Stack Trace / Exception</div>
                         <p className="text-red-400 font-mono text-xs text-left whitespace-pre-wrap break-all leading-tight">
-                            {this.state.error?.message || 'NULL_POINTER_RESET'}
+                            {import.meta.env.DEV
+                                ? (this.state.error?.message || 'NULL_POINTER_RESET')
+                                : 'SYSTEM_PANIC — Error details hidden in production mode.'}
                         </p>
                     </div>
 

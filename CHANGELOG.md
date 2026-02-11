@@ -1,8 +1,30 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus  
-> **Version:** 1.4.0  
-> **Last Updated:** 2026-01-16
+> **Version:** 1.4.1  
+> **Last Updated:** 2026-02-11
+
+---
+
+## [1.4.1] - 2026-02-11
+
+### Fixed
+- **Security**: `DEBUG` now defaults to `False` in `config.py` (was `True`).
+- **Security**: Removed unsafe `= ...` dependency defaults in `stats.py` session history endpoint.
+- **React Hooks**: Fixed Rules of Hooks violation in `SessionHistoryModal.tsx` — early return was before hook calls.
+- **Prod Error Leak**: `ErrorBoundary.tsx` now hides raw error messages in production builds.
+- **Gamepad Crash**: Added guard for empty `games` array in `GameCarousel.tsx` gamepad handler.
+- **Log Name**: Fixed `[AetherFlight]` → `[StellarFlight]` in `StellarFlight.ts`.
+
+### Removed
+- Unused `import re` from `games.py`.
+- Duplicate `formatPlaytime()` from `GameCarousel.tsx` (canonical version in `utils/formatting.ts`).
+- Dead `AtmosphereOverlay.tsx` component (returned `null`, zero imports).
+- Legacy `add_column.py` migration script.
+
+### Changed
+- **DRY**: Extracted duplicate `utc_now()` from 6 model files into `app/datetime_utils.py`.
+- **Dependencies**: Moved `@types/three` from `dependencies` to `devDependencies` in frontend `package.json`.
 
 ---
 

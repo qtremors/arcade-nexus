@@ -7,7 +7,7 @@ from sqlalchemy import ForeignKey, DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
-from app.models.stats import utc_now
+from app.datetime_utils import utc_now
 
 
 class GameSession(Base):

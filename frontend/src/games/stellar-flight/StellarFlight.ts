@@ -74,7 +74,7 @@ export class StellarFlightGame implements Game3DInstance {
         this.currentMapIndex = index;
 
         if (import.meta.env.DEV) {
-            console.log(`[AetherFlight] Map switched to: ${map.name} (${this.currentMapIndex})`);
+            console.log(`[StellarFlight] Map switched to: ${map.name} (${this.currentMapIndex})`);
         }
 
         // Fog

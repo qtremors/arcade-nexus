@@ -1,7 +1,6 @@
 """
 Games Router - Game Store
 """
-import re
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
