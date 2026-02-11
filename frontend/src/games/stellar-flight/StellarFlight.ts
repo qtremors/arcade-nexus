@@ -151,9 +151,37 @@ export class StellarFlightGame implements Game3DInstance {
     }
 
     destroy(): void {
+        // Dispose all geometries, materials, and textures in the scene graph
+        if (this.scene) {
+            this.scene.traverse((object) => {
+                if (object instanceof THREE.Mesh) {
+                    object.geometry?.dispose();
+                    const materials = Array.isArray(object.material)
+                        ? object.material
+                        : [object.material];
+                    for (const mat of materials) {
+                        if (mat && typeof mat.dispose === 'function') {
+                            // Dispose any textures on the material
+                            for (const value of Object.values(mat)) {
+                                if (value instanceof THREE.Texture) {
+                                    value.dispose();
+                                }
+                            }
+                            mat.dispose();
+                        }
+                    }
+                }
+            });
+            this.scene.clear();
+        }
+
+        this.jet = null;
+
         if (this.renderer) {
             this.renderer.dispose();
             this.renderer.forceContextLoss();
         }
+
+        this.isInitialized = false;
     }
 }

@@ -435,7 +435,7 @@ export class SnakeGame implements Game2DInstance {
 
     getScore(): number { return this.score; }
     getState(): Record<string, unknown> { return { score: this.score, length: this.snake.length }; }
-    setState(state: Record<string, unknown>): void { if (state.score) this.score = state.score as number; }
+    setState(state: Record<string, unknown>): void { if (typeof state.score === 'number') this.score = state.score; }
     onPause(): void { }
     onResume(): void { }
     destroy(): void { }

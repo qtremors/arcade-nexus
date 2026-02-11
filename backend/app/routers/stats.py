@@ -4,7 +4,7 @@ Stats Router - Play Statistics
 from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -93,9 +93,9 @@ async def get_overall_stats(
 @router.get("/sessions", response_model=list)
 async def get_session_history(
     game_id: int | None = None,
-    current_user: Annotated[User, Depends(get_default_user)] = None,
-    db: Annotated[AsyncSession, Depends(get_db)] = None,
-    limit: int = 50
+    current_user: Annotated[User, Depends(get_default_user)] = ...,
+    db: Annotated[AsyncSession, Depends(get_db)] = ...,
+    limit: int = Query(50, ge=1, le=200)
 ):
     """Get detailed session history."""
     query = select(GameSession).where(GameSession.user_id == current_user.id)

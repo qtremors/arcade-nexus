@@ -3,19 +3,27 @@ Database Configuration and Session Management
 """
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.orm import DeclarativeBase
+from sqlalchemy.pool import StaticPool
 
 from app.config import get_settings
 
 settings = get_settings()
 
-# Create async engine with connection pool limits
+# SQLite doesn't support true connection pooling — use StaticPool.
+# For production databases (PostgreSQL, etc.) use standard pool settings.
+_is_sqlite = settings.DATABASE_URL.startswith("sqlite")
+
+_engine_kwargs = (
+    {"poolclass": StaticPool, "connect_args": {"check_same_thread": False}}
+    if _is_sqlite
+    else {"pool_size": 5, "max_overflow": 10, "pool_pre_ping": True}
+)
+
 engine = create_async_engine(
     settings.DATABASE_URL,
     echo=settings.DEBUG,
     future=True,
-    pool_size=20,       # Increased for better concurrency
-    max_overflow=30,    # Allow more burst connections
-    pool_pre_ping=True  # Verify connections are alive
+    **_engine_kwargs
 )
 
 # Session factory

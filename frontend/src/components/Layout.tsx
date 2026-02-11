@@ -29,7 +29,7 @@ export function Layout({ children }: LayoutProps) {
     useEffect(() => {
         const checkBackend = async () => {
             try {
-                const res = await fetch('http://localhost:8000/health');
+                const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/health`);
                 if (res.ok) {
                     setBackendStatus('online');
                 } else {
