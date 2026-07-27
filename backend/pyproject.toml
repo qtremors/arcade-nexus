@@ -1,0 +1,42 @@
+[project]
+name = "arcade-nexus-backend"
+version = "0.0.1"
+description = "Local browser-based arcade console backend"
+readme = "../README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.143,<1",
+    "uvicorn[standard]>=0.30,<1",
+    "sqlalchemy[asyncio]>=2.0.44,<3",
+    "aiosqlite>=0.21,<1",
+    "pydantic>=2.10,<3",
+    "pydantic-settings>=2.7,<3",
+    "alembic>=1.14,<2",
+    "platformdirs>=4.3,<5",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3,<10",
+    "pytest-asyncio>=1.0,<2",
+    "pytest-cov>=6,<8",
+    "httpx2>=2.13,<3",
+    "ruff>=0.11,<1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP"]
+
+[tool.coverage.run]
+concurrency = ["thread", "greenlet"]
+source = ["app"]
