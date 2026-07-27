@@ -1,7 +1,7 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.0.2
+> **Version:** 0.0.3
 > **Last Updated:** 2026-10-20
 
 ---
