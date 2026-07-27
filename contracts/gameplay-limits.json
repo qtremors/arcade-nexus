@@ -1,0 +1,11 @@
+{
+  "score": 2147483647,
+  "playtime_seconds": 604800,
+  "rules_version": 10000,
+  "count": 1000000,
+  "max_altitude": 10000000,
+  "max_speed": 2000,
+  "lives": 3,
+  "highest_tile": 1048576,
+  "elapsed_ms": 604800000
+}
