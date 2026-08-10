@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.0.6
+> **Version:** 0.0.7
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.0.7] - 2026-08-10
+
+- Added replayable completion receipts, compatible legacy sessions, and filtered history.
 
 ## [0.0.1] - 2026-07-27
 
