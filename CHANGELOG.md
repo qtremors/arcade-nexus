@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.0.7
+> **Version:** 0.0.8
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.0.8] - 2026-08-16
+
+- Added portable backup transfer, player-copy restoration, and rotating server snapshots.
 
 ## [0.0.7] - 2026-08-10
 
