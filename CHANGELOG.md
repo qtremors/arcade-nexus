@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.0.9
+> **Version:** 0.1.0
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.1.0] - 2026-08-16
+
+- Added completion, household records, history, achievements, and backup endpoints.
 
 ## [0.0.9] - 2026-08-16
 
