@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.0.8
+> **Version:** 0.0.9
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.0.9] - 2026-08-16
+
+- Added local player, game catalog, favorite, and manual-save endpoints.
 
 ## [0.0.8] - 2026-08-16
 
