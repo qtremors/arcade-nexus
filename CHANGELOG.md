@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.1.1
+> **Version:** 0.1.2
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.1.2] - 2026-08-17
+
+- Connected browser-facing profile, game, save, result, and backup clients to typed responses.
 
 ## [0.1.1] - 2026-08-17
 
