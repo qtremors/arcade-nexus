@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.1.0
+> **Version:** 0.1.1
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.1.1] - 2026-08-17
+
+- Added application startup, catalog synchronization, request protections, and the local source launcher.
 
 ## [0.1.0] - 2026-08-16
 
