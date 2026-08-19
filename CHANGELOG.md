@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.1.3
+> **Version:** 0.1.4
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.1.4] - 2026-08-19
+
+- Added keyboard, controller, and accessible menu navigation adapters.
 
 ## [0.1.2] - 2026-08-17
 
