@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.1.5
+> **Version:** 0.1.6
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.1.6] - 2026-08-20
+
+- Added shared local player, favorite, and preference state with validated controls.
 
 ## [0.1.5] - 2026-08-20
 
