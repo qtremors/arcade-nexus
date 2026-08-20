@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.1.4
+> **Version:** 0.1.5
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.1.5] - 2026-08-20
+
+- Added fixed-step gameplay, pause lifecycle, and shared audio runtime capabilities.
 
 ## [0.1.4] - 2026-08-19
 
