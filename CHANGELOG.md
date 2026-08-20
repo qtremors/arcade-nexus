@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.1.6
+> **Version:** 0.1.7
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.1.7] - 2026-08-20
+
+- Added visibility-aware connection checks, local performance measurements, and runtime wiring.
 
 ## [0.1.6] - 2026-08-20
 
