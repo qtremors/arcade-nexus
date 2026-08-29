@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.1.8
+> **Version:** 0.1.9
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.1.9] - 2026-08-29
+
+- Added Neon Snake with classic, maze, sprint, and bonus modes and restorable state.
 
 ## [0.1.7] - 2026-08-20
 
