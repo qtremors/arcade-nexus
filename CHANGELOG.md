@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.1.9
+> **Version:** 0.2.0
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.2.0] - 2026-08-31
+
+- Added Raptor Run obstacle phrases, biomes, deterministic saves, and rendering.
 
 ## [0.1.9] - 2026-08-29
 
