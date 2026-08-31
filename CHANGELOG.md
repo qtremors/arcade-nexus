@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.2.0
+> **Version:** 0.2.1
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.2.1] - 2026-08-31
+
+- Added Neon Breakout campaigns, arcade pickups, medals, and save compatibility.
 
 ## [0.2.0] - 2026-08-31
 
