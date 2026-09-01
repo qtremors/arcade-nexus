@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.2.1
+> **Version:** 0.2.2
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.2.2] - 2026-09-01
+
+- Added 2048 modes, deterministic undo, daily puzzles, and a semantic board reader.
 
 ## [0.2.1] - 2026-08-31
 
