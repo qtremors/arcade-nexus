@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.2.2
+> **Version:** 0.2.3
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.2.3] - 2026-09-01
+
+- Added Tetris with hold, ghost landing, deterministic bags, and 40-line Sprint.
 
 ## [0.2.2] - 2026-09-01
 
