@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.2.3
+> **Version:** 0.2.4
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.2.4] - 2026-09-01
+
+- Added Asteroids with inertial flight, wrapping rocks, hulls, and escalating waves.
 
 ## [0.2.3] - 2026-09-01
 
