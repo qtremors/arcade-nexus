@@ -1,0 +1,3 @@
+.game-stage[data-game="prism-rush"]:not([data-state="playing"]) .prism-hud {
+  visibility: hidden;
+}

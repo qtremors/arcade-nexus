@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.2.4
+> **Version:** 0.2.5
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.2.5] - 2026-09-02
+
+- Added the Prism Rush three-lane highway, authored rhythms, shields, and saves.
 
 ## [0.2.4] - 2026-09-01
 
