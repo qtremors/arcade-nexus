@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.2.6
+> **Version:** 0.2.7
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.2.7] - 2026-09-03
+
+- Added restorable Flight exploration, race progress, contracts, surveys, and ship progression.
 
 ## [0.2.5] - 2026-09-02
 
