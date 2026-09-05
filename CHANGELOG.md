@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.2.9
+> **Version:** 0.3.0
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.3.0] - 2026-09-05
+
+- Added lazy game loading, validated restore preflight, recovery snapshots, and retryable results.
 
 ## [0.2.9] - 2026-09-05
 
