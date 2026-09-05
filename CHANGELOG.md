@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.2.8
+> **Version:** 0.2.9
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.2.9] - 2026-09-05
+
+- Connected Stellar Flight's existing simulation, scenes, cameras, audio, and launch guide.
 
 ## [0.2.7] - 2026-09-03
 
