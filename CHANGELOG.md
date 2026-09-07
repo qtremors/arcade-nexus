@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.3.1
+> **Version:** 0.3.2
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.3.2] - 2026-09-07
+
+- Added run ownership, checkpoints, completion delivery, records, slots, and named session commands.
 
 ## [0.3.1] - 2026-09-07
 
