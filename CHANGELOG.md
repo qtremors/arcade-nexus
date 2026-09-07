@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.3.0
+> **Version:** 0.3.1
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.3.1] - 2026-09-07
+
+- Added shared notifications, confirmations, focus management, and controller text entry.
 
 ## [0.3.0] - 2026-09-05
 

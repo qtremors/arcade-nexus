@@ -1,0 +1,234 @@
+.console-confirmation {
+  position: fixed;
+  inset: 0;
+  margin: auto;
+  padding: 32px;
+  width: min(520px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  color: #f8fafc;
+  background: #182437;
+  border: 1px solid #53617b;
+  border-radius: 18px;
+  box-shadow: 0 20px 80px #0008;
+}
+.console-confirmation::backdrop {
+  background: #030711bb;
+  backdrop-filter: blur(6px);
+}
+.console-confirmation h2 {
+  font-size: 30px;
+  font-weight: 700;
+  margin: 18px 0 12px;
+}
+.console-confirmation p {
+  color: #b7c5d9;
+  line-height: 1.6;
+}
+.confirmation-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 28px;
+}
+.confirmation-actions button {
+  padding: 10px 20px;
+  border: 1px solid #687891;
+  border-radius: 8px;
+  background: #263852;
+}
+.confirmation-actions .confirmation-danger {
+  border-color: #fda4af;
+  background: #9f1239;
+  color: #fff;
+}
+.system-toggle {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  color: #cccccc;
+  background: #111111;
+  border: 1px solid #303030;
+  border-radius: 10px;
+}
+.system-toggle:hover {
+  background: #202020;
+}
+.system-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  background: #000000c9;
+  display: flex;
+  justify-content: flex-end;
+}
+.system-panel {
+  display: flex;
+  flex-direction: column;
+  width: 370px;
+  max-width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  padding: 28px;
+  background: #090909;
+  border-left: 1px solid #333333;
+  box-shadow: -30px 0 100px #0005;
+}
+.system-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.system-panel .eyebrow {
+  margin: 0;
+}
+.system-close {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #333333;
+  background: #181818;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+}
+.system-player {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 32px 0;
+  border-bottom: 1px solid #292929;
+  margin-bottom: 24px;
+}
+.system-player > span {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 15px;
+  background: #181818;
+  font-size: 30px;
+}
+.system-player h2 {
+  font:
+    700 26px "Rajdhani",
+    sans-serif;
+}
+.system-player p {
+  color: #aaaaaa;
+  font-size: 12px;
+  margin-top: 6px;
+}
+.system-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+}
+.system-links button,
+.system-panel-footer button {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 15px 18px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #cccccc;
+  text-align: left;
+  font-size: 14px;
+}
+.system-links button:hover,
+.system-panel-footer button:hover {
+  background: #181818;
+}
+.system-links button[aria-current="page"] {
+  color: #b0ecd8;
+  border-color: #49695d;
+  background: #223c33;
+}
+.system-link-arrow {
+  margin-left: auto;
+  color: #888888;
+}
+.system-panel-footer {
+  border-top: 1px solid #292929;
+  padding-top: 20px;
+  margin-top: 28px;
+}
+.system-panel-footer button {
+  width: 100%;
+}
+.system-panel-footer p {
+  color: #999999;
+  font-size: 10px;
+  margin: 28px 0 6px;
+}
+.console-confirmation {
+  background: #0c0c0c;
+  border-color: #404040;
+  font-family: system-ui, sans-serif;
+}
+.console-confirmation h2 {
+  font-family: "Rajdhani", sans-serif;
+}
+.console-confirmation p {
+  color: #bbb;
+  font-size: 14px;
+}
+.confirmation-actions button {
+  background: #191919;
+  border-color: #444;
+  font-size: 13px;
+}
+.console-confirmation::backdrop {
+  background: #000b;
+}
+.controller-keyboard {
+  width: min(620px, 92vw);
+  border: 1px solid #7de8c4;
+  border-radius: 20px;
+  background: #111615;
+  color: #eef8f3;
+  padding: 24px;
+}
+.controller-keyboard::backdrop {
+  background: #000b;
+}
+.controller-keyboard output {
+  display: block;
+  min-height: 48px;
+  padding: 12px;
+  background: #050807;
+  border: 1px solid #35433c;
+  margin: 16px 0;
+  overflow-wrap: anywhere;
+}
+.keyboard-keys {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 8px;
+}
+.keyboard-keys button,
+.keyboard-actions button {
+  min-height: 44px;
+  background: #23322b;
+  border: 1px solid #496155;
+  color: #fff;
+  border-radius: 8px;
+}
+.keyboard-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.keyboard-actions button {
+  flex: 1;
+}
+@media (max-width: 700px) {
+  .keyboard-keys {
+    gap: 4px;
+  }
+  .keyboard-keys button {
+    min-height: 38px;
+  }
+}
