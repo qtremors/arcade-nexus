@@ -1,0 +1,372 @@
+/* Shared game-menu owner. Game-scoped HUD/briefing styles load afterward. */
+
+.game-stage {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 52px 16px 16px;
+  background: #000;
+}
+.game-canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: min(calc(100vw - 32px), calc((100dvh - 68px) * 1.5));
+  height: auto;
+  aspect-ratio: 3 / 2;
+  object-fit: contain;
+  border: 1px solid #242424;
+  border-radius: 12px;
+}
+.game-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: safe center;
+  padding: 24px;
+  overflow-y: auto;
+  text-align: center;
+  gap: 12px;
+  background: #000000bf;
+  backdrop-filter: blur(6px);
+}
+.game-overlay h1 {
+  font-size: clamp(28px, 5vw, 48px);
+  font-weight: 700;
+  color: #f8fafc;
+  line-height: 1.1;
+  margin: 22px 0 18px;
+  font-family: "Rajdhani", sans-serif;
+  letter-spacing: -0.6px;
+}
+.game-menu-panel {
+  flex-shrink: 0;
+  width: min(100%, 660px);
+  padding: 32px 40px;
+  font-family: system-ui, sans-serif;
+  background: #090909;
+  border: 1px solid #303030;
+  border-top: 2px solid #a1edd5;
+  border-radius: 18px;
+  box-shadow: 0 30px 80px #0009;
+  max-height: 90vh;
+  overflow: auto;
+}
+.game-menu-panel p {
+  margin: 14px auto;
+}
+.game-menu-kicker {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font:
+    11px "JetBrains Mono",
+    monospace;
+  letter-spacing: 1px;
+  color: #b0ecd8;
+}
+.game-menu-kicker span {
+  color: #a7b4c9;
+}
+.game-menu-panel fieldset {
+  border: 1px solid #35445d;
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin: 20px auto;
+  border-color: #303030;
+}
+.game-menu-panel legend {
+  font-size: 14px;
+  color: #a7b4c9;
+  padding: 0 8px;
+}
+.game-pause-score {
+  font-size: 40px;
+  font-weight: 700;
+  color: #f8fafc;
+}
+.game-pause-score span {
+  display: block;
+  font:
+    11px "JetBrains Mono",
+    monospace;
+  color: #94a3b8;
+}
+.game-menu-title {
+  font-size: 22px;
+  font-weight: 600;
+}
+.game-overlay p {
+  color: #c4ccdc;
+  max-width: 680px;
+  font-size: 14px;
+  line-height: 1.8;
+}
+.game-button {
+  padding: 10px 24px;
+  border: 1px solid #49607c;
+  margin: 4px;
+  min-height: 44px;
+  text-transform: capitalize;
+  font-size: 13px;
+  border-radius: 9px;
+  background: #171717;
+  border-color: #3a3a3a;
+  color: #dedede;
+}
+.game-button:hover {
+  background: #262626;
+}
+.game-button[data-primary="true"] {
+  display: block;
+  width: min(100%, 360px);
+  margin: 24px auto 12px;
+  font-weight: 700;
+  box-shadow: 0 4px 20px #67e8f917;
+  background: #a1edd5;
+  border-color: #c8f9e9;
+  color: #112d28;
+  font-size: 16px;
+}
+.game-button[data-primary="true"]:hover {
+  background: #a5f3fc;
+}
+.game-button[aria-pressed="true"] {
+  background: #14271f;
+  border-color: #a1edd5;
+  color: #c3f4e3;
+}
+.game-final-score {
+  font-size: 52px;
+  font-weight: 700;
+}
+.game-best-badge {
+  color: #67e8f9 !important;
+  font:
+    12px "JetBrains Mono",
+    monospace;
+  letter-spacing: 2px;
+}
+.save-slots {
+  max-width: 800px;
+  width: 100%;
+}
+.save-slots > div {
+  display: flex;
+}
+.save-slots > div > button:first-child {
+  flex: 1;
+  text-align: left;
+}
+.game-toolbar {
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  top: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  text-shadow: 0 1px 3px #000;
+  pointer-events: none;
+  font-family: system-ui, sans-serif;
+  color: #ddd;
+}
+.game-toolbar > div {
+  display: flex;
+  gap: 8px;
+}
+.game-live-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  background: #67e8f9;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+.game-toolbar button {
+  pointer-events: auto;
+  border: 1px solid #677891;
+  padding: 8px 16px;
+  background: #0c0c0c;
+  border-color: #333;
+  border-radius: 8px;
+  font-size: 12px;
+}
+@media (max-width: 600px) {
+  .game-menu-panel {
+    padding: 24px 20px;
+  }
+  .game-menu-kicker {
+    font-size: 9px;
+    letter-spacing: 0;
+  }
+  .game-toolbar {
+    left: 12px;
+    right: 12px;
+    font-size: 12px;
+  }
+  .game-toolbar button {
+    padding: 8px;
+  }
+}
+@media (max-width: 700px) {
+  .game-overlay {
+    justify-content: safe center;
+  }
+}
+.game-menu-panel legend,
+.game-menu-kicker span {
+  color: #aaaaaa;
+}
+.game-toolbar button:hover {
+  background: #202020;
+}
+.control-guide {
+  border: 1px solid #303030;
+  border-radius: 10px;
+  margin: 22px 0;
+  overflow: hidden;
+  text-align: left;
+}
+.controls-switch {
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  border-bottom: 1px solid #282828;
+  background: #050505;
+}
+.controls-switch button {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  font-size: 12px;
+  color: #aaa;
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+}
+.controls-switch button:hover {
+  color: #eee;
+  background: #111;
+}
+.controls-switch button[aria-pressed="true"] {
+  background: #171717;
+  border-color: #383838;
+  color: #eee;
+}
+.control-guide dl {
+  padding: 10px 18px;
+}
+.control-guide dl > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 8px 0;
+  font-size: 12px;
+}
+.control-guide dt {
+  color: #aaa;
+}
+.control-guide dd {
+  color: #e5e5e5;
+  text-align: right;
+}
+.game-overlay .launch-goal {
+  font-size: 14px;
+  color: #bbb;
+}
+.game-overlay .launch-record {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  font-size: 11px;
+  color: #aaa;
+}
+.launch-record strong {
+  color: var(--game-accent);
+}
+.launch-record span {
+  margin-left: auto;
+}
+.game-menu-panel[data-state="ready"] h1 {
+  color: var(--game-accent);
+}
+.game-menu-panel .game-button[data-primary="true"] {
+  background: var(--game-accent);
+  border-color: var(--game-accent);
+}
+.pause-controls {
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 12px 18px;
+  margin: 22px 0;
+  text-align: left;
+}
+.pause-controls summary {
+  font-size: 12px;
+  color: #bbb;
+  cursor: pointer;
+}
+.game-overlay .pause-controls p {
+  font-size: 12px;
+}
+@media (max-height: 750px) {
+  .game-menu-panel {
+    padding: 22px 30px;
+  }
+  .game-overlay h1 {
+    margin: 14px 0;
+    font-size: 36px;
+  }
+  .control-guide {
+    margin: 14px 0;
+  }
+  .control-guide dl > div {
+    padding: 5px 0;
+  }
+  .game-menu-panel fieldset {
+    margin: 12px 0;
+  }
+  .game-button[data-primary="true"] {
+    margin: 14px auto 8px;
+  }
+}
+
+.game-stage:not([data-state="playing"]) .flight-hud {
+  visibility: hidden;
+}
+.mode-choices {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+  justify-content: center;
+}
+.mode-choices legend {
+  font-size: 13px;
+  color: #aab6b1;
+}
+.mode-choices .game-button {
+  font-size: 13px;
+  padding: 8px 12px;
+}
+.recovery-summary {
+  background: #14211a;
+  border: 1px solid #345746;
+  padding: 12px;
+  border-radius: 12px;
+  margin: 12px 0;
+}
+.recovery-summary p {
+  font-size: 12px;
+  color: #c0d8ca;
+}

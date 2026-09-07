@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.3.2
+> **Version:** 0.3.3
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.3.3] - 2026-09-07
+
+- Added session launch, pause, results, and save-slot presentation.
 
 ## [0.3.2] - 2026-09-07
 
