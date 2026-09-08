@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.3.3
+> **Version:** 0.3.4
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.3.4] - 2026-09-08
+
+- Added game browsing, search, favorites, and featured-game presentation.
 
 ## [0.3.3] - 2026-09-07
 
