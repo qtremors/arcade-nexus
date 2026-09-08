@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.3.4
+> **Version:** 0.3.5
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.3.5] - 2026-09-08
+
+- Added the Home page with Continue, recently played games, and a daily challenge.
 
 ## [0.3.4] - 2026-09-08
 
