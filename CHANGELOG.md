@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.3.5
+> **Version:** 0.3.6
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.3.6] - 2026-09-09
+
+- Added progress, household comparisons, awards, and paginated filtered history.
 
 ## [0.3.5] - 2026-09-08
 
