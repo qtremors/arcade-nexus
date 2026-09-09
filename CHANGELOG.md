@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.3.6
+> **Version:** 0.3.7
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.3.7] - 2026-09-09
+
+- Added local player setup, switching, profile editing, and player history.
 
 ## [0.3.6] - 2026-09-09
 
