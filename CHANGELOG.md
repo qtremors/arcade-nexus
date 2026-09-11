@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.3.8
+> **Version:** 0.3.9
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.3.9] - 2026-09-11
+
+- Added volume, motion, remapping, retry, backup, and local diagnostic controls.
 
 ## [0.3.8] - 2026-09-11
 
