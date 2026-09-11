@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.3.9
+> **Version:** 0.4.0
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.4.0] - 2026-09-11
+
+- Bundled game artwork, textures, and the original Flight model for local play.
 
 ## [0.3.9] - 2026-09-11
 
