@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.3.7
+> **Version:** 0.3.8
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.3.8] - 2026-09-11
+
+- Added browser-inclusive backup export, restore previews, and server-snapshot management.
 
 ## [0.3.7] - 2026-09-09
 
