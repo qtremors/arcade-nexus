@@ -1,6 +1,6 @@
 [project]
 name = "arcade-nexus-backend"
-version = "0.4.0"
+version = "0.4.1"
 description = "Local browser-based arcade console backend"
 readme = "../README.md"
 requires-python = ">=3.11"

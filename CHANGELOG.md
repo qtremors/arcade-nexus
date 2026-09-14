@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.4.0
+> **Version:** 0.4.1
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.4.1] - 2026-09-14
+
+- Connected the console shell, lazy feature routes, startup, and root recovery while retaining the existing visual styles.
 
 ## [0.4.0] - 2026-09-11
 
