@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.4.8
+> **Version:** 0.4.9
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.4.9] - 2026-09-23
+
+- Added isolated real-server browser journeys for sessions, saves, result delivery, history, and backup data.
 
 ## [0.4.1] - 2026-09-14
 
