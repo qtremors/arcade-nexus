@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.4.9
+> **Version:** 0.5.0
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.5.0] - 2026-09-25
+
+- Added browser journeys for gameplay, catalog flows, accessibility, numeric safeguards, and renderer cleanup.
 
 ## [0.4.9] - 2026-09-23
 
