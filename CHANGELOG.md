@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.5.1
+> **Version:** 0.5.2
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.5.2] - 2026-09-26
+
+- Added the consolidated developer handbook, privacy guidance, unfinished-work backlog, and source setup documentation.
 
 ## [0.5.0] - 2026-09-25
 
