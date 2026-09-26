@@ -1,10 +1,14 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.5.2
+> **Version:** 0.5.3
 > **Last Updated:** 2026-10-20
 
 ---
+
+## [0.5.3] - 2026-09-26
+
+- Added a responsive project website with game filtering, setup instructions, and bundled assets.
 
 ## [0.5.2] - 2026-09-26
 

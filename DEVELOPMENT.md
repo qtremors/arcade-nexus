@@ -2,7 +2,7 @@
 
 > Architecture, implementation contracts, verification, and maintenance guidance.
 
-**Version:** 0.5.2 | **Last Updated:** 2026-10-20
+**Version:** 0.5.3 | **Last Updated:** 2026-10-20
 **Scope:** Local console development. All developer documentation belongs in this file; `docs/` contains only the public static website.
 
 ---

@@ -1,0 +1,449 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#101414" />
+    <meta
+      name="description"
+      content="Eight bundled games. Keyboard and controller play. Local profiles, recovery saves, and household records. Meet Arcade Nexus, your local browser arcade."
+    />
+    <title>Arcade Nexus | Your local arcade</title>
+    <link rel="icon" href="assets/arcade-nexus.png" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="scripts.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <a class="brand" href="#" aria-label="Arcade Nexus home"
+        ><img
+          src="assets/arcade-nexus.png"
+          width="42"
+          height="42"
+          alt=""
+        /><span>ARCADE <strong>NEXUS</strong></span></a
+      >
+      <nav aria-label="Main navigation">
+        <a href="#games">The games</a><a href="#console">The console</a
+        ><a href="#start">Get started <span aria-hidden="true">↗</span></a>
+      </nav>
+    </header>
+    <main id="main">
+      <section class="hero section-width" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow">
+            <span class="status-dot" aria-hidden="true"></span> A LITTLE TIME. A
+            LITTLE PLAY.
+          </p>
+          <h1 id="hero-title">
+            Your next<br />high score<br /><em>starts here.</em>
+          </h1>
+          <p class="hero-description">
+            Eight games. One local arcade. Pick up a controller, chase a
+            personal best, and come back right where you left off.
+          </p>
+          <div class="actions">
+            <a class="button primary" href="#start"
+              >Set up your arcade <span aria-hidden="true">↗</span></a
+            ><a class="text-link" href="#games"
+              >Find your game <span aria-hidden="true">↓</span></a
+            >
+          </div>
+          <div class="hero-notes">
+            <span>Keyboard + controller</span><span>Local profiles</span
+            ><span>No online account</span>
+          </div>
+        </div>
+        <div class="hero-art">
+          <div class="art-caption">
+            <span>IN THE ARCADE / 05</span
+            ><span class="live-label">STELLAR FLIGHT</span>
+          </div>
+          <img
+            class="flight-art"
+            src="assets/games/stellar-flight.svg"
+            alt="Illustrated spacecraft against a distant planetary horizon"
+            width="960"
+            height="540"
+            fetchpriority="high"
+          />
+          <div class="art-footer">
+            <div>
+              <span class="eyebrow">TAKE THE LONG WAY HOME</span>
+              <h2>A universe at your own pace.</h2>
+            </div>
+            <span class="orbit-mark" aria-hidden="true">↗</span>
+          </div>
+          <p class="art-note">
+            Bundled game artwork. Explore, race, and survey in Stellar Flight.
+          </p>
+        </div>
+      </section>
+      <div class="ticker" aria-label="Console highlights">
+        <div class="section-width">
+          <span>08 BUNDLED GAMES</span><span>YOUR PROGRESS, SAVED</span
+          ><span>PLAY OFFLINE AFTER SETUP</span><span>BUILT FOR DESKTOP</span>
+        </div>
+      </div>
+      <section
+        class="games section-width"
+        id="games"
+        aria-labelledby="games-title"
+      >
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">FIND YOUR NEXT FIVE MINUTES</p>
+            <h2 id="games-title">A game for your kind of break.</h2>
+          </div>
+          <p>
+            Quick reflexes, a thoughtful move,<br />or a little space to
+            explore.
+          </p>
+        </div>
+        <div class="game-toolbar">
+          <div class="filters" role="group" aria-label="Filter games">
+            <button
+              type="button"
+              class="active"
+              data-filter="all"
+              aria-pressed="true"
+            >
+              All games</button
+            ><button type="button" data-filter="arcade" aria-pressed="false">
+              Arcade</button
+            ><button type="button" data-filter="puzzle" aria-pressed="false">
+              Puzzle</button
+            ><button type="button" data-filter="explore" aria-pressed="false">
+              Explore
+            </button>
+          </div>
+          <p id="game-count" role="status" aria-live="polite">
+            8 games in the arcade
+          </p>
+        </div>
+        <div class="game-grid">
+          <article class="game-card" data-category="arcade">
+            <img
+              src="assets/games/snake.svg"
+              alt="Neon Snake game artwork"
+              width="480"
+              height="270"
+              loading="lazy"
+            />
+            <div class="game-copy">
+              <span class="game-number">01 / ARCADE</span>
+              <h3>Neon Snake</h3>
+              <p>
+                A familiar chase with authored mazes, timed sprints, and one
+                more gold packet.
+              </p>
+              <span class="game-modes"
+                >Classic · Maze · Sprint · Bonus Sprint</span
+              >
+            </div>
+          </article>
+          <article class="game-card" data-category="arcade">
+            <img
+              src="assets/games/raptor.svg"
+              alt="Raptor Run game artwork"
+              width="480"
+              height="270"
+              loading="lazy"
+            />
+            <div class="game-copy">
+              <span class="game-number">02 / ARCADE</span>
+              <h3>Raptor Run</h3>
+              <p>
+                Jump, duck, and find your rhythm through obstacle phrases and
+                four biomes.
+              </p>
+              <span class="game-modes">Classic · Daily challenge</span>
+            </div>
+          </article>
+          <article class="game-card" data-category="arcade">
+            <img
+              src="assets/games/breakout.svg"
+              alt="Neon Breakout game artwork"
+              width="480"
+              height="270"
+              loading="lazy"
+            />
+            <div class="game-copy">
+              <span class="game-number">03 / ARCADE</span>
+              <h3>Neon Breakout</h3>
+              <p>
+                Work every angle through armored bricks, timed pickups, and
+                campaign sectors.
+              </p>
+              <span class="game-modes">Classic · Daily · Arcade</span>
+            </div>
+          </article>
+          <article class="game-card" data-category="puzzle">
+            <img
+              src="assets/games/merge-2048.svg"
+              alt="Merge 2048 game artwork"
+              width="480"
+              height="270"
+              loading="lazy"
+            />
+            <div class="game-copy">
+              <span class="game-number">04 / PUZZLE</span>
+              <h3>Merge 2048</h3>
+              <p>
+                Take your time with undo, accept a tougher challenge, or solve
+                the daily board.
+              </p>
+              <span class="game-modes">Relaxed · Challenge · Daily puzzle</span>
+            </div>
+          </article>
+          <article class="game-card" data-category="explore">
+            <img
+              src="assets/games/stellar-flight.svg"
+              alt="Stellar Flight game artwork"
+              width="480"
+              height="270"
+              loading="lazy"
+            />
+            <div class="game-copy">
+              <span class="game-number">05 / EXPLORATION</span>
+              <h3>Stellar Flight</h3>
+              <p>
+                Chase a race, survey a landmark, unlock a ship, or follow a
+                distant horizon.
+              </p>
+              <span class="game-modes"
+                >Procedural exploration · Races · Contracts</span
+              >
+            </div>
+          </article>
+          <article class="game-card" data-category="puzzle">
+            <img
+              src="assets/games/tetris.svg"
+              alt="Neon Tetris game artwork"
+              width="480"
+              height="270"
+              loading="lazy"
+            />
+            <div class="game-copy">
+              <span class="game-number">06 / PUZZLE</span>
+              <h3>Neon Tetris</h3>
+              <p>
+                Build a clean stack with hold, ghost landing, and the next piece
+                in sight.
+              </p>
+              <span class="game-modes">Marathon · 40-line Sprint</span>
+            </div>
+          </article>
+          <article class="game-card" data-category="arcade">
+            <img
+              src="assets/games/asteroids.svg"
+              alt="Asteroids game artwork"
+              width="480"
+              height="270"
+              loading="lazy"
+            />
+            <div class="game-copy">
+              <span class="game-number">07 / ARCADE</span>
+              <h3>Asteroids</h3>
+              <p>
+                Drift, turn, and split the rocks. Three hulls stand between you
+                and the next wave.
+              </p>
+              <span class="game-modes"
+                >Wraparound arena · Escalating waves</span
+              >
+            </div>
+          </article>
+          <article class="game-card" data-category="arcade">
+            <img
+              src="assets/games/prism-rush.svg"
+              alt="Prism Rush game artwork"
+              width="480"
+              height="270"
+              loading="lazy"
+            />
+            <div class="game-copy">
+              <span class="game-number">08 / ARCADE</span>
+              <h3>Prism Rush</h3>
+              <p>
+                Read the highway, switch lanes, and collect crystals through
+                authored gate rhythms.
+              </p>
+              <span class="game-modes">3D highway · Three shields</span>
+            </div>
+          </article>
+        </div>
+      </section>
+      <section
+        class="console-section"
+        id="console"
+        aria-labelledby="console-title"
+      >
+        <div class="section-width console-layout">
+          <div>
+            <p class="eyebrow">THE CONSOLE BETWEEN THE GAMES</p>
+            <h2 id="console-title">
+              Make it yours.<br /><em>Keep it yours.</em>
+            </h2>
+            <p class="section-description">
+              A shared computer can still hold a personal arcade. Your player,
+              your favorites, your next attempt.
+            </p>
+          </div>
+          <div class="console-features">
+            <article>
+              <span aria-hidden="true">01</span>
+              <div>
+                <h3>Pick up where you paused.</h3>
+                <p>
+                  Continue a recovery snapshot or use one of five manual slots.
+                  Pause on focus loss or controller disconnect keeps a break
+                  from becoming a lost run.
+                </p>
+              </div>
+            </article>
+            <article>
+              <span aria-hidden="true">02</span>
+              <div>
+                <h3>A little household rivalry.</h3>
+                <p>
+                  Separate local players, achievements, and records by mode and
+                  difficulty. Compare a new best without mixing everyone’s
+                  progress.
+                </p>
+              </div>
+            </article>
+            <article>
+              <span aria-hidden="true">03</span>
+              <div>
+                <h3>Your progress stays local.</h3>
+                <p>
+                  A local database, browser preferences, and backups you
+                  control. No online account. Export your data or restore player
+                  copies when you need them.
+                </p>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+      <section
+        class="start-section section-width"
+        id="start"
+        aria-labelledby="start-title"
+      >
+        <div>
+          <p class="eyebrow">FROM SOURCE TO START SCREEN</p>
+          <h2 id="start-title">Your arcade.<br />Ready when you are.</h2>
+          <p class="section-description">
+            Install Python 3.12, uv, and Node.js 24 with npm. Get the source,
+            then run setup from the repository root.
+          </p>
+          <div class="actions">
+            <a
+              class="button primary"
+              href="https://github.com/qtremors/arcade-nexus"
+              >Get the source <span aria-hidden="true">↗</span></a
+            ><a
+              class="text-link"
+              href="https://github.com/qtremors/arcade-nexus/blob/main/README.md"
+              >Read the setup guide</a
+            >
+          </div>
+        </div>
+        <div class="terminal">
+          <div class="terminal-heading">
+            <span>FIRST LAUNCH</span
+            ><button
+              type="button"
+              id="copy-command"
+              aria-label="Copy setup command"
+            >
+              Copy command
+            </button>
+          </div>
+          <pre><code><span class="terminal-comment"># From the repository root</span>
+python arcade.py --setup
+
+<span class="terminal-comment"># Next time, just play</span>
+python arcade.py</code></pre>
+          <p>
+            Opens <strong>127.0.0.1:8000</strong> in your browser.<br />Keep the
+            terminal open. Ctrl+C stops the console.
+          </p>
+          <p id="copy-status" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+      <section
+        class="questions section-width"
+        aria-labelledby="questions-title"
+      >
+        <p class="eyebrow">BEFORE YOU PRESS START</p>
+        <h2 id="questions-title">A few useful things.</h2>
+        <div class="question-grid">
+          <details>
+            <summary>Does it work offline?</summary>
+            <p>
+              Yes, normal play works offline after dependencies are installed
+              and the frontend is built. Game artwork, models, and fonts are
+              bundled. Initial setup needs Internet access.
+            </p>
+          </details>
+          <details>
+            <summary>Is there an installer?</summary>
+            <p>
+              Arcade Nexus runs from source with Python and Node.js tooling. It
+              does not distribute a desktop executable or APK.
+            </p>
+          </details>
+          <details>
+            <summary>Can I use a controller?</summary>
+            <p>
+              The console supports standard browser gamepads, menu navigation,
+              text entry, remapping, and dead-zone settings. Each game’s launch
+              screen explains its controls.
+            </p>
+          </details>
+          <details>
+            <summary>How do I keep my progress?</summary>
+            <p>
+              Use Settings to export a backup, preview an import, or manage
+              rotating server snapshots. Export from the same browser origin to
+              include preferences and pending results. Import preserves existing
+              players by creating copies.
+            </p>
+          </details>
+        </div>
+      </section>
+    </main>
+    <footer class="site-footer section-width">
+      <a class="brand" href="#"
+        ><img
+          src="assets/arcade-nexus.png"
+          width="36"
+          height="36"
+          alt=""
+        /><span>ARCADE <strong>NEXUS</strong></span></a
+      >
+      <p>
+        Made for a little play. Built by
+        <a href="https://github.com/qtremors">Tremors</a>.
+      </p>
+      <nav aria-label="Footer">
+        <a href="https://github.com/qtremors/arcade-nexus">Source</a
+        ><a href="https://github.com/qtremors/arcade-nexus/issues">Support</a
+        ><a href="https://github.com/qtremors/arcade-nexus/blob/main/PRIVACY.md"
+          >Privacy</a
+        ><a href="https://github.com/qtremors/arcade-nexus/blob/main/LICENSE.md"
+          >License</a
+        >
+      </nav>
+      <small
+        >Rajdhani typeface:
+        <a href="assets/rajdhani-license.txt">SIL Open Font License</a>. Game
+        artwork is bundled project artwork.</small
+      >
+    </footer>
+  </body>
+</html>
