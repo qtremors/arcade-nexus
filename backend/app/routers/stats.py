@@ -1,303 +1,262 @@
-"""
-Stats Router - Play Statistics
-"""
-from datetime import datetime, timezone
-from typing import Annotated
+"""Atomic statistics and durable, optionally idempotent session tracking."""
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import timedelta
+from uuid import uuid4
+
+from fastapi import APIRouter, HTTPException, Query
+from sqlalchemy import select, update
+from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import selectinload
 
-from app.database import get_db
-from app.models.user import User
-from app.models.game import Game
-from app.models.stats import PlayStats
-from app.models.session import GameSession
+from app.datetime_utils import utc_now
+from app.dependencies import CurrentUser, DbSession
 from app.models.library import UserLibrary
-from app.schemas.stats import StatsResponse, GameStatsResponse, SessionRecord, ScoreSubmit
-from app.utils.local_user import get_default_user
+from app.models.session import GameSession
+from app.models.stats import PlayStats
+from app.schemas.stats import (
+    GameStatsResponse,
+    ScoreResponse,
+    ScoreSubmit,
+    SessionRecord,
+    SessionRecordResponse,
+    SessionResponse,
+    SessionStart,
+    SessionStartResponse,
+    StatsResponse,
+)
+from app.services.common import ensure_stats, get_game
 
 router = APIRouter()
 
 
-async def get_or_create_stats(
-    user_id: int,
-    game_id: int,
-    db: AsyncSession
-) -> PlayStats:
-    """Get existing stats or create new record."""
-    result = await db.execute(
-        select(PlayStats).where(
-            PlayStats.user_id == user_id,
-            PlayStats.game_id == game_id
-        )
+def game_stats(stats: PlayStats) -> GameStatsResponse:
+    return GameStatsResponse(
+        game_slug=stats.game.slug,
+        game_title=stats.game.title,
+        total_playtime_seconds=stats.total_playtime_seconds,
+        sessions_count=stats.sessions_count,
+        high_score=stats.high_score,
+        last_session=stats.last_session,
     )
-    stats = result.scalar_one_or_none()
-    
-    if not stats:
-        stats = PlayStats(
-            user_id=user_id,
-            game_id=game_id
-        )
-        db.add(stats)
-        await db.flush()
-    
-    return stats
 
 
 @router.get("", response_model=StatsResponse)
-async def get_overall_stats(
-    current_user: Annotated[User, Depends(get_default_user)],
-    db: Annotated[AsyncSession, Depends(get_db)]
-):
-    """Get overall user stats across all games."""
-    # Efficiently aggregate totals in SQL
-    totals_result = await db.execute(
-        select(
-            func.sum(PlayStats.total_playtime_seconds),
-            func.count(PlayStats.id),
-            func.sum(PlayStats.sessions_count)
-        ).where(PlayStats.user_id == current_user.id)
-    )
-    total_time, total_games, total_sessions = totals_result.first() or (0, 0, 0)
-    
-    # Get individual game stats
-    result = await db.execute(
-        select(PlayStats)
-        .where(PlayStats.user_id == current_user.id)
-        .options(selectinload(PlayStats.game))
-    )
-    all_stats = result.scalars().all()
-    
-    game_stats = [
-        GameStatsResponse(
-            game_slug=s.game.slug,
-            game_title=s.game.title,
-            total_playtime_seconds=s.total_playtime_seconds,
-            sessions_count=s.sessions_count,
-            high_score=s.high_score,
-            last_session=s.last_session
+async def get_overall_stats(current_user: CurrentUser, db: DbSession):
+    stats = (
+        await db.scalars(
+            select(PlayStats)
+            .where(PlayStats.user_id == current_user.id)
+            .options(selectinload(PlayStats.game))
+            .order_by(PlayStats.game_id)
         )
-        for s in all_stats
-    ]
-    
+    ).all()
+    # A single snapshot keeps totals consistent with the included game records.
     return StatsResponse(
-        total_playtime_seconds=total_time or 0,
-        total_games_played=total_games or 0,
-        total_sessions=total_sessions or 0,
-        games=game_stats
+        total_playtime_seconds=sum(item.total_playtime_seconds for item in stats),
+        total_games_played=sum(item.sessions_count > 0 for item in stats),
+        total_sessions=sum(item.sessions_count for item in stats),
+        games=[game_stats(item) for item in stats],
     )
 
 
-@router.get("/sessions", response_model=list)
+@router.get("/sessions", response_model=list[SessionResponse])
 async def get_session_history(
-    game_id: int | None = None,
-    current_user: Annotated[User, Depends(get_default_user)] = None,
-    db: Annotated[AsyncSession, Depends(get_db)] = None,
-    limit: int = Query(50, ge=1, le=200)
+    current_user: CurrentUser,
+    db: DbSession,
+    game_id: int | None = Query(None, ge=1),
+    skip: int = Query(0, ge=0),
+    limit: int = Query(50, ge=1, le=200),
 ):
-    """Get detailed session history."""
-    query = select(GameSession).where(GameSession.user_id == current_user.id)
-    
-    if game_id:
+    query = select(GameSession).where(
+        GameSession.user_id == current_user.id, GameSession.end_time.is_not(None)
+    )
+    if game_id is not None:
         query = query.where(GameSession.game_id == game_id)
-        
-    query = query.order_by(GameSession.end_time.desc()).limit(limit).options(selectinload(GameSession.game))
-    
-    result = await db.execute(query)
-    sessions = result.scalars().all()
-    
+    sessions = (
+        await db.scalars(
+            query.order_by(GameSession.end_time.desc(), GameSession.id.desc())
+            .offset(skip)
+            .limit(limit)
+            .options(selectinload(GameSession.game))
+        )
+    ).all()
     return [
-        {
-            "id": s.id,
-            "game_slug": s.game.slug,
-            "game_title": s.game.title,
-            "start_time": s.start_time,
-            "end_time": s.end_time,
-            "duration_seconds": s.duration_seconds,
-            "score": s.score,
-            "difficulty": s.difficulty
-        }
-        for s in sessions
+        SessionResponse(
+            metrics=session.metrics,
+            id=session.id,
+            session_id=session.session_id,
+            game_slug=session.game.slug,
+            game_title=session.game.title,
+            start_time=session.start_time,
+            end_time=session.end_time,
+            duration_seconds=session.duration_seconds,
+            score=session.score,
+            difficulty=session.difficulty,
+        )
+        for session in sessions
     ]
 
 
 @router.get("/{game_slug}", response_model=GameStatsResponse)
-async def get_game_stats(
-    game_slug: str,
-    current_user: Annotated[User, Depends(get_default_user)],
-    db: Annotated[AsyncSession, Depends(get_db)]
-):
-    """Get stats for a specific game."""
-    result = await db.execute(
-        select(Game).where(Game.slug == game_slug)
+async def get_game_stats(game_slug: str, current_user: CurrentUser, db: DbSession):
+    game = await get_game(game_slug, db, include_inactive=True)
+    stats = await db.scalar(
+        select(PlayStats)
+        .where(PlayStats.user_id == current_user.id, PlayStats.game_id == game.id)
+        .options(selectinload(PlayStats.game))
     )
-    game = result.scalar_one_or_none()
-    
-    if not game:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Game not found"
-        )
-    
-    stats_result = await db.execute(
-        select(PlayStats).where(
-            PlayStats.user_id == current_user.id,
-            PlayStats.game_id == game.id
-        )
-    )
-    stats = stats_result.scalar_one_or_none()
-    
-    if not stats:
-        return GameStatsResponse(
-            game_slug=game_slug,
-            game_title=game.title,
-            total_playtime_seconds=0,
-            sessions_count=0,
-            high_score=0,
-            last_session=None
-        )
-    
+    if stats is not None:
+        return game_stats(stats)
     return GameStatsResponse(
-        game_slug=game_slug,
+        game_slug=game.slug,
         game_title=game.title,
-        total_playtime_seconds=stats.total_playtime_seconds,
-        sessions_count=stats.sessions_count,
-        high_score=stats.high_score,
-        last_session=stats.last_session
+        total_playtime_seconds=0,
+        sessions_count=0,
+        high_score=0,
+        last_session=None,
     )
 
 
-@router.post("/{game_slug}/start")
+@router.post("/{game_slug}/start", response_model=SessionStartResponse)
 async def start_session(
     game_slug: str,
-    current_user: Annotated[User, Depends(get_default_user)],
-    db: Annotated[AsyncSession, Depends(get_db)]
+    current_user: CurrentUser,
+    db: DbSession,
+    session_data: SessionStart | None = None,
 ):
-    """Start a new play session (increments session count)."""
+    game = await get_game(game_slug, db)
+    stats = await ensure_stats(current_user.id, game.id, db)
+    session_id = str(
+        session_data.session_id if session_data and session_data.session_id else uuid4()
+    )
     result = await db.execute(
-        select(Game).where(Game.slug == game_slug)
+        insert(GameSession)
+        .values(session_id=session_id, user_id=current_user.id, game_id=game.id, end_time=None)
+        .on_conflict_do_nothing(index_elements=["session_id"])
+        .returning(GameSession.id)
     )
-    game = result.scalar_one_or_none()
-    
-    if not game:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Game not found"
+    if result.scalar_one_or_none() is None:
+        previous = await db.scalar(select(GameSession).where(GameSession.session_id == session_id))
+        if previous.user_id != current_user.id or previous.game_id != game.id:
+            raise HTTPException(409, "Session identity is already in use")
+    else:
+        now = utc_now()
+        await db.execute(
+            update(PlayStats)
+            .where(PlayStats.id == stats.id)
+            .values(sessions_count=PlayStats.sessions_count + 1, last_session=now)
         )
-    
-    # Ensure stats record exists
-    stats = await get_or_create_stats(current_user.id, game.id, db)
-    
-    # Atomic update for concurrent safety
-    stats.sessions_count = PlayStats.sessions_count + 1
-    stats.last_session = datetime.now(timezone.utc)
-    
-    # Update last_played in library
-    library_result = await db.execute(
-        select(UserLibrary).where(
-            UserLibrary.user_id == current_user.id,
-            UserLibrary.game_id == game.id
+        await db.execute(
+            update(UserLibrary)
+            .where(UserLibrary.user_id == current_user.id, UserLibrary.game_id == game.id)
+            .values(last_played=now)
         )
-    )
-    library_entry = library_result.scalar_one_or_none()
-    if library_entry:
-        library_entry.last_played = datetime.now(timezone.utc)
-    
     await db.commit()
     await db.refresh(stats)
-    
-    return {"message": "Session started", "sessions_count": stats.sessions_count}
+    return SessionStartResponse(
+        message="Session started",
+        sessions_count=stats.sessions_count,
+        session_id=session_id,
+        profile_id=current_user.id,
+    )
 
 
-@router.post("/{game_slug}/session")
+def same_completion(session: GameSession, data: SessionRecord) -> bool:
+    return (
+        session.duration_seconds == data.playtime_seconds
+        and session.score == data.score
+        and session.difficulty == data.difficulty
+        and (session.metrics or {}) == data.metrics.model_dump(exclude_none=True)
+    )
+
+
+@router.post("/{game_slug}/session", response_model=SessionRecordResponse)
 async def record_session(
     game_slug: str,
     session_data: SessionRecord,
-    current_user: Annotated[User, Depends(get_default_user)],
-    db: Annotated[AsyncSession, Depends(get_db)]
+    current_user: CurrentUser,
+    db: DbSession,
 ):
-    """Record play time for an existing session."""
-    result = await db.execute(
-        select(Game).where(Game.slug == game_slug)
+    game = await get_game(game_slug, db, include_inactive=True)
+    # The upsert reserves SQLite's writer before reading or finishing the session.
+    stats = await ensure_stats(current_user.id, game.id, db)
+    query = select(GameSession).where(
+        GameSession.user_id == current_user.id, GameSession.game_id == game.id
     )
-    game = result.scalar_one_or_none()
-    
-    if not game:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Game not found"
+    if session_data.session_id is not None:
+        session = await db.scalar(
+            query.where(GameSession.session_id == str(session_data.session_id))
         )
-    
-    stats = await get_or_create_stats(current_user.id, game.id, db)
-    
-    # Atomic update
-    stats.total_playtime_seconds = PlayStats.total_playtime_seconds + session_data.playtime_seconds
-    stats.last_session = datetime.now(timezone.utc)
-    # Create detailed game session record
-    # Note: We assume session_data.playtime_seconds is the duration
-    # In a more complex system, start/end calls would track precise timestamps
-    now = datetime.now(timezone.utc)
-    # Estimate start time based on duration
-    start_time = datetime.fromtimestamp(now.timestamp() - session_data.playtime_seconds, tz=timezone.utc)
-    
-    session = GameSession(
-        user_id=current_user.id,
-        game_id=game.id,
-        start_time=start_time,
-        end_time=now,
-        duration_seconds=session_data.playtime_seconds,
-        score=session_data.score,
-        difficulty=session_data.difficulty
+        if session is None:
+            raise HTTPException(404, "Session not found for this profile and game")
+    else:
+        # Compatibility for the current frontend, which does not send session IDs.
+        session = await db.scalar(
+            query.where(GameSession.end_time.is_(None))
+            .order_by(GameSession.start_time.desc(), GameSession.id.desc())
+            .limit(1)
+        )
+    if session is not None and session.end_time is not None:
+        if not same_completion(session, session_data):
+            raise HTTPException(409, "A completed session cannot be changed")
+        await db.commit()
+        return SessionRecordResponse(
+            message="Playtime recorded",
+            total_playtime=stats.total_playtime_seconds,
+            session_id=session.session_id,
+        )
+
+    now = utc_now()
+    if session is None:
+        if not game.is_active:
+            raise HTTPException(404, "Game not found")
+        session = GameSession(
+            session_id=str(uuid4()),
+            user_id=current_user.id,
+            game_id=game.id,
+            start_time=now - timedelta(seconds=session_data.playtime_seconds),
+        )
+        db.add(session)
+    session.end_time = now
+    session.duration_seconds = session_data.playtime_seconds
+    session.score = session_data.score
+    session.difficulty = session_data.difficulty
+    session.metrics = session_data.metrics.model_dump(exclude_none=True)
+    await db.execute(
+        update(PlayStats)
+        .where(PlayStats.id == stats.id)
+        .values(
+            total_playtime_seconds=PlayStats.total_playtime_seconds + session_data.playtime_seconds,
+            last_session=now,
+        )
     )
-    db.add(session)
-    
+    # Preserve submitScore's "new high score" behavior used by the current frontend.
     await db.commit()
     await db.refresh(stats)
-    
-    return {"message": "Playtime recorded", "total_playtime": stats.total_playtime_seconds}
+    return SessionRecordResponse(
+        message="Playtime recorded",
+        total_playtime=stats.total_playtime_seconds,
+        session_id=session.session_id,
+    )
 
 
-
-
-
-@router.post("/{game_slug}/score")
+@router.post("/{game_slug}/score", response_model=ScoreResponse)
 async def submit_score(
-    game_slug: str,
-    score_data: ScoreSubmit,
-    current_user: Annotated[User, Depends(get_default_user)],
-    db: Annotated[AsyncSession, Depends(get_db)]
+    game_slug: str, score_data: ScoreSubmit, current_user: CurrentUser, db: DbSession
 ):
-    """Submit a high score."""
+    game = await get_game(game_slug, db)
+    stats = await ensure_stats(current_user.id, game.id, db)
     result = await db.execute(
-        select(Game).where(Game.slug == game_slug)
+        update(PlayStats)
+        .where(PlayStats.id == stats.id, PlayStats.high_score < score_data.score)
+        .values(high_score=score_data.score)
+        .returning(PlayStats.high_score)
     )
-    game = result.scalar_one_or_none()
-    
-    if not game:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Game not found"
-        )
-    
-    # We need to lock the row here because high score check depends on current value
-    # But for simplicity in this architecture (sqlite/async), we'll trust the check
-    # Or strict atomic approach: logic in WHERE clause or CASE statement
-    # For high scores, simple read-compare-write is usually acceptable unless highly competitive real-time
-    # To be perfectly safe, we'll re-fetch with intent (conceptually)
-    
-    stats = await get_or_create_stats(current_user.id, game.id, db)
-    
-    is_new_high = score_data.score > stats.high_score
-    if is_new_high:
-        stats.high_score = score_data.score
-    
+    is_new_high = result.scalar_one_or_none() is not None
     await db.commit()
     await db.refresh(stats)
-    
-    return {
-        "message": "Score submitted",
-        "is_new_high_score": is_new_high,
-        "high_score": stats.high_score
-    }
+    return ScoreResponse(
+        message="Score submitted",
+        is_new_high_score=is_new_high,
+        high_score=stats.high_score,
+    )

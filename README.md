@@ -10,9 +10,9 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/React-19-61DAFB?logo=react" alt="React">
-  <img src="https://img.shields.io/badge/FastAPI-0.104-009688?logo=fastapi" alt="FastAPI">
+  <img src="https://img.shields.io/badge/FastAPI-0.143-009688?logo=fastapi" alt="FastAPI">
   <img src="https://img.shields.io/badge/TypeScript-5.9-3178C6?logo=typescript" alt="TypeScript">
-  <img src="https://img.shields.io/badge/Three.js-0.181-000000?logo=threedotjs" alt="Three.js">
+  <img src="https://img.shields.io/badge/Three.js-0.186-000000?logo=threedotjs" alt="Three.js">
   <img src="https://img.shields.io/badge/License-TSL-red" alt="License">
 </p>
 
@@ -42,7 +42,9 @@
 |------|------|-------------|
 | 🐍 **Neon Snake** | 2D | Classic arcade snake with cyberpunk aesthetics and particle effects |
 | 🦖 **Raptor Run** | 2D | Endless runner with obstacles and day/night cycle |
-| ✈️ **Stellar Flight** | 3D | Flight simulator (Coming Soon) |
+| ✈️ **Stellar Flight** | 3D | Gate training course across three maps, rolling terrain, and saved flights |
+| 🧱 **Neon Breakout** | 2D | Paddle-and-brick arcade with three lives |
+| 🔢 **Merge 2048** | 2D | Tile-merging puzzle with complete saves |
 
 ---
 
@@ -55,13 +57,13 @@ cd arcade-nexus
 
 # Backend
 cd backend
-uv sync
-uv run uvicorn app.main:app --reload
+uv sync --locked
+uv run python run.py
 # Runs at http://localhost:8000
 
 # Frontend (new terminal)
-cd frontend
-npm install
+cd arcade-nexus/frontend
+npm ci
 npm run dev
 # Runs at http://localhost:5173
 ```
@@ -74,10 +76,10 @@ Visit **http://localhost:5173** 🎉
 
 | Layer | Technology |
 |-------|------------|
-| **Frontend** | React 19, TypeScript, Vite 7, Tailwind CSS, Zustand, Framer Motion |
+| **Frontend** | React 19, TypeScript, Vite 8, Tailwind CSS 4, Zustand, Framer Motion |
 | **Backend** | FastAPI, SQLAlchemy 2, SQLite (async), Pydantic v2 |
 | **3D Rendering** | Three.js with GLTF loader |
-| **Testing** | pytest (backend), vitest (frontend) |
+| **Testing** | pytest (backend), Vitest and Playwright (frontend) |
 
 ---
 
@@ -112,6 +114,9 @@ arcade-nexus/
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Architecture, API reference, database schema |
 | [CHANGELOG.md](CHANGELOG.md) | Version history and release notes |
 | [LICENSE.md](LICENSE.md) | License terms and attribution |
+| [Backend guide](backend/README.md) | Local runtime, migrations and API behavior |
+| [Frontend guide](frontend/README.md) | Browser runtime, controls and validation |
+| [Frontend review](frontend/REVIEW.md) | File review and browser test findings |
 | [SDK README](frontend/src/sdk/README.md) | Game development guide |
 
 ---
@@ -125,7 +130,8 @@ uv run pytest
 
 # Frontend tests
 cd frontend
-npm test
+npm run test:unit
+npm run test:e2e
 ```
 
 ---

@@ -1,9 +1,5 @@
-"""
-Utils Package
-"""
-from .local_user import get_or_create_default_user, get_default_user
+"""Local profile dependencies."""
 
-__all__ = [
-    "get_or_create_default_user",
-    "get_default_user",
-]
+from app.utils.local_user import get_active_profile, get_default_user
+
+__all__ = ["get_active_profile", "get_default_user"]

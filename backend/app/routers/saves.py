@@ -1,195 +1,110 @@
-"""
-Saves Router - Game Save Management
-"""
-from datetime import datetime, timezone
+"""Race-safe save-slot writes and profile isolation."""
+
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, HTTPException, Path, status
+from sqlalchemy import select, update
+from sqlalchemy.dialects.sqlite import insert
 
-from app.database import get_db
-from app.models.user import User
-from app.models.game import Game
+from app.datetime_utils import utc_now
+from app.dependencies import CurrentUser, DbSession
 from app.models.save import GameSave
-from app.schemas.save import SaveCreate, SaveUpdate, SaveResponse, SaveListResponse
-from app.utils.local_user import get_default_user
+from app.schemas.save import SaveCreate, SaveListResponse, SaveResponse, SaveUpdate
+from app.services.common import get_game
 
 router = APIRouter()
+SlotPath = Annotated[int, Path(ge=1, le=5)]
 
 
-async def get_game_by_slug(slug: str, db: AsyncSession) -> Game:
-    """Helper to get game by slug."""
-    result = await db.execute(
-        select(Game).where(Game.slug == slug, Game.is_active == True)
+def response(save: GameSave, slug: str) -> SaveResponse:
+    return SaveResponse(
+        id=save.id,
+        game_slug=slug,
+        slot=save.slot,
+        name=save.name,
+        data=save.data,
+        thumbnail=save.thumbnail,
+        created_at=save.created_at,
+        updated_at=save.updated_at,
     )
-    game = result.scalar_one_or_none()
-    if not game:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Game not found"
-        )
-    return game
 
 
 @router.get("/{game_slug}", response_model=SaveListResponse)
-async def list_saves(
-    game_slug: str,
-    current_user: Annotated[User, Depends(get_default_user)],
-    db: Annotated[AsyncSession, Depends(get_db)]
-):
-    """List all saves for a game."""
-    game = await get_game_by_slug(game_slug, db)
-    
-    result = await db.execute(
-        select(GameSave)
-        .where(GameSave.user_id == current_user.id, GameSave.game_id == game.id)
-        .order_by(GameSave.slot)
-    )
-    saves = result.scalars().all()
-    
-    return SaveListResponse(
-        saves=[
-            SaveResponse(
-                id=s.id,
-                game_slug=game_slug,
-                slot=s.slot,
-                name=s.name,
-                data=s.data,
-                thumbnail=s.thumbnail,
-                created_at=s.created_at,
-                updated_at=s.updated_at
-            )
-            for s in saves
-        ],
-        total=len(saves)
-    )
+async def list_saves(game_slug: str, current_user: CurrentUser, db: DbSession):
+    game = await get_game(game_slug, db, include_inactive=True)
+    saves = (
+        await db.scalars(
+            select(GameSave)
+            .where(GameSave.user_id == current_user.id, GameSave.game_id == game.id)
+            .order_by(GameSave.slot)
+        )
+    ).all()
+    return SaveListResponse(saves=[response(save, game_slug) for save in saves], total=len(saves))
 
 
 @router.post("/{game_slug}", response_model=SaveResponse, status_code=status.HTTP_201_CREATED)
 async def create_save(
     game_slug: str,
     save_data: SaveCreate,
-    current_user: Annotated[User, Depends(get_default_user)],
-    db: Annotated[AsyncSession, Depends(get_db)]
+    current_user: CurrentUser,
+    db: DbSession,
 ):
-    """Create a new save or update existing slot."""
-    game = await get_game_by_slug(game_slug, db)
-    
-    # Check if slot exists
-    result = await db.execute(
-        select(GameSave).where(
-            GameSave.user_id == current_user.id,
-            GameSave.game_id == game.id,
-            GameSave.slot == save_data.slot
-        )
+    game = await get_game(game_slug, db)
+    statement = insert(GameSave).values(
+        user_id=current_user.id, game_id=game.id, **save_data.model_dump()
     )
-    existing = result.scalar_one_or_none()
-    
-    if existing:
-        # Update existing save
-        existing.name = save_data.name
-        existing.data = save_data.data
-        existing.thumbnail = save_data.thumbnail
-        existing.updated_at = datetime.now(timezone.utc)
-        save = existing
-    else:
-        # Create new save
-        save = GameSave(
-            user_id=current_user.id,
-            game_id=game.id,
-            slot=save_data.slot,
-            name=save_data.name,
-            data=save_data.data,
-            thumbnail=save_data.thumbnail
-        )
-        db.add(save)
-    
+    statement = statement.on_conflict_do_update(
+        index_elements=["user_id", "game_id", "slot"],
+        set_={
+            "name": statement.excluded.name,
+            "data": statement.excluded.data,
+            "thumbnail": statement.excluded.thumbnail,
+            "updated_at": utc_now(),
+        },
+    ).returning(GameSave.id)
+    save_id = (await db.execute(statement)).scalar_one()
     await db.commit()
-    await db.refresh(save)
-    
-    return SaveResponse(
-        id=save.id,
-        game_slug=game_slug,
-        slot=save.slot,
-        name=save.name,
-        data=save.data,
-        thumbnail=save.thumbnail,
-        created_at=save.created_at,
-        updated_at=save.updated_at
-    )
+    return response(await db.get(GameSave, save_id), game_slug)
 
 
 @router.put("/{game_slug}/{slot}", response_model=SaveResponse)
 async def update_save(
     game_slug: str,
-    slot: int,
+    slot: SlotPath,
     save_data: SaveUpdate,
-    current_user: Annotated[User, Depends(get_default_user)],
-    db: Annotated[AsyncSession, Depends(get_db)]
+    current_user: CurrentUser,
+    db: DbSession,
 ):
-    """Update an existing save slot."""
-    game = await get_game_by_slug(game_slug, db)
-    
+    game = await get_game(game_slug, db)
+    # Omitted optional metadata retains its value; explicit null clears it.
+    values = save_data.model_dump(exclude_unset=True)
+    values["updated_at"] = utc_now()
     result = await db.execute(
-        select(GameSave).where(
+        update(GameSave)
+        .where(
             GameSave.user_id == current_user.id,
             GameSave.game_id == game.id,
-            GameSave.slot == slot
+            GameSave.slot == slot,
         )
+        .values(**values)
+        .returning(GameSave.id)
     )
-    save = result.scalar_one_or_none()
-    
-    if not save:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Save not found"
-        )
-    
-    save.name = save_data.name
-    save.data = save_data.data
-    save.thumbnail = save_data.thumbnail
-    save.updated_at = datetime.now(timezone.utc)
-    
+    save_id = result.scalar_one_or_none()
+    if save_id is None:
+        raise HTTPException(404, "Save not found")
     await db.commit()
-    await db.refresh(save)
-    
-    return SaveResponse(
-        id=save.id,
-        game_slug=game_slug,
-        slot=save.slot,
-        name=save.name,
-        data=save.data,
-        thumbnail=save.thumbnail,
-        created_at=save.created_at,
-        updated_at=save.updated_at
-    )
+    return response(await db.get(GameSave, save_id), game_slug)
 
 
 @router.delete("/{game_slug}/{slot}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_save(
-    game_slug: str,
-    slot: int,
-    current_user: Annotated[User, Depends(get_default_user)],
-    db: Annotated[AsyncSession, Depends(get_db)]
-):
-    """Delete a save slot."""
-    game = await get_game_by_slug(game_slug, db)
-    
-    result = await db.execute(
+async def delete_save(game_slug: str, slot: SlotPath, current_user: CurrentUser, db: DbSession):
+    game = await get_game(game_slug, db, include_inactive=True)
+    save = await db.scalar(
         select(GameSave).where(
-            GameSave.user_id == current_user.id,
-            GameSave.game_id == game.id,
-            GameSave.slot == slot
+            GameSave.user_id == current_user.id, GameSave.game_id == game.id, GameSave.slot == slot
         )
     )
-    save = result.scalar_one_or_none()
-    
-    if not save:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Save not found"
-        )
-    
+    if save is None:
+        raise HTTPException(404, "Save not found")
     await db.delete(save)
     await db.commit()

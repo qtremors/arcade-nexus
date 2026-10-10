@@ -1,27 +1,19 @@
-/**
- * Game Registration Module
- * 
- * Registers all available games with the SDK.
- * Games are organized in modular folders under /games/
- */
-import { registerGame } from '../sdk';
-
-// Import games from modular folders
-import { SnakeGame } from './snake';
-import { RaptorRunGame } from './raptor-run';
-import { StellarFlightGame } from './stellar-flight/StellarFlight';
-
-let registered = false;
-
-export function registerGames(): void {
-    if (registered) return;
-    registered = true;
-
-    // Register each game with its slug (matches backend seed data)
-    registerGame('snake', () => new SnakeGame());
-    registerGame('raptor-run', () => new RaptorRunGame());
-    registerGame('stellar-flight', () => new StellarFlightGame());
+import type { GameInstance } from "../sdk/GameSDK";
+export async function loadGame(slug: string): Promise<GameInstance> {
+  switch (slug) {
+    case "snake":
+      return new (await import("./snake/Snake")).SnakeGame();
+    case "raptor-run":
+      return new (await import("./raptor-run/RaptorRun")).RaptorRunGame();
+    case "stellar-flight":
+      return new (
+        await import("./stellar-flight/StellarFlight")
+      ).StellarFlightGame();
+    case "breakout":
+      return new (await import("./breakout/Breakout")).BreakoutGame();
+    case "merge-2048":
+      return new (await import("./merge-2048/Merge2048")).Merge2048Game();
+    default:
+      throw new Error("This game is not bundled with Arcade Nexus");
+  }
 }
-
-// Auto-register on import
-registerGames();

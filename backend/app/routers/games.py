@@ -1,108 +1,65 @@
-"""
-Games Router - Game Store
-"""
-from typing import Annotated
+"""Installed game catalog and opt-in development metadata creation."""
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy import select, func
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, HTTPException, Query, Request, status
+from sqlalchemy import func, select
+from sqlalchemy.dialects.sqlite import insert
 
-from app.database import get_db
-from app.models.game import Game, Category
-from app.schemas.game import GameResponse, GameListResponse, GameCreate
+from app.dependencies import DbSession
+from app.models.game import Category, Game
+from app.schemas.game import GameCreate, GameListResponse, GameResponse
+from app.services.common import get_game as find_game
 
 router = APIRouter()
 
 
 def escape_like_pattern(pattern: str) -> str:
-    """Escape SQL LIKE special characters to prevent DoS via expensive patterns."""
-    # Escape %, _, and \ which have special meaning in LIKE
-    pattern = pattern.replace('\\', '\\\\')
-    pattern = pattern.replace('%', '\\%')
-    pattern = pattern.replace('_', '\\_')
-    return pattern
+    return pattern.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 @router.get("", response_model=GameListResponse)
 async def list_games(
-    db: Annotated[AsyncSession, Depends(get_db)],
+    db: DbSession,
     category: Category | None = None,
-    search: str | None = Query(None, max_length=100),  # Limit search length
+    search: str | None = Query(None, max_length=100),
     skip: int = Query(0, ge=0),
-    limit: int = Query(50, ge=1, le=100)
+    limit: int = Query(50, ge=1, le=100),
 ):
-    """List all available games in the store."""
-    query = select(Game).where(Game.is_active == True)
-    
+    query = select(Game).where(Game.is_active.is_(True))
     if category:
         query = query.where(Game.category == category)
-    
-    if search:
-        # Sanitize search input to prevent LIKE pattern DoS
-        safe_search = escape_like_pattern(search.strip())
-        query = query.where(Game.title.ilike(f"%{safe_search}%"))
-    
-    # Get total count
-    count_query = select(func.count()).select_from(query.subquery())
-    total_result = await db.execute(count_query)
-    total = total_result.scalar()
-    
-    # Get paginated results
-    query = query.offset(skip).limit(limit).order_by(Game.title)
-    result = await db.execute(query)
-    games = result.scalars().all()
-    
-    return GameListResponse(
-        games=[GameResponse.model_validate(g) for g in games],
-        total=total
-    )
+    if search and search.strip():
+        query = query.where(
+            Game.title.ilike(f"%{escape_like_pattern(search.strip())}%", escape="\\")
+        )
+    total = await db.scalar(select(func.count()).select_from(query.subquery()))
+    games = (await db.scalars(query.order_by(Game.title, Game.id).offset(skip).limit(limit))).all()
+    return GameListResponse(games=games, total=total)
 
 
 @router.get("/categories")
-async def list_categories():
-    """List all game categories."""
-    return [{"value": c.value, "label": c.value.title()} for c in Category]
+async def list_categories() -> list[dict[str, str]]:
+    return [{"value": category.value, "label": category.value.title()} for category in Category]
 
 
 @router.get("/{slug}", response_model=GameResponse)
-async def get_game(
-    slug: str,
-    db: Annotated[AsyncSession, Depends(get_db)]
-):
-    """Get a specific game by slug."""
-    result = await db.execute(
-        select(Game).where(Game.slug == slug, Game.is_active == True)
-    )
-    game = result.scalar_one_or_none()
-    
-    if not game:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Game not found"
-        )
-    
-    return GameResponse.model_validate(game)
+async def get_game(slug: str, db: DbSession):
+    return await find_game(slug, db)
 
 
 @router.post("", response_model=GameResponse, status_code=status.HTTP_201_CREATED)
-async def create_game(
-    game_data: GameCreate,
-    db: Annotated[AsyncSession, Depends(get_db)]
-):
-    """Create a new game (for seeding/admin use)."""
-    # Check if slug exists
-    result = await db.execute(
-        select(Game).where(Game.slug == game_data.slug)
-    )
-    if result.scalar_one_or_none():
+async def create_game(game_data: GameCreate, request: Request, db: DbSession):
+    if not request.app.state.settings.ALLOW_GAME_CREATION:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Game with this slug already exists"
+            403, "Game creation is disabled; install games through the bundled catalog"
         )
-    
-    game = Game(**game_data.model_dump())
-    db.add(game)
+    result = await db.execute(
+        insert(Game)
+        .values(**game_data.model_dump())
+        .on_conflict_do_nothing(index_elements=["slug"])
+        .returning(Game.id)
+    )
+    game_id = result.scalar_one_or_none()
+    if game_id is None:
+        raise HTTPException(400, "Game with this slug already exists")
     await db.commit()
-    await db.refresh(game)
-    
-    return GameResponse.model_validate(game)
+    return await db.get(Game, game_id)

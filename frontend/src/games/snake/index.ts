@@ -1,1 +1,1 @@
-export { SnakeGame } from './Snake';
+export { SnakeGame } from "./Snake";

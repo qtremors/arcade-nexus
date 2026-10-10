@@ -1,52 +1,61 @@
-"""
-Environment Configuration
-"""
-import secrets
-from pydantic_settings import BaseSettings
+"""Configuration for the local browser application."""
+
 from functools import lru_cache
+from pathlib import Path
 
+from platformdirs import user_data_path
+from pydantic import Field, field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import make_url
 
-def _generate_secret_key() -> str:
-    """Generate a secure random secret key."""
-    return secrets.token_urlsafe(32)
+BACKEND_DIR = Path(__file__).resolve().parents[1]
 
 
 class Settings(BaseSettings):
-    """Application settings loaded from environment variables."""
-    
-    # App
+    model_config = SettingsConfigDict(
+        env_file=BACKEND_DIR / ".env", case_sensitive=True, extra="ignore"
+    )
     APP_NAME: str = "Arcade Nexus"
     APP_VERSION: str = "1.4.1"
     DEBUG: bool = False
-    
-    # Database
-    DATABASE_URL: str = "sqlite+aiosqlite:///./arcade_nexus.db"
-    
-    # Security
-    SECRET_KEY: str = ""
-    
-    # CORS
-    # Default to standard frontend development ports
+    DATA_DIR: Path = Field(default_factory=lambda: user_data_path("ArcadeNexus", appauthor=False))
+    DATABASE_URL: str = ""
+    HOST: str = "127.0.0.1"
+    PORT: int = Field(8000, ge=1, le=65535)
+    ALLOWED_HOSTS: list[str] = ["localhost", "127.0.0.1", "[::1]"]
     CORS_ORIGINS: list[str] = [
         "http://localhost:5173",
         "http://localhost:4173",
-        "http://localhost:3000"
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:4173",
     ]
-    
-    class Config:
-        env_file = ".env"
-        case_sensitive = True
-    
-    def model_post_init(self, __context) -> None:
-        """Generate secret key if not provided."""
-        if not self.SECRET_KEY:
-            # Fallback to random key for development
-            # NOTE: In production, always provide SECRET_KEY via environment variable
-            key = _generate_secret_key()
-            object.__setattr__(self, 'SECRET_KEY', key)
+    ALLOW_GAME_CREATION: bool = False
+    MAX_REQUEST_BYTES: int = Field(1024 * 1024, ge=1024)
+
+    @field_validator("CORS_ORIGINS")
+    @classmethod
+    def validate_origins(cls, origins: list[str]) -> list[str]:
+        if "*" in origins:
+            raise ValueError("Use explicit browser origins instead of a wildcard")
+        return origins
+
+    def model_post_init(self, __context: object) -> None:
+        self.DATA_DIR = self.DATA_DIR.expanduser().resolve()
+        if not self.DATABASE_URL:
+            legacy = BACKEND_DIR / "arcade_nexus.db"
+            path = legacy if legacy.exists() else self.DATA_DIR / "arcade_nexus.db"
+            self.DATABASE_URL = f"sqlite+aiosqlite:///{path.as_posix()}"
+        url = make_url(self.DATABASE_URL)
+        if url.drivername != "sqlite+aiosqlite":
+            raise ValueError("Arcade Nexus requires a sqlite+aiosqlite database URL")
+        if url.database and url.database != ":memory:":
+            path = Path(url.database).expanduser()
+            if not path.is_absolute():
+                path = BACKEND_DIR / path
+            self.DATABASE_URL = str(url.set(database=path.resolve().as_posix()))
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
-    """Get cached settings instance."""
     return Settings()

@@ -1,149 +1,216 @@
-import { useState, useCallback, useEffect } from 'react';
-import type { ReactNode } from 'react';
-import { useLocation, Outlet, Link } from 'react-router-dom';
-import { Home, ShoppingBag, Library as LibraryIcon, Trophy, LayoutGrid } from 'lucide-react';
-import { SystemMenu } from './arcus/SystemMenu';
-import { Background } from './Background';
-import { useGamepad } from '../hooks/useGamepad';
+import { useState, useCallback, useEffect } from "react";
+import type { ReactNode } from "react";
+import { useLocation, useNavigate, Outlet, Link } from "react-router-dom";
+import {
+  Home,
+  ShoppingBag,
+  Library as LibraryIcon,
+  Trophy,
+  LayoutGrid,
+  Gamepad2,
+} from "lucide-react";
+import { SystemMenu } from "./arcus/SystemMenu";
+import { Background } from "./Background";
+import { HEALTH_URL } from "../api/client";
+import { isEditing } from "../sdk/InputManager";
+import { useGamepad } from "../hooks/useGamepad";
+import { useProfileStore } from "../stores/profileStore";
+import { moveMenuFocus } from "../sdk/menuNavigation";
 
 interface LayoutProps {
-    children?: ReactNode;
+  children?: ReactNode;
 }
 
 export function Layout({ children }: LayoutProps) {
-    const [menuOpen, setMenuOpen] = useState(false);
-    const [backendStatus, setBackendStatus] = useState<'checking' | 'online' | 'offline'>('checking');
-    const location = useLocation();
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [backendStatus, setBackendStatus] = useState<
+    "checking" | "online" | "offline"
+  >("checking");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const player = useProfileStore((state) => state.activeProfile);
+  const isGaming =
+    location.pathname.startsWith("/play") ||
+    location.pathname.startsWith("/game");
 
-    // Live clock state
-    const [time, setTime] = useState(() => new Date());
+  // Live clock state
+  const [time, setTime] = useState(() => new Date());
 
-    useEffect(() => {
-        const timer = setInterval(() => {
-            setTime(new Date());
-        }, 60000);
-        return () => clearInterval(timer);
-    }, []);
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTime(new Date());
+    }, 60000);
+    return () => clearInterval(timer);
+  }, []);
 
-    // Check backend status
-    useEffect(() => {
-        const checkBackend = async () => {
-            try {
-                const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000'}/health`);
-                if (res.ok) {
-                    setBackendStatus('online');
-                } else {
-                    setBackendStatus('offline');
-                }
-            } catch {
-                setBackendStatus('offline');
-            }
-        };
-
-        checkBackend();
-        const interval = setInterval(checkBackend, 30000);
-        return () => clearInterval(interval);
-    }, []);
-
-    // Keyboard/Gamepad shortcuts
-    const handleKeyDown = useCallback((e: KeyboardEvent) => {
-        if (e.key === 'Escape') setMenuOpen(prev => !prev);
-    }, []);
-
-    useGamepad((button) => {
-        if (button === 'Start' || button === 'Guide' || button === 'Back') {
-            setMenuOpen(prev => !prev);
+  // Check backend status
+  useEffect(() => {
+    const checkBackend = async () => {
+      try {
+        const res = await fetch(HEALTH_URL);
+        if (res.ok) {
+          setBackendStatus("online");
+        } else {
+          setBackendStatus("offline");
         }
-    }, []);
+      } catch {
+        setBackendStatus("offline");
+      }
+    };
 
-    useEffect(() => {
-        window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [handleKeyDown]);
+    checkBackend();
+    const interval = setInterval(checkBackend, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
-    const isGaming = location.pathname.startsWith('/play') || location.pathname.startsWith('/game');
+  // Keyboard/Gamepad shortcuts
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (
+        !isGaming &&
+        e.key === "Escape" &&
+        !e.repeat &&
+        !isEditing(e.target) &&
+        !document.querySelector('[aria-modal="true"]')
+      )
+        setMenuOpen((prev) => !prev);
+    },
+    [isGaming],
+  );
 
-    return (
-        <div className="relative w-full h-screen overflow-hidden bg-[var(--bg-primary)] font-sans select-none text-white">
+  useGamepad((button) => {
+    if (isGaming || document.querySelector("dialog[open]")) return;
+    if (button === "Start" || button === "Guide" || button === "Back") {
+      setMenuOpen((prev) => !prev);
+      return;
+    }
+    if (menuOpen || document.querySelector('[aria-modal="true"]')) return;
+    if (button === "LB" || button === "RB") {
+      const routes = ["/home", "/store", "/library", "/achievements"];
+      const at = Math.max(0, routes.indexOf(location.pathname));
+      navigate(
+        routes[
+          (at + (button === "RB" ? 1 : -1) + routes.length) % routes.length
+        ],
+      );
+      return;
+    }
+    if (location.pathname === "/home" && !["Up", "Down"].includes(button))
+      return; // The game shelf owns left/right and confirm input.
+    const focused = document.activeElement as HTMLElement | null;
+    if (button === "A") focused?.click();
+    if (button === "B") navigate("/home");
+    if (["Up", "Down", "Left", "Right"].includes(button)) {
+      if (
+        focused instanceof HTMLInputElement &&
+        focused.type === "range" &&
+        (button === "Left" || button === "Right")
+      ) {
+        if (button === "Left") focused.stepDown(5);
+        else focused.stepUp(5);
+        focused.dispatchEvent(new Event("input", { bubbles: true }));
+      } else if (!(
+        isEditing(focused) &&
+        (button === "Left" || button === "Right")
+      ))
+        moveMenuFocus(button as "Up" | "Down" | "Left" | "Right");
+    }
+  });
 
-            <Background />
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleKeyDown]);
 
-            {/* Premium Header - Console Style */}
-            {!isGaming && (
-                <header className={`absolute top-0 left-0 right-0 h-24 px-12 flex justify-between items-center z-30 transition-all duration-500 ${menuOpen ? 'opacity-30 pointer-events-none' : 'opacity-100'}`}>
-                    {/* Left: System Status & Branding */}
-                    <div className="flex items-center gap-8">
-                        <div className="flex flex-col">
-                            <span className="text-2xl font-bold tracking-tight text-white">Arcade Nexus</span>
-                            <span className="text-[10px] text-emerald-500 mt-1 uppercase tracking-widest font-bold">Online</span>
-                        </div>
+  return (
+    <div className="console-shell relative w-full h-screen overflow-hidden bg-[var(--bg-primary)] font-sans select-none text-white">
+      <Background />
 
-                        <nav className="flex gap-4 ml-12">
-                            <Link to="/home" className={`p-2 rounded-xl transition-all ${location.pathname === '/home' ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white'}`}>
-                                <Home size={20} />
-                            </Link>
-                            <Link to="/store" className={`p-2 rounded-xl transition-all ${location.pathname === '/store' ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white'}`}>
-                                <ShoppingBag size={20} />
-                            </Link>
-                            <Link to="/library" className={`p-2 rounded-xl transition-all ${location.pathname === '/library' ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white'}`}>
-                                <LibraryIcon size={20} />
-                            </Link>
-                            <Link to="/achievements" className={`p-2 rounded-xl transition-all ${location.pathname === '/achievements' ? 'bg-cyan-500 text-white shadow-lg shadow-cyan-500/20' : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white'}`}>
-                                <Trophy size={20} />
-                            </Link>
-                        </nav>
-                    </div>
-
-                    {/* Right: Clock & User Info */}
-                    <div className="flex items-center gap-8">
-                        {/* Backend indicator */}
-                        <div className={`flex items-center gap-2 font-mono text-[10px] ${backendStatus === 'online' ? 'text-green-500' : 'text-red-500'}`}>
-                            <div className={`w-1.5 h-1.5 rounded-full ${backendStatus === 'online' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 'bg-red-500 animate-pulse'}`} />
-                            {backendStatus === 'online' ? 'SECURE' : 'OFFLINE'}
-                        </div>
-
-                        {/* Beautiful Clock */}
-                        <div className="flex flex-col items-end">
-                            <span className="text-3xl font-light tracking-widest leading-none text-white">
-                                {time.getHours().toString().padStart(2, '0')}:{time.getMinutes().toString().padStart(2, '0')}
-                            </span>
-                            <span className="text-[10px] text-zinc-500 uppercase tracking-tighter mt-1">Clock</span>
-                        </div>
-
-                        {/* System Button */}
-                        <button
-                            onClick={() => setMenuOpen(!menuOpen)}
-                            className="w-12 h-12 glass-panel rounded-2xl flex items-center justify-center hover:neon-border-cyan transition-all"
-                        >
-                            <LayoutGrid size={20} className={menuOpen ? "animate-spin" : ""} />
-                        </button>
-                    </div>
-                </header>
-            )}
-
-            {/* Main Interactive Stage */}
-            <main
-                className={`relative z-10 w-full h-full flex flex-col transition-all duration-700 ease-[var(--ease-out-expo)]
-                ${menuOpen ? 'scale-90 opacity-20 pointer-events-none' : 'scale-100 opacity-100'}
-                ${!isGaming ? 'pt-24 pb-8' : ''}`}
+      {!isGaming && (
+        <>
+          <a href="#console-content" className="skip-link">
+            Skip to content
+          </a>
+          <header inert={menuOpen} className="console-header">
+            <Link
+              to="/home"
+              className="console-brand"
+              aria-label="Arcade Nexus home"
             >
-                {children || <Outlet />}
-            </main>
+              <span className="brand-mark">
+                <Gamepad2 size={24} />
+              </span>
+              <span>
+                ARCADE<span className="brand-secondary">NEXUS</span>
+              </span>
+            </Link>
+            <nav aria-label="Main navigation">
+              {[
+                { path: "/home", label: "Home", icon: Home },
+                { path: "/store", label: "Store", icon: ShoppingBag },
+                { path: "/library", label: "Library", icon: LibraryIcon },
+                { path: "/achievements", label: "Achievements", icon: Trophy },
+              ].map(({ path, label, icon: Icon }) => (
+                <Link
+                  key={path}
+                  to={path}
+                  aria-label={label}
+                  aria-current={location.pathname === path ? "page" : undefined}
+                >
+                  <Icon size={17} />
+                  <span>{label}</span>
+                </Link>
+              ))}
+            </nav>
+            <div className="console-status">
+              <span
+                className={`connection-dot ${backendStatus}`}
+                title={
+                  backendStatus === "online"
+                    ? "Local server connected"
+                    : backendStatus
+                }
+              />
+              <time>
+                {time.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </time>
+              <Link
+                to="/profile"
+                className="header-player"
+                aria-label="Your player profile"
+              >
+                <span>{player?.avatar ?? "🎮"}</span>
+                <strong>{player?.username ?? "Player"}</strong>
+              </Link>
+              <button
+                aria-label="Open system menu"
+                className="system-toggle"
+                onClick={() => setMenuOpen(!menuOpen)}
+              >
+                <LayoutGrid size={18} />
+              </button>
+            </div>
+          </header>
+        </>
+      )}
 
-            {/* System Menu */}
-            <SystemMenu
-                isOpen={menuOpen}
-                onClose={() => setMenuOpen(false)}
-            />
+      {/* Main Interactive Stage */}
+      <main
+        id="console-content"
+        tabIndex={-1}
+        inert={menuOpen}
+        className={`console-main relative z-10 w-full h-full flex flex-col transition-all duration-700 ease-[var(--ease-out-expo)]
+                ${menuOpen ? "opacity-50 pointer-events-none" : "opacity-100"}
+                ${isGaming ? "is-gaming" : ""}`}
+      >
+        {children || <Outlet />}
+      </main>
 
-            {/* Footer Context / Watermark */}
-            {!isGaming && (
-                <footer className="absolute bottom-8 left-12 right-12 flex justify-between items-end z-20 pointer-events-none opacity-10">
-                    <div className="text-[10px] font-mono tracking-widest">
-                        Arcade Nexus v1.2
-                    </div>
-                </footer>
-            )}
-        </div>
-    );
+      {/* System Menu */}
+      <SystemMenu isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
+    </div>
+  );
 }

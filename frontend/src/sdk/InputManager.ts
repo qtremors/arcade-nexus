@@ -1,100 +1,89 @@
-/**
- * Input Manager - Handles keyboard and gamepad input
- */
-import type { InputState } from './GameSDK';
-
+import type { InputState } from "./GameSDK";
+export function isEditing(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLElement &&
+    (target.isContentEditable ||
+      ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName))
+  );
+}
 export class InputManager {
-    private keys: Record<string, boolean> = {};
-    private gamepadIndex: number | null = null;
-
-    constructor() {
-        this.handleKeyDown = this.handleKeyDown.bind(this);
-        this.handleKeyUp = this.handleKeyUp.bind(this);
-        this.handleGamepadConnected = this.handleGamepadConnected.bind(this);
-        this.handleGamepadDisconnected = this.handleGamepadDisconnected.bind(this);
+  private keys: Record<string, boolean> = {};
+  private presses = new Set<string>();
+  private blockedButtons = new Set<string>();
+  start(): void {
+    // Confirm/pause used in the console must be released before gameplay sees it.
+    for (const pad of navigator.getGamepads?.() ?? []) {
+      if (!pad?.connected) continue;
+      for (const id of [0, 1, 9])
+        if (pad.buttons[id]?.pressed)
+          this.blockedButtons.add(`${pad.index}:${id}`);
     }
-
-    /** Start listening for input events */
-    start(): void {
-        window.addEventListener('keydown', this.handleKeyDown);
-        window.addEventListener('keyup', this.handleKeyUp);
-        window.addEventListener('gamepadconnected', this.handleGamepadConnected);
-        window.addEventListener('gamepaddisconnected', this.handleGamepadDisconnected);
-    }
-
-    /** Stop listening for input events */
-    stop(): void {
-        window.removeEventListener('keydown', this.handleKeyDown);
-        window.removeEventListener('keyup', this.handleKeyUp);
-        window.removeEventListener('gamepadconnected', this.handleGamepadConnected);
-        window.removeEventListener('gamepaddisconnected', this.handleGamepadDisconnected);
-        this.keys = {};
-    }
-
-    /** Get current input state */
-    getState(): InputState {
-        // Check gamepad input
-        const gamepad = this.getGamepad();
-
-        // Combine keyboard and gamepad input
-        return {
-            up: this.keys['ArrowUp'] || this.keys['KeyW'] || this.getGamepadButton(gamepad, 12),
-            down: this.keys['ArrowDown'] || this.keys['KeyS'] || this.getGamepadButton(gamepad, 13),
-            left: this.keys['ArrowLeft'] || this.keys['KeyA'] || this.getGamepadButton(gamepad, 14),
-            right: this.keys['ArrowRight'] || this.keys['KeyD'] || this.getGamepadButton(gamepad, 15),
-            action: this.keys['Space'] || this.keys['Enter'] || this.getGamepadButton(gamepad, 0),
-            cancel: this.keys['Escape'] || this.getGamepadButton(gamepad, 1),
-            pause: this.keys['KeyP'] || this.keys['Escape'] || this.getGamepadButton(gamepad, 9),
-            keys: { ...this.keys },
-        };
-    }
-
-    /** Check if a specific key is pressed */
-    isKeyPressed(code: string): boolean {
-        return this.keys[code] || false;
-    }
-
-    /** Clear all key states */
-    clear(): void {
-        this.keys = {};
-    }
-
-    private handleKeyDown(e: KeyboardEvent): void {
-        // Prevent default for game keys
-        if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
-            e.preventDefault();
-        }
-        this.keys[e.code] = true;
-    }
-
-    private handleKeyUp(e: KeyboardEvent): void {
-        this.keys[e.code] = false;
-    }
-
-    private handleGamepadConnected(e: GamepadEvent): void {
-        if (import.meta.env.DEV) {
-            console.log(`[InputManager] Gamepad connected: ${e.gamepad.id}`);
-        }
-        this.gamepadIndex = e.gamepad.index;
-    }
-
-    private handleGamepadDisconnected(e: GamepadEvent): void {
-        if (import.meta.env.DEV) {
-            console.log(`[InputManager] Gamepad disconnected: ${e.gamepad.id}`);
-        }
-        if (this.gamepadIndex === e.gamepad.index) {
-            this.gamepadIndex = null;
-        }
-    }
-
-    private getGamepad(): Gamepad | null {
-        if (this.gamepadIndex === null) return null;
-        const gamepads = navigator.getGamepads();
-        return gamepads[this.gamepadIndex] || null;
-    }
-
-    private getGamepadButton(gamepad: Gamepad | null, index: number): boolean {
-        if (!gamepad) return false;
-        return gamepad.buttons[index]?.pressed || false;
-    }
+    window.addEventListener("keydown", this.down);
+    window.addEventListener("keyup", this.up);
+    window.addEventListener("blur", this.clear);
+  }
+  stop(): void {
+    window.removeEventListener("keydown", this.down);
+    window.removeEventListener("keyup", this.up);
+    window.removeEventListener("blur", this.clear);
+    this.clear();
+  }
+  clear = (): void => {
+    this.keys = {};
+    this.presses.clear();
+    this.blockedButtons.clear();
+  };
+  isKeyPressed(code: string): boolean {
+    return !!this.keys[code];
+  }
+  private down = (event: KeyboardEvent): void => {
+    if (isEditing(event.target) || event.defaultPrevented) return;
+    if (
+      ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", "Space"].includes(
+        event.code,
+      )
+    )
+      event.preventDefault();
+    this.keys[event.code] = true;
+    this.presses.add(event.code);
+  };
+  private up = (event: KeyboardEvent): void => {
+    this.keys[event.code] = false;
+  };
+  consumePresses(): void {
+    this.presses.clear();
+  }
+  getState(): InputState {
+    const keys = {
+      ...this.keys,
+      ...Object.fromEntries([...this.presses].map((code) => [code, true])),
+    };
+    const gamepad = Array.from(navigator.getGamepads?.() ?? []).find(
+      (g) => g?.connected,
+    );
+    const button = (id: number) => {
+      const key = `${gamepad?.index}:${id}`,
+        pressed = !!gamepad?.buttons[id]?.pressed;
+      if (!pressed) this.blockedButtons.delete(key);
+      return pressed && !this.blockedButtons.has(key);
+    };
+    const x = gamepad?.axes[0] ?? 0,
+      y = gamepad?.axes[1] ?? 0;
+    return {
+      up: !!(keys.ArrowUp || keys.KeyW || button(12) || y < -0.5),
+      down: !!(keys.ArrowDown || keys.KeyS || button(13) || y > 0.5),
+      left: !!(keys.ArrowLeft || keys.KeyA || button(14) || x < -0.5),
+      right: !!(keys.ArrowRight || keys.KeyD || button(15) || x > 0.5),
+      action: !!(keys.Space || keys.Enter || button(0)),
+      cancel: !!(keys.Escape || button(1)),
+      pause: !!(keys.KeyP || keys.Escape || button(9)),
+      keys: {
+        ...keys,
+        ShiftLeft: !!(keys.ShiftLeft || button(7)),
+        ControlLeft: !!(keys.ControlLeft || button(6)),
+        KeyQ: !!(keys.KeyQ || button(4)),
+        KeyE: !!(keys.KeyE || button(5)),
+      },
+    };
+  }
 }

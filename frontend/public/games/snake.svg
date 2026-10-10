@@ -1,1 +1,71 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256"><path fill="#00ff88" d="M64 48c-17.7 0-32 14.3-32 32v64c0 17.7 14.3 32 32 32h96v32H96c-17.7 0-32 14.3-32 32s14.3 32 32 32h96c17.7 0 32-14.3 32-32v-64c0-17.7-14.3-32-32-32H96v-32h64c17.7 0 32-14.3 32-32S177.7 48 160 48H64z"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600">
+  <defs>
+    <radialGradient id="bg">
+      <stop stop-color="#7de8c4" stop-opacity=".10" />
+      <stop offset="1" stop-color="#030303" />
+    </radialGradient>
+    <linearGradient id="shine" x2="1" y2="1">
+      <stop stop-color="#f4fffc" />
+      <stop offset="1" stop-color="#7de8c4" />
+    </linearGradient>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow
+        dy="20"
+        stdDeviation="18"
+        flood-color="#000000"
+        flood-opacity=".5"
+      />
+    </filter>
+    <pattern id="grid" width="50" height="50" patternUnits="userSpaceOnUse">
+      <path d="M50 0H0V50" fill="none" stroke="#ffffff" stroke-opacity=".035" />
+    </pattern>
+  </defs>
+  <rect width="800" height="600" fill="#030303" />
+  <rect width="800" height="600" fill="url(#bg)" />
+  <rect width="800" height="600" fill="url(#grid)" />
+  <circle
+    cx="400"
+    cy="300"
+    r="212"
+    fill="none"
+    stroke="#7de8c4"
+    stroke-opacity=".1"
+  />
+  <circle
+    cx="400"
+    cy="300"
+    r="170"
+    fill="none"
+    stroke="#7de8c4"
+    stroke-opacity=".07"
+  />
+  <g filter="url(#shadow)">
+    <path
+      d="M265 409H500Q536 409 536 373V295Q536 259 500 259H329Q293 259 293 223V196Q293 160 329 160H425"
+      stroke="#3d9b84"
+      stroke-width="57"
+      fill="none"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <path
+      d="M265 404H500Q531 404 531 373V295Q531 264 500 264H329Q288 264 288 223V196Q288 155 329 155H425"
+      stroke="url(#shine)"
+      stroke-width="43"
+      fill="none"
+      stroke-linecap="round"
+      stroke-linejoin="round"
+    />
+    <rect x="390" y="123" width="83" height="64" rx="25" fill="#b7f9de" />
+    <circle cx="451" cy="143" r="5" fill="#183e3a" />
+    <circle cx="451" cy="167" r="5" fill="#183e3a" />
+  </g>
+  <circle cx="558" cy="162" r="37" fill="#f5a6a6" fill-opacity=".1" />
+  <circle cx="558" cy="162" r="20" fill="#f5a6a6" />
+  <circle cx="553" cy="156" r="6" fill="#ffe7dd" />
+  <g fill="#7de8c4" opacity=".2">
+    <circle cx="190" cy="206" r="4" />
+    <circle cx="596" cy="403" r="4" />
+    <circle cx="307" cy="497" r="4" />
+  </g>
+</svg>

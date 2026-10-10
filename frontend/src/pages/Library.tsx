@@ -1,126 +1,195 @@
-import { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { libraryApi } from '../api/client';
-import type { LibraryEntry } from '../api/client';
-import { GameCard } from '../components/arcus/GameCard';
-import { Library as LibraryIcon, Search, Download } from 'lucide-react';
-
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Search, X, Trash2 } from "lucide-react";
+import { libraryApi } from "../api/client";
+import type { LibraryEntry } from "../api/client";
+import { GameCard } from "../components/arcus/GameCard";
+import { EmptyState, LoadingCards, PageHeading } from "../components/ConsoleUI";
+import { useToast } from "../hooks/useToast";
+import { useConfirmation } from "../hooks/useConfirmation";
 export function Library() {
-    const [entries, setEntries] = useState<LibraryEntry[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [removingId, setRemovingId] = useState<number | null>(null);
-    const navigate = useNavigate();
-
-    const fetchLibrary = useCallback(async () => {
-        try {
-            setLoading(true);
-            const data = await libraryApi.list();
-            setEntries(data);
-        } catch (error) {
-            console.error('Failed to load library:', error);
-        } finally {
-            setLoading(false);
+  const [entries, setEntries] = useState<LibraryEntry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [retry, setRetry] = useState(0);
+  const [removingId, setRemovingId] = useState<number | null>(null);
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("recent");
+  const navigate = useNavigate();
+  const { showToast } = useToast();
+  const { ask, confirmation } = useConfirmation();
+  useEffect(() => {
+    let active = true;
+    void libraryApi
+      .list()
+      .then((data) => {
+        if (active) {
+          setEntries(data);
+          setError("");
         }
-    }, []);
-
-    useEffect(() => {
-        fetchLibrary();
-    }, [fetchLibrary]);
-
-    const handleRemove = async (gameId: number, e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (!confirm('Are you sure you want to remove this CORE from your local storage?')) return;
-
-        setRemovingId(gameId);
-        try {
-            await libraryApi.remove(gameId);
-            setEntries(prev => prev.filter(entry => entry.game.id !== gameId));
-        } catch (error) {
-            console.error('Failed to remove from library:', error);
-        } finally {
-            setRemovingId(null);
-        }
+      })
+      .catch((err) => {
+        if (active) setError((err as Error).message);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
     };
-
-    if (loading) {
-        return (
-            <div className="flex flex-col items-center justify-center h-full gap-6">
-                <div className="w-16 h-16 border-2 border-cyan-500/20 border-t-cyan-500 rounded-full animate-spin" />
-                <div className="text-cyan-400 font-mono text-[10px] tracking-widest animate-pulse">Loading games...</div>
-            </div>
-        );
+  }, [retry]);
+  const remove = async (entry: LibraryEntry) => {
+    if (
+      !(await ask({
+        title: "Remove this game?",
+        message: `${entry.game.title} will leave your library. Your saves, scores, and achievements are kept.`,
+        confirmText: "Remove game",
+      }))
+    )
+      return;
+    setRemovingId(entry.game.id);
+    try {
+      await libraryApi.remove(entry.game.id);
+      setEntries((list) => list.filter((e) => e.id !== entry.id));
+      showToast("Game removed. Your progress is kept.", "success");
+    } catch (err) {
+      showToast((err as Error).message, "error");
+    } finally {
+      setRemovingId(null);
     }
-
-    return (
-        <div className="h-full w-full overflow-y-auto px-12 pt-32 pb-32">
-            {/* Header: Command Center Style */}
-            <div className="relative mb-20 flex flex-col md:flex-row md:items-end justify-between gap-8">
-                <div className="flex items-center gap-8">
-                    <div className="w-24 h-24 glass-panel border-cyan-400/30 flex items-center justify-center relative group">
-                        <div className="absolute inset-0 bg-cyan-400/10 blur-xl group-hover:bg-cyan-400/20 transition-all" />
-                        <LibraryIcon className="text-cyan-400 relative z-10" size={40} />
-                    </div>
-                    <div>
-                        <h1 className="text-5xl font-bold text-white tracking-tight leading-none">My Library</h1>
-                        <p className="text-white/40 font-mono text-xs mt-3 tracking-wide">
-                            Stored Games // <span className="text-cyan-400/50">{entries.length} items</span> in your vault
-                        </p>
-                    </div>
-                </div>
-
-                {/* Filter/Search Bar Hook */}
-                <div className="flex items-center gap-4">
-                    <div className="glass-panel h-12 px-6 flex items-center gap-3 border-white/5 focus-within:border-cyan-400/30 transition-all">
-                        <Search size={16} className="text-white/20" />
-                        <input
-                            type="text"
-                            placeholder="Search games..."
-                            className="bg-transparent border-none text-white font-mono text-xs placeholder-white/10 focus:outline-none w-48"
-                        />
-                    </div>
-                </div>
-            </div>
-
-            {entries.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-32 glass-panel border-white/5 bg-white/[0.02] rounded-[48px]">
-                    <div className="w-32 h-32 rounded-full glass-panel border-white/5 flex items-center justify-center mb-10 relative">
-                        <div className="absolute inset-0 bg-white/5 blur-3xl" />
-                        <Download className="text-white/10 relative z-10" size={48} />
-                    </div>
-                    <h3 className="text-2xl font-bold text-white tracking-tight uppercase mb-4">Library Empty</h3>
-                    <p className="text-white/40 font-mono text-[11px] mb-12 max-w-sm text-center leading-relaxed">
-                        No games found in your library. <br /> Add games from the Store to get started.
-                    </p>
-                    <button
-                        onClick={() => navigate('/store')}
-                        className="glass-panel px-12 py-5 border-cyan-400/50 hover:neon-border-cyan group"
-                    >
-                        <span className="text-[10px] font-bold tracking-widest text-cyan-400 group-hover:text-white transition-colors uppercase">Go to Store</span>
-                    </button>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 animate-in fade-in slide-in-from-bottom-8 duration-1000">
-                    {entries.map((entry) => (
-                        <div key={entry.id} className="relative group/card">
-                            <GameCard
-                                game={entry.game}
-                                variant="library"
-                                actionLabel="PLAY"
-                                onClick={() => navigate(`/play/${entry.game.slug}`)}
-                            />
-                            {/* Premium Remove Action */}
-                            <button
-                                onClick={(e) => handleRemove(entry.game.id, e)}
-                                disabled={removingId === entry.game.id}
-                                className="absolute top-6 right-6 w-10 h-10 glass-panel border-red-500/20 hover:border-red-500 hover:bg-red-500/10 text-red-500/50 hover:text-red-500 rounded-full flex items-center justify-center opacity-0 group-hover/card:opacity-100 transition-all duration-300 backdrop-blur-md"
-                                title="Terminate Core"
-                            >
-                                <span className="text-[8px] font-black">X</span>
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
+  };
+  const filtered = entries
+    .filter((e) =>
+      e.game.title.toLowerCase().includes(query.trim().toLowerCase()),
+    )
+    .sort((a, b) =>
+      sort === "title"
+        ? a.game.title.localeCompare(b.game.title)
+        : new Date(
+            sort === "added" ? b.added_at : (b.last_played ?? b.added_at),
+          ).getTime() -
+          new Date(
+            sort === "added" ? a.added_at : (a.last_played ?? a.added_at),
+          ).getTime(),
     );
+  return (
+    <div className="console-page">
+      {confirmation}
+      <PageHeading
+        kicker="ALL YOUR FAVOURITES"
+        title="My Library"
+        aside={
+          <button
+            className="secondary-action"
+            onClick={() => navigate("/store")}
+          >
+            Discover games ↗
+          </button>
+        }
+      >
+        Your collection, ready whenever you are. Saves stay with your player.
+      </PageHeading>
+      <div className="catalog-tools">
+        <label className="search-field">
+          <Search size={18} />
+          <input
+            aria-label="Search library games"
+            placeholder="Search your collection…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {query && (
+            <button
+              aria-label="Clear library search"
+              onClick={() => setQuery("")}
+            >
+              <X size={16} />
+            </button>
+          )}
+        </label>
+        <label className="filter-field">
+          Sort by
+          <select
+            aria-label="Sort library"
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+          >
+            <option value="recent">Recently played</option>
+            <option value="title">Title A–Z</option>
+            <option value="added">Recently added</option>
+          </select>
+        </label>
+        <span className="result-count" role="status">
+          {filtered.length} of {entries.length} games
+        </span>
+      </div>
+      {loading ? (
+        <LoadingCards />
+      ) : error ? (
+        <EmptyState
+          title="Library unavailable"
+          action={
+            <button
+              className="primary-action"
+              onClick={() => {
+                setLoading(true);
+                setRetry((i) => i + 1);
+              }}
+            >
+              Try again
+            </button>
+          }
+        >
+          {error}
+        </EmptyState>
+      ) : !entries.length ? (
+        <EmptyState
+          title="Library Empty"
+          action={
+            <button
+              className="primary-action"
+              onClick={() => navigate("/store")}
+            >
+              Go to Store
+            </button>
+          }
+        >
+          Find a favourite and add it to your collection.
+        </EmptyState>
+      ) : !filtered.length ? (
+        <EmptyState
+          title="No matching games"
+          action={
+            <button className="secondary-action" onClick={() => setQuery("")}>
+              Clear search
+            </button>
+          }
+        >
+          Try another title. Your collection is still here.
+        </EmptyState>
+      ) : (
+        <div className="catalog-grid">
+          {filtered.map((entry) => (
+            <div key={entry.id} className="library-card">
+              <GameCard
+                game={entry.game}
+                variant="library"
+                actionLabel="PLAY"
+                onClick={() => navigate(`/play/${entry.game.slug}`)}
+              />
+              <button
+                className="remove-game"
+                onClick={() => void remove(entry)}
+                disabled={removingId !== null}
+                aria-label={`Remove ${entry.game.title}`}
+                title="Remove from library"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }

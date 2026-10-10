@@ -1,433 +1,56 @@
-# Arcade Nexus Game SDK
+# Arcade Nexus game SDK
 
-> Build games for the Arcade Nexus platform using TypeScript and Canvas 2D.
+Games implement `Game2DInstance` or `Game3DInstance` from `GameSDK.ts`. Canvas games receive a 2D context in `render`; WebGL games manage their renderer.
 
-## Architecture
+```ts
+import type { Game2DInstance, GameConfig, InputState } from "./GameSDK";
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        FRONTEND                              │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
-│  │   Your Game  │───▶│  Game Engine │───▶│   Canvas 2D  │  │
-│  │  (SnakeGame) │    │   (SDK)      │    │  (Rendering) │  │
-│  └──────────────┘    └──────────────┘    └──────────────┘  │
-│         │                   │                               │
-│         ▼                   ▼                               │
-│  ┌──────────────┐    ┌──────────────┐                      │
-│  │ InputManager │    │  GameCanvas  │◀── React Component    │
-│  │  (Keyboard)  │    │   (UI/HUD)   │                      │
-│  └──────────────┘    └──────────────┘                      │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼ API Calls
-┌─────────────────────────────────────────────────────────────┐
-│                        BACKEND                               │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
-│  │  High Scores │    │  Save States │    │ Achievements │  │
-│  │   /stats/*   │    │   /saves/*   │    │ /achieve/*   │  │
-│  └──────────────┘    └──────────────┘    └──────────────┘  │
-│                              │                               │
-│                              ▼                               │
-│                     ┌──────────────┐                        │
-│                     │    SQLite    │                        │
-│                     │   Database   │                        │
-│                     └──────────────┘                        │
-└─────────────────────────────────────────────────────────────┘
-```
+export class Example implements Game2DInstance {
+  readonly type = "2d" as const;
+  private score = 0;
 
-**All game data is stored on the backend.** You can switch browsers and your progress persists.
+  init(canvas: HTMLCanvasElement, config: GameConfig): void {
+    // Create simulation state using canvas.width/canvas.height.
+  }
 
----
-
-## Quick Start: Building a Game
-
-### Step 1: Create Your Game Class
-
-```typescript
-// src/games/MyGame.ts
-import type { GameInstance, GameConfig, InputState } from '../sdk';
-
-export class MyGame implements GameInstance {
-    private canvas!: HTMLCanvasElement;
-    private score = 0;
-    private gameOver = false;
-
-    async init(canvas: HTMLCanvasElement, config: GameConfig): Promise<void> {
-        this.canvas = canvas;
-        // Initialize your game state here
-    }
-
-    update(deltaTime: number, input: InputState): boolean {
-        if (this.gameOver) {
-            // Check for restart input
-            if (input.action) {
-                this.restart();
-            }
-            return true; // Keep running for restart
-        }
-
-        // Game logic here
-        // Return false to trigger game over
-        return true;
-    }
-
-    render(ctx: CanvasRenderingContext2D): void {
-        // Clear canvas
-        ctx.fillStyle = '#0f1419';
-        ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-
-        // Draw your game
-        // ...
-
-        // Draw score
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '20px monospace';
-        ctx.fillText(`Score: ${this.score}`, 10, 30);
-    }
-
-    getScore(): number {
-        return this.score;
-    }
-
-    private restart(): void {
-        this.score = 0;
-        this.gameOver = false;
-    }
-}
-```
-
-### Step 2: Register Your Game
-
-```typescript
-// src/games/index.ts
-import { registerGame } from '../sdk';
-import { MyGame } from './MyGame';
-
-registerGame('my-game', () => new MyGame());
-```
-
-### Step 3: Add to Backend Database
-
-Run the seed script or add via API:
-```bash
-cd backend
-uv run python -c "
-from app.seed import seed_games
-import asyncio
-asyncio.run(seed_games())
-"
-```
-
----
-
-## GameInstance Interface
-
-Every game must implement this interface:
-
-```typescript
-interface GameInstance {
-    // REQUIRED
-    init(canvas: HTMLCanvasElement, config: GameConfig): void | Promise<void>;
-    update(deltaTime: number, input: InputState): boolean;
-    render(ctx: CanvasRenderingContext2D): void;
-
-    // OPTIONAL - Lifecycle
-    onPause?(): void;
-    onResume?(): void;
-    destroy?(): void;
-
-    // OPTIONAL - Persistence
-    getState?(): Record<string, unknown>;
-    setState?(state: Record<string, unknown>): void;
-    getScore?(): number;
-}
-```
-
-### Method Details
-
-| Method | When Called | Purpose |
-|--------|-------------|---------|
-| `init` | Once at game load | Initialize state, load assets |
-| `update` | Every frame (~60fps) | Game logic. Return `false` = game over |
-| `render` | Every frame after update | Draw to canvas |
-| `onPause` | When player pauses | Stop sounds, show pause state |
-| `onResume` | When player unpauses | Resume sounds/timers |
-| `destroy` | When leaving game | Cleanup resources |
-| `getScore` | On game over | Submit high score to backend |
-| `getState` | When saving | Return serializable state |
-| `setState` | When loading | Restore saved state |
-
----
-
-## InputState Reference
-
-The SDK provides normalized input state:
-
-```typescript
-interface InputState {
-    // Directional (Arrow keys OR WASD)
-    up: boolean;       // ↑ or W
-    down: boolean;     // ↓ or S
-    left: boolean;     // ← or A
-    right: boolean;    // → or D
-
-    // Action buttons
-    action: boolean;   // Space or Enter
-    cancel: boolean;   // Escape
-    pause: boolean;    // P or Escape
-
-    // Raw keys for custom bindings
-    keys: Record<string, boolean>;  // e.g., keys['KeyZ']
-}
-```
-
-### Example: Handling Input
-
-```typescript
-update(deltaTime: number, input: InputState): boolean {
-    // Movement
-    if (input.up) this.player.y -= this.speed * deltaTime;
-    if (input.down) this.player.y += this.speed * deltaTime;
-    if (input.left) this.player.x -= this.speed * deltaTime;
-    if (input.right) this.player.x += this.speed * deltaTime;
-
-    // Action (fire, jump, etc.)
-    if (input.action && this.canShoot) {
-        this.shoot();
-    }
-
-    // Custom key binding
-    if (input.keys['KeyZ']) {
-        this.useSpecialAbility();
-    }
-
+  update(milliseconds: number, input: InputState): boolean {
+    // Advance simulation; return false exactly when the run ends.
     return true;
-}
-```
+  }
 
----
+  render(context: CanvasRenderingContext2D): void {
+    // Draw without changing simulation state.
+  }
 
-## Game Lifecycle
-
-The platform handles these states automatically:
-
-```
-┌─────────────┐
-│   LOADING   │  ─── Game initializing
-└──────┬──────┘
-       ▼
-┌─────────────┐
-│   READY     │  ─── "Press Start" screen shown
-└──────┬──────┘
-       ▼ (Player presses Start)
-┌─────────────┐
-│   PLAYING   │  ─── update() and render() running
-└──────┬──────┘
-       │ (P or Escape)
-       ▼
-┌─────────────┐
-│   PAUSED    │  ─── onPause() called, loop paused
-└──────┬──────┘
-       │ (Resume)
-       ▼
-┌─────────────┐
-│   PLAYING   │  ─── onResume() called
-└──────┬──────┘
-       │ (update returns false)
-       ▼
-┌─────────────┐
-│  GAME OVER  │  ─── Score submitted, "Play Again" shown
-└─────────────┘
-```
-
----
-
-## Scoring System
-
-The platform automatically:
-1. Calls `getScore()` when game ends
-2. Submits to backend via `POST /api/stats/{game-slug}/score`
-3. Shows "🏆 New High Score!" if it's a record
-
-**Your game just needs to:**
-```typescript
-getScore(): number {
+  getScore(): number {
     return this.score;
+  }
+  destroy(): void {
+    /* Release resources; tolerate repeated calls. */
+  }
 }
 ```
 
----
+`GameEngine` updates at fixed 60 Hz using milliseconds and caps catch-up after a slow frame. Rendering follows the simulation; a game-over or frame exception stops the loop and notifies the UI. Input is released on pause/stop/blur. Keyboard taps are buffered until a simulation step consumes them. `input.keys` uses KeyboardEvent.code (`Digit1`, `KeyQ`, `ShiftLeft`), not character strings.
 
-## Save States (Optional)
+The console uses a 960×640 logical canvas scaled to the browser window. Resizing preserves the playfield and rules. A Three.js renderer should call `setSize(width, height, false)` so it does not override the canvas CSS size. `init` can be asynchronous; a game must handle being destroyed while assets load and release late-arriving assets. Dispose meshes, points, materials, textures and event listeners, including objects removed during map changes.
 
-To support save/load:
+## Saves and achievements
 
-```typescript
-getState(): Record<string, unknown> {
-    return {
-        score: this.score,
-        level: this.level,
-        playerPos: { x: this.player.x, y: this.player.y },
-        // Any serializable data
-    };
-}
+`getResult()` may return `{ title, detail }` for the results screen. Use a concrete outcome such as a cleared course or a blocked board. Optional cosmetic feedback can use `games/feedback.ts`; it follows the console's mute/volume and reduced-animation preferences and is excluded from saved simulation state. New gameplay fields in an existing save version need validation and compatible defaults, or an explicit migration.
 
-setState(state: Record<string, unknown>): void {
-    this.score = state.score as number;
-    this.level = state.level as number;
-    this.player.x = (state.playerPos as any).x;
-    this.player.y = (state.playerPos as any).y;
-}
-```
+To support saving, implement both `getState()` and `setState(state)`. Snapshots must contain all gameplay state: positions, velocity, timers, board contents, score, difficulty, and relevant measurements. Return a copy, include a version, and validate the entire payload before changing live state. Throw an error for unsupported or corrupt data. Do not restore just the score. Cosmetic particles need not be persisted.
 
----
+The console wraps game state as `{ format: 1, game: slug, difficulty, state }`. Loading validates a temporary game before replacing the current run; resuming a loaded game starts a new session. Save APIs and session APIs always use the player captured at game launch.
 
-## Best Practices
+`getMetrics()` may return `{ jumps?, max_altitude?, crashed? }`. Backend bounds and validates those measurements on completion. Seeded achievement conditions may use `score`, `jumps`, `max_altitude`, or `flight_seconds` (completed active time with `crashed: false`). These are local player-controlled measurements, not competitive anti-cheat.
 
-### 1. Use Delta Time for Movement
-```typescript
-// ❌ Bad - speed depends on frame rate
-this.x += 5;
+## Add a game
 
-// ✅ Good - consistent speed regardless of frame rate
-this.x += this.speed * deltaTime;
-```
+1. Create its implementation under `src/games/<slug>/`.
+2. Add a dynamic import case in `src/games/index.ts`. Do not eagerly import Three.js into the console.
+3. Add its metadata, config and achievement definitions in `backend/app/seed.py`. Startup synchronizes metadata while preserving player progress.
+4. Add a local thumbnail in `frontend/public/games/` and control hints in `GameCanvas.tsx`.
+5. Add meaningful rule/save tests and a browser journey with the real backend.
 
-### 2. Handle Game Over Gracefully
-```typescript
-update(deltaTime: number, input: InputState): boolean {
-    if (this.gameOver) {
-        // Allow restart with Space
-        if (input.action) {
-            this.startNewGame();
-        }
-        return true; // Keep loop running for restart
-    }
-    // Normal game logic...
-    return true;
-}
-```
-
-### 3. Keep Render Efficient
-```typescript
-render(ctx: CanvasRenderingContext2D): void {
-    // Clear once
-    ctx.fillStyle = this.colors.bg;
-    ctx.fillRect(0, 0, this.width, this.height);
-
-    // Batch similar operations
-    ctx.fillStyle = this.colors.player;
-    // Draw all player elements...
-
-    ctx.fillStyle = this.colors.enemy;
-    // Draw all enemies...
-}
-```
-
-### 4. Cleanup Resources
-```typescript
-destroy(): void {
-    // Stop any running timers
-    clearInterval(this.spawnTimer);
-    // Release any audio
-    this.backgroundMusic?.pause();
-    console.log('[MyGame] Destroyed');
-}
-```
-
----
-
-## Example: Complete Minimal Game
-
-```typescript
-import type { GameInstance, GameConfig, InputState } from '../sdk';
-
-export class CatchGame implements GameInstance {
-    private width = 800;
-    private height = 600;
-    private playerX = 400;
-    private targetY = 0;
-    private targetX = Math.random() * 800;
-    private score = 0;
-    private speed = 300;
-
-    async init(canvas: HTMLCanvasElement, config: GameConfig): Promise<void> {
-        this.width = canvas.width;
-        this.height = canvas.height;
-        this.playerX = this.width / 2;
-    }
-
-    update(deltaTime: number, input: InputState): boolean {
-        // Move player
-        if (input.left) this.playerX -= this.speed * deltaTime;
-        if (input.right) this.playerX += this.speed * deltaTime;
-        this.playerX = Math.max(25, Math.min(this.width - 25, this.playerX));
-
-        // Move target down
-        this.targetY += 200 * deltaTime;
-
-        // Check catch
-        if (this.targetY > this.height - 50) {
-            if (Math.abs(this.targetX - this.playerX) < 40) {
-                this.score += 10;
-                this.resetTarget();
-            } else {
-                return false; // Game over!
-            }
-        }
-
-        return true;
-    }
-
-    render(ctx: CanvasRenderingContext2D): void {
-        // Background
-        ctx.fillStyle = '#1a1a2e';
-        ctx.fillRect(0, 0, this.width, this.height);
-
-        // Player (paddle)
-        ctx.fillStyle = '#00ff88';
-        ctx.fillRect(this.playerX - 25, this.height - 30, 50, 10);
-
-        // Target (falling object)
-        ctx.fillStyle = '#ff4757';
-        ctx.beginPath();
-        ctx.arc(this.targetX, this.targetY, 15, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Score
-        ctx.fillStyle = '#fff';
-        ctx.font = '24px monospace';
-        ctx.fillText(`Score: ${this.score}`, 20, 40);
-    }
-
-    getScore(): number {
-        return this.score;
-    }
-
-    private resetTarget(): void {
-        this.targetY = 0;
-        this.targetX = Math.random() * (this.width - 60) + 30;
-    }
-}
-```
-
----
-
-## File Structure
-
-```
-frontend/src/
-├── sdk/
-│   ├── GameSDK.ts      # Interfaces & registry
-│   ├── GameEngine.ts   # Game loop & lifecycle
-│   ├── InputManager.ts # Keyboard handling
-│   └── index.ts        # Exports
-│
-├── games/
-│   ├── Snake.ts        # Example game
-│   ├── MyGame.ts       # Your game!
-│   └── index.ts        # Register all games
-│
-└── components/
-    └── GameCanvas.tsx  # React wrapper (Start/Pause/GameOver UI)
-```
+The older synchronous `registerGame`/`getGame` registry remains exported for compatibility; bundled games use the asynchronous loader.

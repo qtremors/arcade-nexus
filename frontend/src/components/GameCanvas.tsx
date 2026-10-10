@@ -1,574 +1,698 @@
-/**
- * GameCanvas - Manages game lifecycle with enhanced start screen
- * FULLSCREEN - uses entire viewport
- */
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { GameEngine, getGame } from '../sdk';
-import type { GameConfig } from '../sdk';
-import { statsApi, savesApi, achievementsApi } from '../api/client';
-import type { SaveData, Achievement } from '../api/client';
-import { useToast } from './Toast';
-import { Clock, Save, Download, Trash2, X } from 'lucide-react';
-import '../games';
-
-interface Props {
-    slug: string;
-    title: string;
-    onGameOver?: (score: number) => void;
-}
-
-type State = 'loading' | 'ready' | 'playing' | 'paused' | 'gameover' | 'save_menu' | 'load_menu';
-type Difficulty = 'easy' | 'normal' | 'hard';
-
-// Game-specific control hints
-const CONTROL_HINTS: Record<string, string> = {
-    'snake': 'Arrow Keys / WASD to move',
-    'raptor-run': 'UP / SPACE to Jump • DOWN to Duck',
-    'stellar-flight': 'WASD / Arrows: Pitch & Roll • Q/E: Yaw • Shift/Ctrl: Throttle',
+import {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  useEffectEvent,
+} from "react";
+import type { CSSProperties } from "react";
+import { getExperience } from "../games/experience";
+import { Keyboard, Gamepad2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { GameEngine } from "../sdk";
+import { loadGame } from "../games";
+import { statsApi, savesApi, getApiProfileId } from "../api/client";
+import type { SaveData } from "../api/client";
+import { useToast } from "../hooks/useToast";
+import { useGamepad } from "../hooks/useGamepad";
+import {
+  enqueueCompletion,
+  sendCompletion,
+  sendCompletionOnExit,
+} from "../services/sessionQueue";
+import type { Completion } from "../services/sessionQueue";
+import { useModalFocus } from "../hooks/useModalFocus";
+import { isEditing } from "../sdk/InputManager";
+import { AudioManager } from "../sdk/AudioManager";
+import { useConfirmation } from "../hooks/useConfirmation";
+type Difficulty = "easy" | "normal" | "hard";
+type State =
+  | "loading"
+  | "ready"
+  | "playing"
+  | "paused"
+  | "gameover"
+  | "save"
+  | "load"
+  | "error";
+const hints: Record<string, string> = {
+  snake:
+    "Arrow keys or WASD to turn. Eat pink packets; avoid walls and your body.",
+  "raptor-run":
+    "Up or Space: jump • Down: duck / fall faster. Survive as long as you can.",
+  "stellar-flight":
+    "Arrows / WASD: pitch and roll • Q/E: yaw • Shift/Ctrl: throttle • 1–3: planet. Fly through cyan gates and avoid the ground. Score is peak speed.",
+  breakout:
+    "Left / Right or A/D: paddle • Space: launch. Clear three sectors with three lives. Aim with the paddle edges.",
+  "merge-2048":
+    "Arrows / WASD: slide tiles • Z / controller B: undo once. Merge matching numbers and reach 2048.",
 };
-
-export function GameCanvas({ slug, title, onGameOver }: Props) {
-    const containerRef = useRef<HTMLDivElement>(null);
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const engineRef = useRef<GameEngine | null>(null);
-    const initRef = useRef(false);
-    const navigate = useNavigate();
-    const { showToast } = useToast();
-
-    const [state, setState] = useState<State>('loading');
-    const [score, setScore] = useState(0);
-    const [highScore, setHighScore] = useState(0);
-    const [isNewHigh, setIsNewHigh] = useState(false);
-    const [difficulty, setDifficulty] = useState<Difficulty>('normal');
-    const [saves, setSaves] = useState<SaveData[]>([]);
-    const [isLoadingSaves, setIsLoadingSaves] = useState(false);
-
-    const loadSaves = useCallback(async () => {
-        setIsLoadingSaves(true);
-        try {
-            const data = await savesApi.list(slug);
-            setSaves(data.saves);
-        } catch (e) {
-            console.error('Failed to load saves:', e);
-        } finally {
-            setIsLoadingSaves(false);
+const emptyConfig = {};
+export function GameCanvas({
+  slug,
+  title,
+  config = emptyConfig,
+}: {
+  slug: string;
+  title: string;
+  config?: Record<string, unknown>;
+}) {
+  const experience = getExperience(slug);
+  const [controlMode, setControlMode] = useState<"keyboard" | "controller">(
+    "keyboard",
+  );
+  const canvas = useRef<HTMLCanvasElement>(null),
+    engine = useRef<GameEngine | null>(null);
+  const navigate = useNavigate(),
+    { showToast } = useToast();
+  const { ask, confirmation } = useConfirmation();
+  const [state, setState] = useState<State>("loading"),
+    [difficulty, setDifficulty] = useState<Difficulty>("normal");
+  const [score, setScore] = useState(0),
+    [highScore, setHighScore] = useState(0),
+    [newHigh, setNewHigh] = useState(false);
+  const [error, setError] = useState(""),
+    [busy, setBusy] = useState(false),
+    [saves, setSaves] = useState<SaveData[]>([]);
+  const busyRef = useRef(false),
+    mounted = useRef(false);
+  const session = useRef<{
+    id: string;
+    profileId: number;
+    difficulty: Difficulty;
+    confirmed: boolean;
+    seconds: number;
+    since: number | null;
+    completion?: Completion;
+  } | null>(null);
+  const profileId = useRef(getApiProfileId());
+  const menuOrigin = useRef<State>("paused");
+  const modal = useRef<HTMLDivElement>(null);
+  useModalFocus(
+    modal,
+    state !== "playing" && state !== "loading" && !busy,
+    state,
+  );
+  const stopClock = useCallback(() => {
+    const current = session.current;
+    if (current?.since !== null && current?.since !== undefined) {
+      current.seconds += (performance.now() - current.since) / 1000;
+      current.since = null;
+    }
+  }, []);
+  const completion = useCallback(() => {
+    stopClock();
+    const current = session.current;
+    if (!current?.confirmed) return null;
+    if (!current.completion)
+      current.completion = {
+        slug,
+        sessionId: current.id,
+        profileId: current.profileId,
+        difficulty: current.difficulty,
+        seconds: Math.min(604800, Math.floor(current.seconds)),
+        score: engine.current?.getScore() ?? 0,
+        metrics: engine.current?.getMetrics() ?? {},
+      };
+    return current.completion;
+  }, [slug, stopClock]);
+  const finish = useCallback(async () => {
+    const item = completion();
+    if (!item) return;
+    const persisted = enqueueCompletion(item);
+    try {
+      const result = await sendCompletion(item);
+      if (mounted.current) {
+        setHighScore(result.high_score);
+        setNewHigh(result.is_new_high_score);
+      }
+    } catch (err) {
+      if (mounted.current)
+        showToast(
+          `${persisted ? "Result saved for retry" : "Keep this page open to retry your result"}: ${(err as Error).message}`,
+          "error",
+        );
+    }
+  }, [completion, showToast]);
+  const generation = useRef(0);
+  const prepare = useCallback(
+    async (selected: Difficulty, saved?: Record<string, unknown>) => {
+      const request = ++generation.current;
+      engine.current?.destroy();
+      const instance = await loadGame(slug);
+      if (
+        !mounted.current ||
+        request !== generation.current ||
+        !canvas.current
+      ) {
+        instance.destroy?.();
+        return;
+      }
+      const next = new GameEngine();
+      engine.current = next;
+      next.onPause(() => {
+        stopClock();
+        if (mounted.current) setState("paused");
+      });
+      next.onGameOver((finalScore) => {
+        if (mounted.current) {
+          setScore(finalScore);
+          setState("gameover");
+          void finish();
         }
-    }, [slug]);
-
-    // Use ref for canvas size to avoid re-triggering init effect
-    const sizeRef = useRef({ width: 800, height: 600 });
-    const [, forceUpdate] = useState(0);
-
-    // Track playtime
-    const playStartTimeRef = useRef<number | null>(null);
-    const totalPlaytimeRef = useRef(0);
-
-    // Handle window resize
-    useEffect(() => {
-        const updateSize = () => {
-            if (containerRef.current && canvasRef.current) {
-                const rect = containerRef.current.getBoundingClientRect();
-                const newWidth = Math.floor(rect.width);
-                const newHeight = Math.floor(rect.height);
-                sizeRef.current = { width: newWidth, height: newHeight };
-                canvasRef.current.width = newWidth;
-                canvasRef.current.height = newHeight;
-                forceUpdate(n => n + 1);
-            }
-        };
-        updateSize();
-        window.addEventListener('resize', updateSize);
-        return () => window.removeEventListener('resize', updateSize);
-    }, []);
-
-    const checkAchievements = useCallback(async (finalScore: number) => {
-        try {
-            const { achievements } = await achievementsApi.getForGame(slug);
-            const locked = achievements.filter((a: Achievement) => !a.unlocked);
-
-            for (const achievement of locked) {
-                let shouldUnlock = false;
-                // Simple score-based unlock logic for now
-                // In a more complex app, the game might send specific event slugs
-                if (achievement.slug.startsWith('score-')) {
-                    const requiredScore = parseInt(achievement.slug.split('-')[1]);
-                    if (finalScore >= requiredScore) shouldUnlock = true;
-                } else if (achievement.slug === 'first-bite' && finalScore > 0) {
-                    shouldUnlock = true;
-                } else if (achievement.slug === 'first-jump' && finalScore > 0) {
-                    shouldUnlock = true;
-                } else if (achievement.slug === 'first-dodge' && finalScore > 0) {
-                    shouldUnlock = true;
-                } else if (achievement.slug === 'takeoff' && finalScore > 0) {
-                    shouldUnlock = true;
-                }
-
-                if (shouldUnlock) {
-                    await achievementsApi.unlock(slug, achievement.slug);
-                    if (import.meta.env.DEV) {
-                        console.log(`[GameCanvas] Achievement unlocked: ${achievement.title}`);
-                    }
-                }
-            }
-        } catch (e) {
-            console.error('Failed to check achievements:', e);
-        }
-    }, [slug]);
-
-    const setupCallbacks = useCallback((engine: GameEngine) => {
-        engine.onPause(() => {
-            if (playStartTimeRef.current) {
-                totalPlaytimeRef.current += (Date.now() - playStartTimeRef.current) / 1000;
-                playStartTimeRef.current = null;
-            }
-            setState('paused');
+      });
+      next.onError((err) => {
+        stopClock();
+        setError(err.message);
+        setState("error");
+        void finish();
+      });
+      try {
+        await next.init(canvas.current, instance, {
+          ...config,
+          slug,
+          title,
+          difficulty: selected,
+          width: 960,
+          height: 640,
         });
-
-        engine.onGameOver(async (finalScore) => {
-            if (playStartTimeRef.current) {
-                totalPlaytimeRef.current += (Date.now() - playStartTimeRef.current) / 1000;
-                playStartTimeRef.current = null;
-            }
-            setState('gameover');
-            setScore(finalScore);
-
-            try {
-                if (totalPlaytimeRef.current > 0) {
-                    await statsApi.recordSession(slug, Math.floor(totalPlaytimeRef.current), finalScore, difficulty);
-                }
-                const result = await statsApi.submitScore(slug, finalScore);
-                setHighScore(result.high_score);
-                setIsNewHigh(result.is_new_high_score);
-
-                // Achievement check
-                await checkAchievements(finalScore);
-            } catch (e) {
-                console.error('Failed to submit stats/achievements:', e);
-            }
-            onGameOver?.(finalScore);
-        });
-    }, [slug, onGameOver, checkAchievements, difficulty]);
-
-    // Initialize engine
-    useEffect(() => {
-        if (initRef.current) return;
-        initRef.current = true;
-
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        const game = getGame(slug);
-        if (!game) {
-            console.error('Game not found:', slug);
-            return;
+      } catch (err) {
+        if (mounted.current && request === generation.current) {
+          setError((err as Error).message);
+          setState("error");
         }
-
-        const engine = new GameEngine();
-        engineRef.current = engine;
-
-        setupCallbacks(engine);
-
-        const config: GameConfig = {
-            slug,
-            title,
-            width: sizeRef.current.width || 800,
-            height: sizeRef.current.height || 600,
-            difficulty // Pass difficulty to game
-        };
-        engine.init(canvas, game, config)
-            .then(() => setState('ready'))
-            .catch(e => console.error('Init failed:', e));
-
-        return () => {
-            engineRef.current?.destroy();
-            engineRef.current = null;
-            initRef.current = false;
-        };
-    }, [slug, title, difficulty, setupCallbacks]);
-
-    // Start game
-    const start = useCallback(async () => {
-        if (state !== 'ready') return;
+        throw err;
+      }
+      if (!mounted.current || request !== generation.current) {
+        next.destroy();
+        return false;
+      }
+      if (saved) next.setState(saved);
+      return true;
+    },
+    [config, slug, title, stopClock, finish],
+  );
+  useEffect(() => {
+    mounted.current = true;
+    const revision = generation;
+    void prepare("normal")
+      .then((ready) => {
+        if (ready && mounted.current) setState("ready");
+      })
+      .catch((err) => {
+        if (mounted.current) {
+          setError(String(err));
+          setState("error");
+        }
+      });
+    void statsApi
+      .getForGame(slug, profileId.current ?? undefined)
+      .then((data) => {
+        if (mounted.current) setHighScore(data.high_score);
+      })
+      .catch(() => {});
+    const exit = () => {
+      const item = completion();
+      if (item) {
         try {
-            await statsApi.startSession(slug);
-        } catch (e) {
-            console.error('Failed to start session:', e);
+          enqueueCompletion(item);
+          sendCompletionOnExit(item);
+        } catch {
+          /* Cannot persist when storage is unavailable. */
         }
-        playStartTimeRef.current = Date.now();
-        totalPlaytimeRef.current = 0;
-        engineRef.current?.start();
-        setState('playing');
-    }, [state, slug]);
-
-    // Pause/Resume
-    const pause = useCallback(() => {
-        if (playStartTimeRef.current) {
-            totalPlaytimeRef.current += (Date.now() - playStartTimeRef.current) / 1000;
-            playStartTimeRef.current = null;
-        }
-        engineRef.current?.pause();
-        setState('paused');
-    }, []);
-
-    const resume = useCallback(() => {
-        playStartTimeRef.current = Date.now();
-        engineRef.current?.resume();
-        setState('playing');
-    }, []);
-
-    // Restart
-    const restart = useCallback(async () => {
-        // Record session if restarting mid-game
-        if (state === 'playing' || state === 'paused') {
-            if (playStartTimeRef.current) {
-                totalPlaytimeRef.current += (Date.now() - playStartTimeRef.current) / 1000;
-                playStartTimeRef.current = null;
-            }
-            if (totalPlaytimeRef.current > 0) {
-                try {
-                    const currentScore = engineRef.current?.getScore() || 0;
-                    await statsApi.recordSession(slug, Math.floor(totalPlaytimeRef.current), currentScore, difficulty);
-                } catch (e) {
-                    console.error('Failed to record session on restart:', e);
-                }
-            }
-        }
-
-        const canvas = canvasRef.current;
-        if (!canvas) return;
-
-        engineRef.current?.destroy();
-        initRef.current = false;
-
-        const game = getGame(slug);
-        if (!game) return;
-
-        const engine = new GameEngine();
-        engineRef.current = engine;
-
-        setupCallbacks(engine);
-
-        const config: GameConfig = {
-            slug,
-            title,
-            width: sizeRef.current.width,
-            height: sizeRef.current.height,
-            difficulty
-        };
-        engine.init(canvas, game, config).then(async () => {
-            try {
-                await statsApi.startSession(slug);
-            } catch (e) {
-                console.error('Failed to start session on restart:', e);
-            }
-            playStartTimeRef.current = Date.now();
-            totalPlaytimeRef.current = 0;
-            engine.start();
-            setState('playing');
-            initRef.current = true;
-        });
-    }, [slug, title, difficulty, setupCallbacks, state]);
-
-    // Quit - go back to previous page
-    const quit = useCallback(async () => {
-        // Record session if we played
-        if (state === 'playing' || state === 'paused') {
-            if (playStartTimeRef.current) {
-                totalPlaytimeRef.current += (Date.now() - playStartTimeRef.current) / 1000;
-                playStartTimeRef.current = null;
-            }
-            if (totalPlaytimeRef.current > 0) {
-                try {
-                    const currentScore = engineRef.current?.getScore() || 0;
-                    await statsApi.recordSession(slug, Math.floor(totalPlaytimeRef.current), currentScore, difficulty);
-                } catch (e) {
-                    console.error('Failed to record session on quit:', e);
-                }
-            }
-        }
-
-        engineRef.current?.destroy();
-        navigate(-1); // Go back to previous page
-    }, [navigate, state, slug, difficulty]);
-
-    // Save/Load handlers
-    const onSaveClick = () => {
-        setState('save_menu');
-        loadSaves();
+      }
     };
-
-    const onLoadClick = () => {
-        setState('load_menu');
-        loadSaves();
+    const restore = (event: PageTransitionEvent) => {
+      if (!event.persisted || !session.current?.completion) return;
+      // A page restored from the browser cache must not continue a completed UUID.
+      engine.current?.stop();
+      session.current = null;
+      setState("paused");
     };
-
-    const handleSave = async (slot: number) => {
-        if (!engineRef.current) return;
-        const gameState = engineRef.current.getState();
-
-        // Simple validation - ensure we have something to save
-        if (Object.keys(gameState).length === 0) {
-            showToast('Game state is empty', 'error');
-            return;
-        }
-
-        try {
-            // Default name with timestamp
-            const date = new Date().toLocaleDateString(undefined, { hour: '2-digit', minute: '2-digit' });
-            await savesApi.create(slug, slot, gameState, `${title} - ${date}`);
-            await loadSaves();
-            showToast(`Game saved to slot ${slot}`, 'success');
-        } catch (e) {
-            console.error('Failed to save:', e);
-            showToast('Failed to save game', 'error');
-        }
+    window.addEventListener("pageshow", restore);
+    window.addEventListener("pagehide", exit);
+    return () => {
+      exit();
+      mounted.current = false;
+      revision.current++;
+      window.removeEventListener("pagehide", exit);
+      window.removeEventListener("pageshow", restore);
+      engine.current?.destroy();
+      engine.current = null;
     };
-
-    const handleLoad = async (slot: number) => {
-        const save = saves.find(s => s.slot === slot);
-        if (!save || !engineRef.current) return;
-
-        try {
-            engineRef.current.setState(save.data);
-            setState('paused');
-            showToast(`Loaded save from slot ${slot}`, 'success');
-        } catch (e) {
-            console.error('Failed to load:', e);
-            showToast('Failed to load save', 'error');
-        }
+  }, [slug, completion, prepare]);
+  useEffect(() => {
+    const hide = () => {
+      if (document.hidden) engine.current?.pause();
     };
-
-    const handleDelete = async (slot: number, e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (!confirm('Delete this save?')) return;
-        try {
-            await savesApi.delete(slug, slot);
-            await loadSaves();
-        } catch (error) {
-            console.error('Failed to delete:', error);
-        }
+    const blur = () => engine.current?.pause();
+    document.addEventListener("visibilitychange", hide);
+    window.addEventListener("blur", blur);
+    return () => {
+      document.removeEventListener("visibilitychange", hide);
+      window.removeEventListener("blur", blur);
     };
-
-    const backToPause = () => setState('paused');
-
-    // Keyboard controls
-    useEffect(() => {
-        const onKey = (e: KeyboardEvent) => {
-            if (e.code === 'Space' || e.code === 'Enter') {
-                if (state === 'ready') start();
-                else if (state === 'paused') resume();
-            }
-            if (e.code === 'KeyP' && state === 'playing') pause();
-            if (e.code === 'Escape') {
-                if (state === 'paused') quit();
-                else if (state === 'ready') quit();
-            }
-        };
-        window.addEventListener('keydown', onKey);
-        return () => window.removeEventListener('keydown', onKey);
-    }, [state, start, resume, pause, quit]);
-
-    const controlHint = CONTROL_HINTS[slug] || 'Arrow Keys to move';
-
-    return (
-        <div ref={containerRef} className="absolute inset-0 bg-[#0a0a0f] overflow-hidden">
-            <canvas
-                ref={canvasRef}
-                width={sizeRef.current.width}
-                height={sizeRef.current.height}
-                className="block w-full h-full"
-            />
-
-            {state === 'loading' && <Overlay><p>Loading...</p></Overlay>}
-
-            {state === 'ready' && (
-                <Overlay>
-                    {/* Game Title */}
-                    <h1 className="text-5xl font-extrabold bg-gradient-to-br from-[#00ff88] to-[#00ccff] bg-clip-text text-transparent mb-2">
-                        {title}
-                    </h1>
-
-                    {/* Controls */}
-                    <p style={{ opacity: 0.5, marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-                        {controlHint}
-                    </p>
-
-                    {/* Difficulty Selector */}
-                    <div style={{ marginBottom: '1.5rem' }}>
-                        <p style={{ opacity: 0.4, fontSize: '0.75rem', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                            Difficulty
-                        </p>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            {(['easy', 'normal', 'hard'] as Difficulty[]).map(d => (
-                                <button
-                                    key={d}
-                                    onClick={() => setDifficulty(d)}
-                                    style={{
-                                        padding: '0.5rem 1rem',
-                                        background: difficulty === d ? 'linear-gradient(135deg, #00ff88, #00cc66)' : '#222',
-                                        border: difficulty === d ? 'none' : '1px solid #444',
-                                        borderRadius: '6px',
-                                        color: '#fff',
-                                        fontSize: '0.8rem',
-                                        fontWeight: difficulty === d ? 700 : 400,
-                                        cursor: 'pointer',
-                                        textTransform: 'capitalize',
-                                        transition: 'all 0.2s',
-                                    }}
-                                >
-                                    {d}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Start Button */}
-                    <Button onClick={start} primary>▶ START GAME</Button>
-
-                    {/* Back Button */}
-                    <button
-                        onClick={quit}
-                        className="mt-4 bg-transparent border-none text-white/40 text-sm cursor-pointer hover:text-white/60 transition-colors"
-                    >
-                        ← Back
-                    </button>
-
-                    <p style={{ opacity: 0.2, marginTop: '1rem', fontSize: '0.75rem' }}>
-                        Press SPACE to start • ESC to go back
-                    </p>
-                </Overlay>
+  }, []);
+  const act = async (fn: () => Promise<void>) => {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    try {
+      await fn();
+    } catch (err) {
+      showToast((err as Error).message, "error");
+    } finally {
+      busyRef.current = false;
+      if (mounted.current) setBusy(false);
+    }
+  };
+  const begin = async (selected = difficulty) => {
+    if (profileId.current === null) throw new Error("Select a profile to play");
+    // Retain the UUID on failed starts: retrying cannot create duplicate sessions.
+    const id = session.current?.id ?? crypto.randomUUID();
+    session.current = {
+      id,
+      profileId: profileId.current,
+      difficulty: selected,
+      confirmed: false,
+      seconds: 0,
+      since: null,
+    };
+    await statsApi.startSession(slug, id, profileId.current);
+    session.current.confirmed = true;
+    if (!mounted.current) {
+      const item = completion();
+      if (item) {
+        enqueueCompletion(item);
+        sendCompletionOnExit(item);
+      }
+      return;
+    }
+    session.current.since = performance.now();
+    engine.current?.start();
+    setNewHigh(false);
+    setState("playing");
+  };
+  const start = () =>
+    act(async () => {
+      await prepare(difficulty);
+      await begin();
+    });
+  const resume = () => {
+    if (busyRef.current) return;
+    if (!session.current?.confirmed) {
+      void act(() => begin());
+      return;
+    }
+    session.current.since = performance.now();
+    engine.current?.resume();
+    setState("playing");
+  };
+  const restart = () =>
+    act(async () => {
+      engine.current?.pause();
+      await finish();
+      session.current = null;
+      await prepare(difficulty);
+      await begin();
+    });
+  const quit = () =>
+    act(async () => {
+      engine.current?.pause();
+      await finish();
+      navigate("/home");
+    });
+  const openSaves = (mode: "save" | "load") =>
+    act(async () => {
+      menuOrigin.current = state;
+      const data = await savesApi.list(slug, profileId.current ?? undefined);
+      setSaves(data.saves);
+      setState(mode);
+    });
+  const saveSlot = (slot: number) =>
+    act(async () => {
+      if (!engine.current) return;
+      const data = {
+        format: 1,
+        game: slug,
+        difficulty,
+        state: engine.current.getState(),
+      };
+      await savesApi.create(
+        slug,
+        slot,
+        data,
+        `${title} · ${new Date().toLocaleString()}`,
+        profileId.current ?? undefined,
+      );
+      setSaves(
+        (await savesApi.list(slug, profileId.current ?? undefined)).saves,
+      );
+      showToast(`Saved to slot ${slot}`, "success");
+    });
+  const loadSlot = (slot: number) =>
+    act(async () => {
+      const data = saves.find((s) => s.slot === slot)?.data;
+      if (
+        !data ||
+        data.format !== 1 ||
+        data.game !== slug ||
+        !["easy", "normal", "hard"].includes(String(data.difficulty)) ||
+        !data.state ||
+        typeof data.state !== "object"
+      )
+        throw new Error(
+          "This save uses an unsupported format. Start a new game to create a full save.",
+        );
+      // Validate against a temporary game before replacing the current run.
+      const candidate = await loadGame(slug);
+      try {
+        candidate.setState?.(data.state as Record<string, unknown>);
+      } finally {
+        candidate.destroy?.();
+      }
+      await finish();
+      session.current = null;
+      const selected = data.difficulty as Difficulty;
+      setDifficulty(selected);
+      await prepare(selected, data.state as Record<string, unknown>);
+      setScore(engine.current?.getScore() ?? 0);
+      setState("paused");
+      showToast("Game restored. Resume when ready.", "success");
+    });
+  const keyboard = useEffectEvent((event: KeyboardEvent) => {
+    if (document.querySelector("dialog[open]")) return;
+    if (event.repeat || isEditing(event.target) || busyRef.current) return;
+    if (
+      (event.code === "Escape" || event.code === "KeyP") &&
+      state === "playing"
+    ) {
+      event.preventDefault();
+      engine.current?.pause();
+      return;
+    }
+    if (event.code === "Escape" && state !== "playing") {
+      event.preventDefault();
+      if (state === "paused") resume();
+      else if (state === "save" || state === "load")
+        setState(menuOrigin.current);
+      else void quit();
+    } else if (
+      event.code === "Space" &&
+      state === "ready" &&
+      !(event.target instanceof HTMLButtonElement)
+    ) {
+      event.preventDefault();
+      void start();
+    }
+  });
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => keyboard(e);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+  useGamepad((button) => {
+    if (document.querySelector("dialog[open]")) return;
+    if (state === "playing" && button === "Start") {
+      engine.current?.pause();
+      return;
+    }
+    if (busyRef.current || state === "playing") return;
+    if (button === "B") {
+      if (state === "paused") resume();
+      else if (state === "save" || state === "load")
+        setState(menuOrigin.current);
+      else void quit();
+    }
+    if (button === "A") (document.activeElement as HTMLElement | null)?.click();
+    if (["Up", "Down", "Left", "Right"].includes(button)) {
+      const targets = Array.from(
+        modal.current?.querySelectorAll<HTMLElement>(
+          "button:not(:disabled),summary",
+        ) ?? [],
+      );
+      const at = targets.indexOf(document.activeElement as HTMLElement),
+        shift = ["Down", "Right"].includes(button) ? 1 : -1;
+      targets[(at + shift + targets.length) % targets.length]?.focus();
+    }
+  });
+  const supportsDifficulty = ["snake", "raptor-run", "breakout"].includes(slug);
+  const button = (label: string, onClick: () => void, disabled = false) => (
+    <button
+      disabled={busy || disabled}
+      onClick={() => {
+        AudioManager.getInstance().unlock();
+        onClick();
+      }}
+      data-primary={
+        ["Start game", "Resume", "Play again"].includes(label) || undefined
+      }
+      className="game-button"
+    >
+      {label}
+    </button>
+  );
+  return (
+    <div className="game-stage" data-state={state}>
+      {confirmation}
+      <canvas
+        ref={canvas}
+        className="game-canvas"
+        width={960}
+        height={640}
+        aria-label={`${title} playfield`}
+      />
+      {state === "playing" && (
+        <div className="game-toolbar">
+          <span>
+            <span className="game-live-dot" />
+            {title}
+          </span>
+          <div>
+            {document.documentElement.requestFullscreen && (
+              <button
+                onClick={() => {
+                  const action = document.fullscreenElement
+                    ? document.exitFullscreen()
+                    : document.documentElement.requestFullscreen();
+                  void action.catch(() =>
+                    showToast(
+                      "Fullscreen is unavailable in this browser.",
+                      "error",
+                    ),
+                  );
+                }}
+              >
+                Fullscreen
+              </button>
             )}
-
-            {state === 'paused' && (
-                <Overlay>
-                    <h2 className="text-2xl font-bold mb-6 tracking-widest">PAUSED</h2>
-                    <Button onClick={resume} primary>▶ Resume</Button>
-                    <Button onClick={restart}>🔄 Restart</Button>
-                    <div className="flex gap-2 my-2">
-                        <Button onClick={onSaveClick}>Save Game</Button>
-                        <Button onClick={onLoadClick}>Load Game</Button>
+            <button onClick={() => engine.current?.pause()}>
+              Pause (Esc / P)
+            </button>
+          </div>
+        </div>
+      )}
+      {state !== "playing" && (
+        <div
+          ref={modal}
+          className="game-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
+        >
+          {state === "loading" ? (
+            <p role="status">Loading {title}…</p>
+          ) : (
+            <section
+              className="game-menu-panel"
+              data-state={state}
+              style={{ "--game-accent": experience.accent } as CSSProperties}
+            >
+              <div className="game-menu-kicker">
+                ARCADE NEXUS{" "}
+                <span>
+                  /{" "}
+                  {state === "ready"
+                    ? "READY TO PLAY"
+                    : state === "paused"
+                      ? "SESSION PAUSED"
+                      : state === "gameover"
+                        ? "RESULTS"
+                        : "SESSION"}
+                </span>
+              </div>
+              <h1>
+                {state === "ready"
+                  ? title
+                  : state === "paused"
+                    ? "Paused"
+                    : state === "gameover"
+                      ? (engine.current?.getResult()?.title ??
+                        (newHigh ? "New high score!" : "Game over"))
+                      : state === "error"
+                        ? "Game unavailable"
+                        : state === "save"
+                          ? "Save game"
+                          : "Load game"}
+              </h1>
+              {state === "ready" && (
+                <>
+                  <p className="launch-goal">{experience.goal}</p>
+                  <div className="control-guide">
+                    <div className="controls-switch" aria-label="Control guide">
+                      {(["keyboard", "controller"] as const).map((mode) => (
+                        <button
+                          key={mode}
+                          aria-pressed={controlMode === mode}
+                          onClick={() => setControlMode(mode)}
+                        >
+                          {mode === "keyboard" ? (
+                            <Keyboard size={15} />
+                          ) : (
+                            <Gamepad2 size={15} />
+                          )}
+                          {mode === "keyboard" ? "Keyboard" : "Controller"}
+                        </button>
+                      ))}
                     </div>
-                    <Button onClick={quit}>← Quit</Button>
-                </Overlay>
-            )}
-
-            {(state === 'save_menu' || state === 'load_menu') && (
-                <Overlay>
-                    <div className="w-full max-w-md bg-[#1a1a20] p-6 rounded-xl border border-white/10 shadow-2xl animate-in zoom-in-95 duration-200">
-                        <div className="flex items-center justify-between mb-6">
-                            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                                {state === 'save_menu' ? <Save className="text-cyan-400" /> : <Download className="text-green-400" />}
-                                {state === 'save_menu' ? 'SAVE GAME' : 'LOAD GAME'}
-                            </h2>
-                            <button onClick={backToPause} className="text-white/50 hover:text-white transition-colors">
-                                <X size={24} />
-                            </button>
+                    <dl>
+                      {[
+                        ...experience.controls,
+                        {
+                          action: "Pause",
+                          keyboard: "Esc / P",
+                          controller: "Start",
+                        },
+                      ].map((control) => (
+                        <div key={control.action}>
+                          <dt>{control.action}</dt>
+                          <dd>{control[controlMode]}</dd>
                         </div>
-
-                        <div className="space-y-3">
-                            {[1, 2, 3, 4, 5].map(slot => {
-                                const save = saves.find(s => s.slot === slot);
-                                const isEmpty = !save;
-
-                                return (
-                                    <div key={slot} className="flex items-center gap-2 group">
-                                        <button
-                                            onClick={() => state === 'save_menu' ? handleSave(slot) : handleLoad(slot)}
-                                            disabled={state === 'load_menu' && isEmpty}
-                                            className={`
-                                                flex-1 flex items-center justify-between p-4 rounded-lg border transition-all text-left
-                                                ${!isEmpty
-                                                    ? 'bg-white/5 border-white/10 hover:bg-white/10'
-                                                    : 'bg-black/30 border-white/5 text-white/30 hover:bg-white/5 hover:border-white/10'}
-                                                ${isLoadingSaves ? 'opacity-50 pointer-events-none' : ''}
-                                                ${state === 'load_menu' && isEmpty ? 'opacity-30 cursor-not-allowed' : ''}
-                                            `}
-                                        >
-                                            <div className="flex items-center gap-4">
-                                                <span className={`
-                                                    w-8 h-8 rounded-full flex items-center justify-center font-mono text-sm border
-                                                    ${!isEmpty ? 'bg-cyan-500/20 border-cyan-500/50 text-cyan-400' : 'bg-white/5 border-white/10'}
-                                                `}>
-                                                    {slot}
-                                                </span>
-                                                <div>
-                                                    <div className={`font-bold text-sm ${!isEmpty ? 'text-white' : 'text-white/30'}`}>
-                                                        {save ? save.name || 'Untitled Save' : 'Empty Slot'}
-                                                    </div>
-                                                    {save && (
-                                                        <div className="text-xs text-white/40 flex items-center gap-1 mt-1">
-                                                            <Clock size={10} />
-                                                            {new Date(save.updated_at).toLocaleString()}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            {state === 'save_menu' ? (
-                                                <span className="opacity-0 group-hover:opacity-100 transition-opacity text-xs font-mono uppercase bg-white/10 px-2 py-1 rounded">
-                                                    Overwrite
-                                                </span>
-                                            ) : (save && (
-                                                <span className="opacity-0 group-hover:opacity-100 transition-opacity text-xs font-mono uppercase bg-green-500/20 text-green-400 px-2 py-1 rounded">
-                                                    Load
-                                                </span>
-                                            ))}
-                                        </button>
-
-                                        {save && (
-                                            <button
-                                                onClick={(e) => handleDelete(slot, e)}
-                                                className="p-4 bg-red-500/10 border border-red-500/20 rounded-lg text-red-400 hover:bg-red-500/20 transition-all opacity-0 group-hover:opacity-100"
-                                                title="Delete Save"
-                                            >
-                                                <Trash2 size={18} />
-                                            </button>
-                                        )}
-                                    </div>
-                                );
+                      ))}
+                    </dl>
+                  </div>
+                  <p className="launch-record">
+                    Personal best <strong>{highScore.toLocaleString()}</strong>
+                    <span>Save your run from the pause menu</span>
+                  </p>
+                  {supportsDifficulty && (
+                    <fieldset>
+                      <legend>Difficulty</legend>
+                      {(["easy", "normal", "hard"] as Difficulty[]).map((d) => (
+                        <button
+                          key={d}
+                          disabled={busy}
+                          aria-pressed={difficulty === d}
+                          onClick={() => setDifficulty(d)}
+                          className="game-button"
+                        >
+                          {d}
+                        </button>
+                      ))}
+                    </fieldset>
+                  )}
+                  {button("Start game", () => void start())}
+                  {engine.current?.canSave &&
+                    button("Load game", () => void openSaves("load"))}
+                  {button("Back to console", () => void quit())}
+                </>
+              )}
+              {state === "paused" && (
+                <>
+                  <p className="game-menu-title">{title}</p>
+                  <div className="game-pause-score">
+                    {engine.current?.getScore() ?? 0}
+                    <span> CURRENT SCORE</span>
+                  </div>
+                  <details className="pause-controls">
+                    <summary>Controls & tips</summary>
+                    <p>{hints[slug]}</p>
+                    <p>{experience.tip}</p>
+                  </details>
+                  {button("Resume", resume)}
+                  {button("Restart", () => void restart())}
+                  {engine.current?.canSave && (
+                    <div>
+                      {button("Save game", () => void openSaves("save"))}
+                      {button("Load game", () => void openSaves("load"))}
+                    </div>
+                  )}
+                  {button("Quit to console", () => void quit())}
+                </>
+              )}
+              {state === "gameover" && (
+                <>
+                  <p className="game-final-score">{score}</p>
+                  <p>Best: {highScore}</p>
+                  {newHigh && engine.current?.getResult() && (
+                    <p className="game-best-badge">NEW PERSONAL BEST</p>
+                  )}
+                  {engine.current?.getResult() && (
+                    <p>{engine.current.getResult()?.detail}</p>
+                  )}
+                  {button("Play again", () => void restart())}
+                  {button("Back to console", () => void quit())}
+                </>
+              )}
+              {state === "error" && (
+                <>
+                  <p role="alert">{error}</p>
+                  {button("Back to console", () => void quit())}
+                </>
+              )}
+              {(state === "save" || state === "load") && (
+                <>
+                  <div className="save-slots">
+                    {[1, 2, 3, 4, 5].map((slot) => {
+                      const entry = saves.find((s) => s.slot === slot);
+                      return (
+                        <div key={slot}>
+                          {button(
+                            `Slot ${slot} · ${entry?.name ?? "Empty"}`,
+                            () =>
+                              void (state === "save"
+                                ? saveSlot(slot)
+                                : loadSlot(slot)),
+                            state === "load" && !entry,
+                          )}
+                          {entry &&
+                            button(`Delete slot ${slot}`, () => {
+                              void ask({
+                                title: `Delete slot ${slot}?`,
+                                message:
+                                  "This saved run will be permanently removed. Other slots and recorded scores are kept.",
+                                confirmText: "Delete save",
+                              }).then((answer) => {
+                                if (answer)
+                                  void act(async () => {
+                                    await savesApi.delete(
+                                      slug,
+                                      slot,
+                                      profileId.current ?? undefined,
+                                    );
+                                    setSaves(
+                                      (
+                                        await savesApi.list(
+                                          slug,
+                                          profileId.current ?? undefined,
+                                        )
+                                      ).saves,
+                                    );
+                                  });
+                              });
                             })}
                         </div>
-                    </div>
-                </Overlay>
-            )}
-
-            {state === 'gameover' && (
-                <Overlay>
-                    <h2 className={isNewHigh ? 'text-[#ffd700]' : ''}>
-                        {isNewHigh ? '🏆 NEW HIGH SCORE!' : 'GAME OVER'}
-                    </h2>
-                    <div className="text-5xl font-extrabold my-4">{score}</div>
-                    {highScore > 0 && !isNewHigh && (
-                        <p className="opacity-50">High Score: {highScore}</p>
-                    )}
-                    <Button onClick={restart}>🔄 Play Again</Button>
-                    <Button onClick={quit}>← Back</Button>
-                </Overlay>
-            )}
+                      );
+                    })}
+                  </div>
+                  {button("Back", () => setState(menuOrigin.current))}
+                </>
+              )}
+              {busy && <p role="status">Working…</p>}
+            </section>
+          )}
         </div>
-    );
-}
-
-function Overlay({ children }: { children: React.ReactNode }) {
-    return (
-        <div className="absolute inset-0 bg-[#0a0a0f]/95 flex flex-col items-center justify-center text-white text-center">
-            {children}
-        </div>
-    );
-}
-
-function Button({ children, onClick, primary }: { children: React.ReactNode; onClick: () => void; primary?: boolean }) {
-    return (
-        <button
-            onClick={onClick}
-            className={`
-                px-8 py-3 m-2 rounded-lg text-white transition-all
-                ${primary
-                    ? 'bg-gradient-to-br from-[#00ff88] to-[#00cc66] text-xl font-bold hover:opacity-90'
-                    : 'bg-[#333] text-base font-semibold hover:bg-[#444]'}
-            `}
-        >
-            {children}
-        </button>
-    );
+      )}
+    </div>
+  );
 }

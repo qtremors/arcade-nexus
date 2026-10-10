@@ -1,66 +1,43 @@
-"""
-Save Schemas
-"""
-import json
+"""Bounded JSON saves; game-specific state validation belongs to the game SDK."""
+
 from datetime import datetime
-from typing import Any
-from pydantic import BaseModel, Field, field_validator
+from typing import Annotated
+
+from pydantic import Field, JsonValue, field_validator
+
+from app.schemas.base import RequestSchema, ResponseSchema, validate_json_size
+
+MAX_SAVE_DATA_SIZE = 1024 * 100
+MAX_THUMBNAIL_SIZE = 1024 * 500
+SaveSlot = Annotated[int, Field(ge=1, le=5, strict=True)]
 
 
-# Maximum sizes to prevent database bloat
-MAX_SAVE_DATA_SIZE = 1024 * 100  # 100KB max for save data JSON
-MAX_THUMBNAIL_SIZE = 1024 * 500  # 500KB max for base64 thumbnail
-
-
-class SaveCreate(BaseModel):
-    """Schema for creating a game save."""
-    slot: int = Field(..., ge=1, le=5)
+class SaveUpdate(RequestSchema):
     name: str | None = Field(None, max_length=100)
-    data: dict = Field(...)
+    data: dict[str, JsonValue]
     thumbnail: str | None = Field(None, max_length=MAX_THUMBNAIL_SIZE)
-    
-    @field_validator('data')
+
+    @field_validator("data")
     @classmethod
-    def validate_data_size(cls, v: dict) -> dict:
-        """Ensure save data doesn't exceed size limit."""
-        json_str = json.dumps(v)
-        if len(json_str) > MAX_SAVE_DATA_SIZE:
-            raise ValueError(f'Save data exceeds maximum size of {MAX_SAVE_DATA_SIZE // 1024}KB')
-        return v
+    def validate_data_size(cls, value: dict[str, JsonValue]) -> dict[str, JsonValue]:
+        return validate_json_size(value, MAX_SAVE_DATA_SIZE)
 
 
-class SaveUpdate(BaseModel):
-    """Schema for updating a game save."""
-    name: str | None = Field(None, max_length=100)
-    data: dict = Field(...)
-    thumbnail: str | None = Field(None, max_length=MAX_THUMBNAIL_SIZE)
-    
-    @field_validator('data')
-    @classmethod
-    def validate_data_size(cls, v: dict) -> dict:
-        """Ensure save data doesn't exceed size limit."""
-        json_str = json.dumps(v)
-        if len(json_str) > MAX_SAVE_DATA_SIZE:
-            raise ValueError(f'Save data exceeds maximum size of {MAX_SAVE_DATA_SIZE // 1024}KB')
-        return v
+class SaveCreate(SaveUpdate):
+    slot: SaveSlot
 
 
-class SaveResponse(BaseModel):
-    """Schema for save data in responses."""
+class SaveResponse(ResponseSchema):
     id: int
     game_slug: str
     slot: int
     name: str | None = None
-    data: dict
+    data: dict[str, JsonValue]
     thumbnail: str | None = None
     created_at: datetime
     updated_at: datetime
-    
-    class Config:
-        from_attributes = True
 
 
-class SaveListResponse(BaseModel):
-    """Schema for list of saves."""
+class SaveListResponse(ResponseSchema):
     saves: list[SaveResponse]
     total: int

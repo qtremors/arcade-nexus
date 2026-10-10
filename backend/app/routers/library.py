@@ -1,126 +1,73 @@
-"""
-Library Router - User's Game Library
-"""
-from datetime import datetime, timezone
-from typing import Annotated
+"""Profile-scoped library membership; removal preserves saves and statistics."""
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.orm import selectinload
 
-from app.database import get_db
-from app.models.user import User
+from app.dependencies import CurrentUser, DbSession
 from app.models.game import Game
 from app.models.library import UserLibrary
-from app.schemas.library import LibraryEntryResponse, LibraryAddResponse
-from app.schemas.game import GameResponse
-from app.utils.local_user import get_default_user
+from app.schemas.library import LibraryAddResponse, LibraryEntryResponse
 
 router = APIRouter()
 
 
 @router.get("", response_model=list[LibraryEntryResponse])
 async def get_library(
-    current_user: Annotated[User, Depends(get_default_user)],
-    db: Annotated[AsyncSession, Depends(get_db)]
+    current_user: CurrentUser,
+    db: DbSession,
+    skip: int = Query(0, ge=0),
+    limit: int | None = Query(None, ge=1, le=200),
 ):
-    """Get user's game library."""
-    result = await db.execute(
+    query = (
         select(UserLibrary)
-        .where(UserLibrary.user_id == current_user.id)
+        .join(Game)
+        .where(UserLibrary.user_id == current_user.id, Game.is_active.is_(True))
         .options(selectinload(UserLibrary.game))
-        .order_by(UserLibrary.last_played.desc().nullsfirst(), UserLibrary.added_at.desc())
-    )
-    entries = result.scalars().all()
-    
-    return [
-        LibraryEntryResponse(
-            id=entry.id,
-            game=GameResponse.model_validate(entry.game),
-            added_at=entry.added_at,
-            last_played=entry.last_played
+        .order_by(
+            UserLibrary.last_played.desc().nullslast(),
+            UserLibrary.added_at.desc(),
+            UserLibrary.id.desc(),
         )
-        for entry in entries
-    ]
+        .offset(skip)
+    )
+    if limit is not None:
+        query = query.limit(limit)
+    return (await db.scalars(query)).all()
 
 
 @router.post("/{game_id}", response_model=LibraryAddResponse, status_code=status.HTTP_201_CREATED)
-async def add_to_library(
-    game_id: int,
-    current_user: Annotated[User, Depends(get_default_user)],
-    db: Annotated[AsyncSession, Depends(get_db)]
-):
-    """Add a game to user's library."""
-    # Check if game exists
-    game_result = await db.execute(
-        select(Game).where(Game.id == game_id, Game.is_active == True)
+async def add_to_library(game_id: int, current_user: CurrentUser, db: DbSession):
+    game = await db.scalar(select(Game).where(Game.id == game_id, Game.is_active.is_(True)))
+    if game is None:
+        raise HTTPException(404, "Game not found")
+    result = await db.execute(
+        insert(UserLibrary)
+        .values(user_id=current_user.id, game_id=game.id)
+        .on_conflict_do_nothing(index_elements=["user_id", "game_id"])
+        .returning(UserLibrary.id)
     )
-    game = game_result.scalar_one_or_none()
-    
-    if not game:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Game not found"
-        )
-    
-    # Check if already in library
-    existing_result = await db.execute(
-        select(UserLibrary).where(
-            UserLibrary.user_id == current_user.id,
-            UserLibrary.game_id == game_id
-        )
-    )
-    if existing_result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Game already in library"
-        )
-    
-    # Add to library
-    entry = UserLibrary(
-        user_id=current_user.id,
-        game_id=game_id,
-        added_at=datetime.now(timezone.utc)
-    )
-    db.add(entry)
+    entry_id = result.scalar_one_or_none()
+    if entry_id is None:
+        raise HTTPException(400, "Game already in library")
     await db.commit()
-    await db.refresh(entry)
-    
-    # Load game relationship
-    await db.refresh(entry, ["game"])
-    
-    return LibraryAddResponse(
-        message="Game added to library",
-        entry=LibraryEntryResponse(
-            id=entry.id,
-            game=GameResponse.model_validate(entry.game),
-            added_at=entry.added_at,
-            last_played=entry.last_played
-        )
+    entry = await db.scalar(
+        select(UserLibrary)
+        .where(UserLibrary.id == entry_id)
+        .options(selectinload(UserLibrary.game))
     )
+    return LibraryAddResponse(message="Game added to library", entry=entry)
 
 
 @router.delete("/{game_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def remove_from_library(
-    game_id: int,
-    current_user: Annotated[User, Depends(get_default_user)],
-    db: Annotated[AsyncSession, Depends(get_db)]
-):
-    """Remove a game from user's library."""
-    result = await db.execute(
+async def remove_from_library(game_id: int, current_user: CurrentUser, db: DbSession):
+    entry = await db.scalar(
         select(UserLibrary).where(
-            UserLibrary.user_id == current_user.id,
-            UserLibrary.game_id == game_id
+            UserLibrary.user_id == current_user.id, UserLibrary.game_id == game_id
         )
     )
-    entry = result.scalar_one_or_none()
-    
-    if not entry:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Game not in library"
-        )
-    
+    if entry is None:
+        raise HTTPException(404, "Game not in library")
     await db.delete(entry)
     await db.commit()

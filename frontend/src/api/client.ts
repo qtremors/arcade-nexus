@@ -1,16 +1,37 @@
 /**
  * API Client - Axios wrapper for local app (no auth required)
  */
-import axios from 'axios';
-import type { AxiosError } from 'axios';
+import axios from "axios";
+import type { AxiosError } from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+export function apiBaseUrl(value = import.meta.env.VITE_API_URL || ""): string {
+  const base = value.replace(/\/+$/, "");
+  return base.endsWith("/api") ? base : `${base}/api`;
+}
+export const API_BASE_URL = apiBaseUrl();
+export const HEALTH_URL = `${API_BASE_URL.slice(0, -4)}/health`;
+let selectedProfileId: number | null = null;
+export const setApiProfileId = (id: number | null) => {
+  selectedProfileId = id;
+};
+export const getApiProfileId = () => selectedProfileId;
+const playerConfig = (profileId = selectedProfileId) => {
+  if (profileId === null) throw new Error("Select a profile first");
+  return { headers: { "X-Profile-ID": String(profileId) } };
+};
+export class ApiError extends Error {
+  status?: number;
+  constructor(message: string, status?: number) {
+    super(message);
+    this.status = status;
+  }
+}
 
 // Create axios instance
 const api = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
   },
   timeout: 10000,
 });
@@ -18,11 +39,14 @@ const api = axios.create({
 // Response interceptor - handle errors
 api.interceptors.response.use(
   (response) => response,
-  (error: AxiosError<{ detail?: string }>) => {
+  (error: AxiosError<{ detail?: string | { msg: string }[] }>) => {
     // Extract error message
-    const message = error.response?.data?.detail || error.message || 'An error occurred';
-    return Promise.reject(new Error(message));
-  }
+    const detail = error.response?.data?.detail;
+    const message = Array.isArray(detail)
+      ? detail.map((item) => item.msg).join("; ")
+      : detail || error.message;
+    return Promise.reject(new ApiError(message, error.response?.status));
+  },
 );
 
 // API Types
@@ -35,12 +59,13 @@ export interface User {
 }
 
 export interface Game {
+  config: Record<string, unknown>;
   id: number;
   slug: string;
   title: string;
   description: string | null;
   thumbnail: string | null;
-  category: 'arcade' | 'puzzle' | 'action' | 'strategy' | 'simulation';
+  category: "arcade" | "puzzle" | "action" | "strategy" | "simulation";
   version: string;
   is_active: boolean;
   created_at: string;
@@ -74,6 +99,8 @@ export interface GameStats {
 }
 
 export interface GameSession {
+  metrics: Record<string, unknown>;
+  session_id: string | null;
   id: number;
   game_slug: string;
   game_title: string;
@@ -92,6 +119,7 @@ export interface OverallStats {
 }
 
 export interface Achievement {
+  unlock_condition: Record<string, number> | null;
   id: number;
   game_slug: string;
   slug: string;
@@ -120,17 +148,17 @@ export interface ProfileListResponse {
 
 export const profilesApi = {
   list: async () => {
-    const { data } = await api.get<ProfileListResponse>('/profiles');
+    const { data } = await api.get<ProfileListResponse>("/profiles");
     return data;
   },
 
   getActive: async () => {
-    const { data } = await api.get<Profile | null>('/profiles/active');
+    const { data } = await api.get<Profile | null>("/profiles/active");
     return data;
   },
 
   create: async (username: string, avatar?: string) => {
-    const { data } = await api.post<Profile>('/profiles', { username, avatar });
+    const { data } = await api.post<Profile>("/profiles", { username, avatar });
     return data;
   },
 
@@ -139,7 +167,10 @@ export const profilesApi = {
     return data;
   },
 
-  update: async (id: number, updates: { username?: string; avatar?: string }) => {
+  update: async (
+    id: number,
+    updates: { username?: string; avatar?: string },
+  ) => {
     const { data } = await api.put<Profile>(`/profiles/${id}`, updates);
     return data;
   },
@@ -160,7 +191,9 @@ export const gamesApi = {
     if (category) params.category = category;
     if (search) params.search = search;
 
-    const { data } = await api.get<{ games: Game[]; total: number }>('/games', { params });
+    const { data } = await api.get<{ games: Game[]; total: number }>("/games", {
+      params,
+    });
     return data;
   },
 
@@ -170,107 +203,168 @@ export const gamesApi = {
   },
 
   getCategories: async () => {
-    const { data } = await api.get<{ value: string; label: string }[]>('/games/categories');
+    const { data } =
+      await api.get<{ value: string; label: string }[]>("/games/categories");
     return data;
   },
 };
 
 export const libraryApi = {
   list: async () => {
-    const { data } = await api.get<LibraryEntry[]>('/library');
+    const { data } = await api.get<LibraryEntry[]>("/library", playerConfig());
     return data;
   },
 
   add: async (gameId: number) => {
-    const { data } = await api.post<{ message: string; entry: LibraryEntry }>(`/library/${gameId}`);
+    const { data } = await api.post<{ message: string; entry: LibraryEntry }>(
+      `/library/${gameId}`,
+      undefined,
+      playerConfig(),
+    );
     return data;
   },
 
   remove: async (gameId: number) => {
-    await api.delete(`/library/${gameId}`);
+    await api.delete(`/library/${gameId}`, playerConfig());
   },
 };
 
 export const savesApi = {
-  list: async (gameSlug: string) => {
-    const { data } = await api.get<{ saves: SaveData[]; total: number }>(`/saves/${gameSlug}`);
+  list: async (gameSlug: string, profileId?: number) => {
+    const { data } = await api.get<{ saves: SaveData[]; total: number }>(
+      `/saves/${gameSlug}`,
+      playerConfig(profileId),
+    );
     return data;
   },
 
-  create: async (gameSlug: string, slot: number, saveData: Record<string, unknown>, name?: string) => {
-    const { data } = await api.post<SaveData>(`/saves/${gameSlug}`, {
-      slot,
-      name,
-      data: saveData,
-    });
+  create: async (
+    gameSlug: string,
+    slot: number,
+    saveData: Record<string, unknown>,
+    name?: string,
+    profileId?: number,
+  ) => {
+    const { data } = await api.post<SaveData>(
+      `/saves/${gameSlug}`,
+      {
+        slot,
+        name,
+        data: saveData,
+      },
+      playerConfig(profileId),
+    );
     return data;
   },
 
-  delete: async (gameSlug: string, slot: number) => {
-    await api.delete(`/saves/${gameSlug}/${slot}`);
+  delete: async (gameSlug: string, slot: number, profileId?: number) => {
+    await api.delete(`/saves/${gameSlug}/${slot}`, playerConfig(profileId));
   },
 };
 
 export const statsApi = {
-  getOverall: async () => {
-    const { data } = await api.get<OverallStats>('/stats');
-    return data;
-  },
-
-  getForGame: async (gameSlug: string) => {
-    const { data } = await api.get<GameStats>(`/stats/${gameSlug}`);
-    return data;
-  },
-
-  startSession: async (gameSlug: string) => {
-    const { data } = await api.post(`/stats/${gameSlug}/start`);
-    return data;
-  },
-
-  recordSession: async (gameSlug: string, playtimeSeconds: number, score: number, difficulty?: string) => {
-    const { data } = await api.post(`/stats/${gameSlug}/session`, {
-      playtime_seconds: playtimeSeconds,
-      score,
-      difficulty
-    });
-    return data;
-  },
-
-  submitScore: async (gameSlug: string, score: number) => {
-    const { data } = await api.post<{ is_new_high_score: boolean; high_score: number }>(
-      `/stats/${gameSlug}/score`,
-      { score }
+  getOverall: async (profileId?: number) => {
+    const { data } = await api.get<OverallStats>(
+      "/stats",
+      playerConfig(profileId),
     );
+    return data;
+  },
+
+  getForGame: async (gameSlug: string, profileId?: number) => {
+    const { data } = await api.get<GameStats>(
+      `/stats/${gameSlug}`,
+      playerConfig(profileId),
+    );
+    return data;
+  },
+
+  startSession: async (
+    gameSlug: string,
+    sessionId: string,
+    profileId?: number,
+  ) => {
+    const { data } = await api.post<{ session_id: string; profile_id: number }>(
+      `/stats/${gameSlug}/start`,
+      { session_id: sessionId },
+      playerConfig(profileId),
+    );
+    return data;
+  },
+
+  recordSession: async (
+    gameSlug: string,
+    playtimeSeconds: number,
+    score: number,
+    difficulty: string,
+    sessionId: string,
+    profileId?: number,
+    metrics: Record<string, unknown> = {},
+  ) => {
+    const { data } = await api.post(
+      `/stats/${gameSlug}/session`,
+      {
+        playtime_seconds: playtimeSeconds,
+        score,
+        difficulty,
+        session_id: sessionId,
+        metrics,
+      },
+      playerConfig(profileId),
+    );
+    return data;
+  },
+
+  submitScore: async (gameSlug: string, score: number, profileId?: number) => {
+    const { data } = await api.post<{
+      is_new_high_score: boolean;
+      high_score: number;
+    }>(`/stats/${gameSlug}/score`, { score }, playerConfig(profileId));
     return data;
   },
 
   getHistory: async (gameId?: number) => {
     const params = gameId ? { game_id: gameId } : {};
-    const { data } = await api.get<GameSession[]>('/stats/sessions', { params });
+    const { data } = await api.get<GameSession[]>("/stats/sessions", {
+      ...playerConfig(),
+      params,
+    });
     return data;
   },
 };
 
 export const achievementsApi = {
   getAll: async () => {
-    const { data } = await api.get<{ achievements: Achievement[]; total: number; unlocked_count: number }>(
-      '/achievements'
-    );
+    const { data } = await api.get<{
+      achievements: Achievement[];
+      total: number;
+      unlocked_count: number;
+    }>("/achievements", playerConfig());
     return data;
   },
 
-  getForGame: async (gameSlug: string) => {
-    const { data } = await api.get<{ achievements: Achievement[]; total: number; unlocked_count: number }>(
-      `/achievements/${gameSlug}`
-    );
+  getForGame: async (gameSlug: string, profileId?: number) => {
+    const { data } = await api.get<{
+      achievements: Achievement[];
+      total: number;
+      unlocked_count: number;
+    }>(`/achievements/${gameSlug}`, playerConfig(profileId));
     return data;
   },
 
-  unlock: async (gameSlug: string, achievementSlug: string) => {
-    const { data } = await api.post<{ message: string; unlocked: boolean }>('/achievements/unlock', {
-      game_slug: gameSlug,
-      achievement_slug: achievementSlug,
-    });
+  unlock: async (
+    gameSlug: string,
+    achievementSlug: string,
+    profileId?: number,
+  ) => {
+    const { data } = await api.post<{ message: string; unlocked: boolean }>(
+      "/achievements/unlock",
+      {
+        game_slug: gameSlug,
+        achievement_slug: achievementSlug,
+      },
+      playerConfig(profileId),
+    );
     return data;
   },
 };

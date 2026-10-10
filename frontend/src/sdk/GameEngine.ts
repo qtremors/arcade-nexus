@@ -1,224 +1,163 @@
-/**
- * Game Engine - Manages game loop and lifecycle
- * Supports both 2D (Canvas) and 3D (WebGL/Three.js) games
- */
-import type { GameInstance, LegacyGameInstance, GameConfig } from './GameSDK';
-import { is3DGame } from './GameSDK';
-import { InputManager } from './InputManager';
-
+import type { GameInstance, LegacyGameInstance, GameConfig } from "./GameSDK";
+import { is3DGame } from "./GameSDK";
+import { InputManager } from "./InputManager";
 export class GameEngine {
-    private ctx: CanvasRenderingContext2D | null = null;
-    private game: GameInstance | LegacyGameInstance | null = null;
-    private config: GameConfig | null = null;
-    private is3D = false;
-
-    private inputManager: InputManager;
-    private isRunning = false;
-    private isPaused = false;
-    private animationFrameId: number | null = null;
-    private lastTime = 0;
-    private wasPausePressed = false;
-
-    private onPauseCallback?: () => void;
-    private onGameOverCallback?: (score: number) => void;
-
-    constructor() {
-        this.inputManager = new InputManager();
-        this.gameLoop = this.gameLoop.bind(this);
+  private ctx: CanvasRenderingContext2D | null = null;
+  private game: GameInstance | LegacyGameInstance | null = null;
+  private input = new InputManager();
+  private destroyed = false;
+  private isRunning = false;
+  private isPaused = false;
+  private frame: number | null = null;
+  private lastTime = 0;
+  private accumulator = 0;
+  private pauseHeld = false;
+  private pauseCallback?: () => void;
+  private overCallback?: (score: number) => void;
+  private errorCallback?: (error: Error) => void;
+  async init(
+    canvas: HTMLCanvasElement,
+    game: GameInstance | LegacyGameInstance,
+    config: GameConfig,
+  ): Promise<void> {
+    if (this.destroyed) throw new Error("Engine was disposed");
+    this.game = game;
+    // Stable logical dimensions: resizing the browser scales the playfield without changing its rules.
+    canvas.width = config.width ?? 960;
+    canvas.height = config.height ?? 640;
+    this.ctx = is3DGame(game) ? null : canvas.getContext("2d");
+    if (!is3DGame(game) && !this.ctx)
+      throw new Error("Canvas rendering is unavailable");
+    try {
+      await game.init(canvas, config);
+      if (this.destroyed) {
+        game.destroy?.();
+        return;
+      }
+      this.render();
+    } catch (err) {
+      game.destroy?.();
+      throw err;
     }
-
-    /** Initialize the engine with a canvas element */
-    async init(
-        canvas: HTMLCanvasElement,
-        game: GameInstance | LegacyGameInstance,
-        config: GameConfig
-    ): Promise<void> {
-        this.game = game;
-        this.config = config;
-        this.is3D = is3DGame(game as GameInstance);
-
-        // Set canvas size
-        canvas.width = config.width || 800;
-        canvas.height = config.height || 600;
-
-        if (this.is3D) {
-            // 3D games manage their own WebGL context
-            this.ctx = null;
-            if (import.meta.env.DEV) {
-                console.log('[GameEngine] Initializing 3D game');
-            }
+  }
+  start(): void {
+    if (this.destroyed || this.isRunning || !this.game) return;
+    this.isRunning = true;
+    this.isPaused = false;
+    this.lastTime = performance.now();
+    this.input.start();
+    this.frame = requestAnimationFrame(this.loop);
+  }
+  stop(): void {
+    this.isRunning = false;
+    this.input.stop();
+    if (this.frame !== null) cancelAnimationFrame(this.frame);
+    this.frame = null;
+  }
+  pause(): void {
+    if (!this.isRunning || this.isPaused) return;
+    this.isPaused = true;
+    this.input.stop();
+    this.game?.onPause?.();
+    this.pauseCallback?.();
+  }
+  resume(): void {
+    if (!this.isRunning || !this.isPaused) return;
+    this.isPaused = false;
+    this.lastTime = performance.now();
+    this.accumulator = 0;
+    this.input.start();
+    this.game?.onResume?.();
+  }
+  togglePause(): void {
+    if (this.isPaused) this.resume();
+    else this.pause();
+  }
+  destroy(): void {
+    if (this.destroyed) return;
+    this.destroyed = true;
+    this.stop();
+    this.game?.destroy?.();
+    this.game = null;
+    this.ctx = null;
+  }
+  getMetrics(): { jumps?: number; max_altitude?: number; crashed?: boolean } {
+    return "getMetrics" in (this.game ?? {})
+      ? ((this.game as GameInstance).getMetrics?.() ?? {})
+      : {};
+  }
+  getScore(): number {
+    const value = this.game?.getScore?.() ?? 0;
+    return Number.isFinite(value) ? Math.max(0, Math.floor(value)) : 0;
+  }
+  getResult(): { title: string; detail: string } | null {
+    return "getResult" in (this.game ?? {})
+      ? ((this.game as GameInstance).getResult?.() ?? null)
+      : null;
+  }
+  get canSave(): boolean {
+    return !!(this.game?.getState && this.game?.setState);
+  }
+  getState(): Record<string, unknown> {
+    if (!this.canSave) throw new Error("This game does not support saves");
+    return this.game!.getState!();
+  }
+  setState(state: Record<string, unknown>): void {
+    if (!this.canSave) throw new Error("This game does not support saves");
+    this.game!.setState!(state);
+    this.render();
+  }
+  onPause(callback: () => void): void {
+    this.pauseCallback = callback;
+  }
+  onGameOver(callback: (score: number) => void): void {
+    this.overCallback = callback;
+  }
+  onError(callback: (error: Error) => void): void {
+    this.errorCallback = callback;
+  }
+  get paused(): boolean {
+    return this.isPaused;
+  }
+  get running(): boolean {
+    return this.isRunning;
+  }
+  private render(): void {
+    if (!this.game) return;
+    if (is3DGame(this.game)) this.game.render();
+    else if (this.ctx) this.game.render(this.ctx);
+  }
+  private loop = (now: number): void => {
+    if (!this.isRunning || this.destroyed) return;
+    try {
+      if (!this.isPaused) {
+        const input = this.input.getState();
+        if (input.pause && !this.pauseHeld) {
+          this.pauseHeld = true;
+          this.pause();
         } else {
-            // 2D games use Canvas 2D context
-            this.ctx = canvas.getContext('2d');
-            if (!this.ctx) {
-                throw new Error('Failed to get 2D context from canvas');
+          this.pauseHeld = input.pause;
+          this.accumulator += Math.max(0, Math.min(now - this.lastTime, 100));
+          const step = 1000 / 60;
+          while (this.accumulator >= step) {
+            this.accumulator -= step;
+            this.input.consumePresses();
+            if (!this.game?.update(step, input)) {
+              this.render();
+              const score = this.getScore();
+              this.stop();
+              this.overCallback?.(score);
+              return;
             }
-            if (import.meta.env.DEV) {
-                console.log('[GameEngine] Initializing 2D game');
-            }
+          }
+          this.render();
         }
-
-        // Initialize the game
-        await this.game.init(canvas, config);
+      }
+      this.lastTime = now;
+      this.frame = requestAnimationFrame(this.loop);
+    } catch (err) {
+      this.stop();
+      this.errorCallback?.(err instanceof Error ? err : new Error(String(err)));
     }
-
-    /** Start the game loop */
-    start(): void {
-        if (this.isRunning) return;
-
-        this.isRunning = true;
-        this.isPaused = false;
-        this.lastTime = performance.now();
-
-        this.inputManager.start();
-        this.animationFrameId = requestAnimationFrame(this.gameLoop);
-
-        this.log(`[GameEngine] Started: ${this.config?.slug}`);
-    }
-
-    /** Stop the game loop */
-    stop(): void {
-        this.isRunning = false;
-        this.inputManager.stop();
-
-        if (this.animationFrameId) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
-        }
-
-        this.log(`[GameEngine] Stopped: ${this.config?.slug}`);
-    }
-
-    /** Pause the game */
-    pause(): void {
-        if (!this.isRunning || this.isPaused) return;
-
-        this.isPaused = true;
-        this.game?.onPause?.();
-        this.onPauseCallback?.();
-
-        this.log(`[GameEngine] Paused: ${this.config?.slug}`);
-    }
-
-    /** Resume from pause */
-    resume(): void {
-        if (!this.isRunning || !this.isPaused) return;
-
-        this.isPaused = false;
-        this.lastTime = performance.now(); // Reset time to avoid jump
-        this.game?.onResume?.();
-
-        this.log(`[GameEngine] Resumed: ${this.config?.slug}`);
-    }
-
-    /** Toggle pause state */
-    togglePause(): void {
-        if (this.isPaused) {
-            this.resume();
-        } else {
-            this.pause();
-        }
-    }
-
-    /** Destroy the engine and clean up */
-    destroy(): void {
-        this.stop();
-        this.game?.destroy?.();
-        this.game = null;
-        this.ctx = null;
-        this.config = null;
-    }
-
-    /** Get current game score */
-    getScore(): number {
-        return this.game?.getScore?.() || 0;
-    }
-
-    /** Get current game state */
-    getState(): Record<string, unknown> {
-        return this.game?.getState?.() || {};
-    }
-
-    /** Restore game state */
-    setState(state: Record<string, unknown>): void {
-        this.game?.setState?.(state);
-    }
-
-    /** Set pause callback */
-    onPause(callback: () => void): void {
-        this.onPauseCallback = callback;
-    }
-
-    /** Set game over callback */
-    onGameOver(callback: (score: number) => void): void {
-        this.onGameOverCallback = callback;
-    }
-
-    /** Check if game is paused */
-    get paused(): boolean {
-        return this.isPaused;
-    }
-
-    /** Check if game is running */
-    get running(): boolean {
-        return this.isRunning;
-    }
-
-    /** Main game loop */
-    private gameLoop(currentTime: number): void {
-        if (!this.isRunning) return;
-
-        // Request next frame immediately
-        this.animationFrameId = requestAnimationFrame(this.gameLoop);
-
-        // Skip if paused
-        if (this.isPaused) return;
-
-        // Calculate delta time in MILLISECONDS (games expect ms)
-        const deltaTime = currentTime - this.lastTime;
-        this.lastTime = currentTime;
-
-        // Cap delta time to prevent spiral of death (100ms max)
-        const cappedDelta = Math.min(deltaTime, 100);
-
-        // Get input state
-        const input = this.inputManager.getState();
-
-        // Check for pause input
-        if (input.pause && !this.wasPausePressed) {
-            this.pause();
-            this.wasPausePressed = true;
-            return;
-        }
-        if (!input.pause) {
-            this.wasPausePressed = false;
-        }
-
-        // Update game - returns false if game is over
-        const continueGame = this.game?.update(cappedDelta, input) ?? false;
-
-        // Render game
-        if (this.is3D) {
-            // 3D games handle their own rendering
-            (this.game as { render: () => void })?.render();
-        } else if (this.ctx) {
-            // 2D games use canvas context
-            (this.game as { render: (ctx: CanvasRenderingContext2D) => void })?.render(this.ctx);
-        }
-
-        // Check game over
-        if (!continueGame) {
-            const score = this.getScore();
-            this.log(`[GameEngine] Game Over! Score: ${score}`);
-            this.onGameOverCallback?.(score);
-            this.stop();
-        }
-    }
-
-    /** Log only in development mode */
-    private log(message: string): void {
-        if (import.meta.env.DEV) {
-            console.log(message);
-        }
-    }
+  };
 }

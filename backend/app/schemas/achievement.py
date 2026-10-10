@@ -1,12 +1,16 @@
 """
 Achievement Schemas
 """
+
 from datetime import datetime
-from pydantic import BaseModel
+
+from app.schemas.base import RequestSchema, ResponseSchema, Slug
 
 
-class AchievementResponse(BaseModel):
+class AchievementResponse(ResponseSchema):
     """Schema for achievement data."""
+
+    unlock_condition: dict | None = None
     id: int
     game_slug: str
     slug: str
@@ -15,19 +19,18 @@ class AchievementResponse(BaseModel):
     icon: str | None = None
     unlocked: bool = False
     unlocked_at: datetime | None = None
-    
-    class Config:
-        from_attributes = True
 
 
-class AchievementUnlock(BaseModel):
+class AchievementUnlock(RequestSchema):
     """Schema for unlocking an achievement."""
-    achievement_slug: str
-    game_slug: str
+
+    achievement_slug: Slug
+    game_slug: Slug
 
 
-class AchievementListResponse(BaseModel):
+class AchievementListResponse(ResponseSchema):
     """Schema for list of achievements."""
+
     achievements: list[AchievementResponse]
     total: int
     unlocked_count: int

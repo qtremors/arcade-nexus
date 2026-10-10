@@ -1,56 +1,44 @@
-/**
- * Library Store - User's game library state
- */
-import { create } from 'zustand';
-import { libraryApi } from '../api/client';
-import type { LibraryEntry } from '../api/client';
-
+import { create } from "zustand";
+import { libraryApi, getApiProfileId } from "../api/client";
+import type { LibraryEntry } from "../api/client";
 interface LibraryState {
-    entries: LibraryEntry[];
-    isLoading: boolean;
-    error: string | null;
-
-    // Actions
-    fetchLibrary: () => Promise<void>;
-    addGame: (gameId: number) => Promise<void>;
-    removeGame: (gameId: number) => Promise<void>;
+  entries: LibraryEntry[];
+  profileId: number | null;
+  isLoading: boolean;
+  error: string | null;
+  fetchLibrary: () => Promise<void>;
+  addGame: (id: number) => Promise<void>;
+  removeGame: (id: number) => Promise<void>;
 }
-
+let revision = 0;
 export const useLibraryStore = create<LibraryState>()((set, get) => ({
-    entries: [],
-    isLoading: false,
-    error: null,
-
-    fetchLibrary: async () => {
-        set({ isLoading: true, error: null });
-        try {
-            const entries = await libraryApi.list();
-            set({ entries, isLoading: false });
-        } catch (err) {
-            set({ error: (err as Error).message, isLoading: false });
-        }
-    },
-
-    addGame: async (gameId) => {
-        try {
-            const response = await libraryApi.add(gameId);
-            set({ entries: [...get().entries, response.entry] });
-        } catch (err) {
-            set({ error: (err as Error).message });
-            throw err;
-        }
-    },
-
-    removeGame: async (gameId) => {
-        const previousEntries = get().entries;
-        // Optimistic update
-        set({ entries: previousEntries.filter((e) => e.game.id !== gameId) });
-        try {
-            await libraryApi.remove(gameId);
-        } catch (err) {
-            // Rollback
-            set({ entries: previousEntries, error: (err as Error).message });
-            throw err;
-        }
-    },
+  entries: [],
+  profileId: null,
+  isLoading: false,
+  error: null,
+  fetchLibrary: async () => {
+    const id = getApiProfileId();
+    const request = ++revision;
+    set({
+      isLoading: true,
+      error: null,
+      ...(get().profileId !== id ? { entries: [], profileId: id } : {}),
+    });
+    try {
+      const entries = await libraryApi.list();
+      if (request === revision && id === getApiProfileId())
+        set({ entries, isLoading: false });
+    } catch (err) {
+      if (request === revision && id === getApiProfileId())
+        set({ isLoading: false, error: (err as Error).message });
+    }
+  },
+  addGame: async (id) => {
+    await libraryApi.add(id);
+    await get().fetchLibrary();
+  },
+  removeGame: async (id) => {
+    await libraryApi.remove(id);
+    await get().fetchLibrary();
+  },
 }));
