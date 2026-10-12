@@ -31,6 +31,7 @@ class Settings(BaseSettings):
         "http://127.0.0.1:4173",
     ]
     ALLOW_GAME_CREATION: bool = False
+    FRONTEND_DIR: Path | None = None
     MAX_REQUEST_BYTES: int = Field(1024 * 1024, ge=1024)
 
     @field_validator("CORS_ORIGINS")

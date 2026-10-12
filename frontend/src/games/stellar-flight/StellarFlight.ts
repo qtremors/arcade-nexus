@@ -21,6 +21,10 @@ export class StellarFlightGame implements Game3DInstance {
   private disposed = false;
   private mapKey: string | null = null;
   private bestSpeed = 0;
+  private mode = "classic";
+  private elapsed = 0;
+  private courseFinished = false;
+  private worldHeld = false;
   private maxAltitude = 150;
   private crashed = false;
   private readonly forward = new THREE.Vector3();
@@ -50,6 +54,7 @@ export class StellarFlightGame implements Game3DInstance {
   ];
 
   async init(canvas: HTMLCanvasElement, config: GameConfig): Promise<void> {
+    this.mode = config.mode ?? "classic";
     // 1. Setup Three.js
     this.scene = new THREE.Scene();
 
@@ -161,8 +166,8 @@ export class StellarFlightGame implements Game3DInstance {
     this.hud.setAttribute("aria-label", "Flight instruments");
     canvas.parentElement?.appendChild(this.hud);
     this.gate = new THREE.Mesh(
-      new THREE.TorusGeometry(28, 0.9, 8, 64),
-      new THREE.MeshBasicMaterial({ color: 0x67e8f9, fog: false }),
+      new THREE.TorusGeometry(28, 1.8, 8, 64),
+      new THREE.MeshBasicMaterial({ color: 0xffdd55, fog: false }),
     );
     this.scene.add(this.gate);
     this.placeGate(true);
@@ -284,7 +289,9 @@ export class StellarFlightGame implements Game3DInstance {
   update(deltaTime: number, input: InputState): boolean {
     if (!this.isInitialized || !this.jet) return true;
 
+    if (this.courseFinished) return false;
     const dt = deltaTime / 1000;
+    this.elapsed += dt;
     this.previousPosition.copy(this.jet.position);
     this.gateMessageTime = Math.max(0, this.gateMessageTime - dt);
     this.controller.update(dt, input);
@@ -292,7 +299,18 @@ export class StellarFlightGame implements Game3DInstance {
     // Map Switching (Keys 1-3)
     const key =
       ["Digit1", "Digit2", "Digit3"].find((key) => input.keys[key]) ?? null;
-    if (key && key !== this.mapKey) this.setupMap(Number(key.slice(-1)) - 1);
+    if (this.mode === "classic") {
+      const cycle = !!input.keys.KeyM;
+      if (cycle && !this.worldHeld) {
+        this.setupMap((this.currentMapIndex + 1) % 3);
+        this.placeGate(true);
+      }
+      this.worldHeld = cycle;
+      if (key && key !== this.mapKey) {
+        this.setupMap(Number(key.slice(-1)) - 1);
+        this.placeGate(true);
+      }
+    }
     this.mapKey = key;
 
     // Apply rotation
@@ -335,7 +353,9 @@ export class StellarFlightGame implements Game3DInstance {
           this.feedback.sound("miss");
         }
         this.gateMessageTime = 2;
-        this.placeGate();
+        if (this.mode === "course" && this.gatesPassed + this.gatesMissed >= 12)
+          this.courseFinished = true;
+        else this.placeGate();
       }
     }
 
@@ -370,13 +390,13 @@ export class StellarFlightGame implements Game3DInstance {
       const distance = this.gate
         ? Math.round(this.jet.position.distanceTo(this.gate.position))
         : 0;
-      this.hud.textContent = `${this.maps[this.currentMapIndex].name} · Speed ${Math.floor(this.controller.speed)} m/s · ${this.currentMapIndex === 2 ? "Altitude" : "Ground clearance"} ${Math.floor(this.currentMapIndex === 2 ? this.jet.position.y + 50 : clearance)} m\nGates ${this.gatesPassed} cleared / ${this.gatesMissed} missed · Next ${distance} m\n${clearance < 40 && this.currentMapIndex !== 2 ? "PULL UP · LOW ALTITUDE" : this.gateMessageTime > 0 ? this.gateMessage : "Line up the cyan ring · Shift / Ctrl adjusts speed"}`;
+      this.hud.textContent = `${this.maps[this.currentMapIndex].name} · Speed ${Math.floor(this.controller.speed)} m/s · ${this.currentMapIndex === 2 ? "Altitude" : "Ground clearance"} ${Math.floor(this.currentMapIndex === 2 ? this.jet.position.y + 50 : clearance)} m\nGates ${this.gatesPassed} cleared / ${this.gatesMissed} missed${this.mode === "course" ? ` · ${this.gatesPassed + this.gatesMissed}/12 · ${Math.floor(this.elapsed)}s` : ""} · Next ${distance} m\n${clearance < 40 && this.currentMapIndex !== 2 ? "PULL UP · LOW ALTITUDE" : this.gateMessageTime > 0 ? this.gateMessage : `${this.gate && this.gate.position.clone().sub(this.jet.position).applyQuaternion(this.jet.quaternion.clone().invert()).x > 15 ? "STEER RIGHT →" : this.gate && this.gate.position.clone().sub(this.jet.position).applyQuaternion(this.jet.quaternion.clone().invert()).x < -15 ? "← STEER LEFT" : "GATE AHEAD"} · ${this.mode === "classic" ? "Y / M changes world" : "12 gates · Finish the course"}`}`;
       this.hud.classList.toggle(
         "flight-warning",
         clearance < 40 && this.currentMapIndex !== 2,
       );
     }
-    return !this.crashed;
+    return !this.crashed && !this.courseFinished;
   }
 
   render(): void {
@@ -385,12 +405,34 @@ export class StellarFlightGame implements Game3DInstance {
   }
 
   getScore(): number {
-    return Math.floor(this.bestSpeed);
+    return this.mode === "classic"
+      ? Math.floor(this.bestSpeed)
+      : Math.max(
+          0,
+          this.gatesPassed * 1000 -
+            this.gatesMissed * 250 +
+            (this.courseFinished
+              ? Math.max(0, Math.floor(3000 - this.elapsed * 10))
+              : 0),
+        );
   }
 
   getMetrics() {
     return {
       max_altitude: Math.max(0, this.maxAltitude),
+      max_speed: this.bestSpeed,
+      gates: this.gatesPassed,
+      misses: this.gatesMissed,
+      completed: this.courseFinished,
+      ...(this.courseFinished
+        ? {
+            medal: (this.gatesMissed === 0 && this.elapsed < 180
+              ? "gold"
+              : this.gatesPassed >= 10
+                ? "silver"
+                : "bronze") as "gold" | "silver" | "bronze",
+          }
+        : {}),
       crashed: this.crashed,
     };
   }
@@ -398,6 +440,9 @@ export class StellarFlightGame implements Game3DInstance {
     if (!this.jet) throw new Error("Aircraft is not ready");
     return {
       version: 1,
+      mode: this.mode,
+      elapsed: this.elapsed,
+      courseFinished: this.courseFinished,
       maxAltitude: this.maxAltitude,
       position: this.jet.position.toArray(),
       rotation: this.jet.quaternion.toArray(),
@@ -418,6 +463,9 @@ export class StellarFlightGame implements Game3DInstance {
     const data = z
       .object({
         version: z.literal(1),
+        mode: z.enum(["classic", "course"]).default("classic"),
+        elapsed: z.number().min(0).max(604800).default(0),
+        courseFinished: z.boolean().default(false),
         maxAltitude: z.number().min(0).max(10000000),
         position: z.array(z.number().min(-1e7).max(1e7)).length(3),
         rotation: z
@@ -446,6 +494,9 @@ export class StellarFlightGame implements Game3DInstance {
     if (!this.jet) return; // Validation also works before initialization.
     this.jet.position.fromArray(data.position);
     this.jet.quaternion.fromArray(data.rotation).normalize();
+    this.mode = data.mode;
+    this.elapsed = data.elapsed;
+    this.courseFinished = data.courseFinished;
     this.maxAltitude = data.maxAltitude;
     this.crashed = false;
     this.controller.speed = data.speed;
@@ -461,8 +512,12 @@ export class StellarFlightGame implements Game3DInstance {
   }
   getResult(): { title: string; detail: string } {
     return {
-      title: this.crashed ? "Flight ended" : "Flight complete",
-      detail: `${this.gatesPassed} gates cleared · Peak speed ${this.getScore()} m/s`,
+      title: this.crashed
+        ? "Flight ended"
+        : this.courseFinished
+          ? "Course complete"
+          : "Flight complete",
+      detail: `${this.gatesPassed} gates cleared · ${this.gatesMissed} missed · ${Math.floor(this.elapsed)}s · Peak speed ${Math.floor(this.bestSpeed)} m/s`,
     };
   }
   private disposeObject(object: THREE.Object3D): void {

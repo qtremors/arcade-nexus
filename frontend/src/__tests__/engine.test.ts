@@ -175,3 +175,38 @@ it("controller confirm used to launch the game waits for release before becoming
   expect(input.getState().action).toBe(true);
   input.stop();
 });
+it("a released tap is consumed once across catch-up simulation steps", async () => {
+  const instance = game(),
+    engine = new GameEngine();
+  const actions: boolean[] = [];
+  instance.update = (_dt, input) => {
+    actions.push(input.action);
+    return true;
+  };
+  await engine.init(canvas(), instance, config);
+  engine.start();
+  window.dispatchEvent(new KeyboardEvent("keydown", { code: "Space" }));
+  window.dispatchEvent(new KeyboardEvent("keyup", { code: "Space" }));
+  tick(70);
+  expect(actions.length).toBeGreaterThan(1);
+  expect(actions.filter(Boolean)).toHaveLength(1);
+  engine.destroy();
+});
+it("recoverable game over resumes the same engine after undo", async () => {
+  const instance = game(),
+    engine = new GameEngine();
+  let terminal = true;
+  instance.update = () => !terminal;
+  instance.getStatus = () => (terminal ? "recoverable" : "playing");
+  instance.recover = () => {
+    terminal = false;
+  };
+  await engine.init(canvas(), instance, config);
+  engine.start();
+  tick(20);
+  expect(engine.recoverable).toBe(true);
+  engine.recover();
+  tick(40);
+  expect(engine.running).toBe(true);
+  engine.destroy();
+});

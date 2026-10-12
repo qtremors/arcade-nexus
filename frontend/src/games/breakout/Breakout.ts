@@ -1,3 +1,4 @@
+import { Random } from "../../sdk/Random";
 import { z } from "zod";
 import type { Game2DInstance, GameConfig, InputState } from "../../sdk/GameSDK";
 import { GameFeedback } from "../feedback";
@@ -15,13 +16,38 @@ export class BreakoutGame implements Game2DInstance {
   private difficulty: "easy" | "normal" | "hard" = "normal";
   private actionHeld = false;
   private stage = 1;
+  private armor = Array<number>(60).fill(1);
+  private elapsed = 0;
+  private sinceHit = 0;
+  private random = new Random();
+  private mode = "classic";
   private feedback = new GameFeedback();
   private trail: { x: number; y: number }[] = [];
   init(canvas: HTMLCanvasElement, config: GameConfig): void {
+    this.random = new Random(config.seed);
+    this.mode = config.mode ?? "classic";
     this.width = canvas.width;
     this.height = canvas.height;
     this.difficulty = config.difficulty ?? "normal";
+    this.setSector();
     this.resetBall();
+  }
+  private setSector(): void {
+    this.bricks = Array.from(
+      { length: 60 },
+      (_, i) =>
+        this.stage === 1 ||
+        (this.stage === 2
+          ? i % 10 !== 2 && i % 10 !== 7
+          : Math.abs((i % 10) - 4.5) + Math.abs(Math.floor(i / 10) - 2.5) < 5),
+    );
+    if (this.mode === "daily")
+      this.bricks = this.bricks.map(
+        (active, i) => active && (i < 10 || this.random.next() > 0.15),
+      );
+    this.armor = this.bricks.map((active, i) =>
+      !active ? 0 : this.stage > 1 && i % 4 === 0 ? 2 : 1,
+    );
   }
   private get ballSpeed(): number {
     const base =
@@ -41,11 +67,7 @@ export class BreakoutGame implements Game2DInstance {
   private advanceStage(): boolean {
     if (this.stage === 3) return false;
     this.stage++;
-    this.bricks = Array.from({ length: 60 }, (_, i) =>
-      this.stage === 2
-        ? i % 10 !== 2 && i % 10 !== 7
-        : Math.abs((i % 10) - 4.5) + Math.abs(Math.floor(i / 10) - 2.5) < 5,
-    );
+    this.setSector();
     this.resetBall();
     this.feedback.sound("collect");
     return true;
@@ -60,6 +82,8 @@ export class BreakoutGame implements Game2DInstance {
   update(milliseconds: number, input: InputState): boolean {
     if (!this.lives) return false;
     if (!this.bricks.some(Boolean)) return this.advanceStage();
+    this.elapsed += milliseconds;
+    this.sinceHit += milliseconds;
     this.feedback.update(milliseconds);
     const dt = milliseconds / 1000;
     this.paddle = Math.max(
@@ -109,6 +133,15 @@ export class BreakoutGame implements Game2DInstance {
       this.ball.vx = Math.sin(angle) * speed;
       this.ball.vy = -Math.cos(angle) * speed;
       this.ball.y = paddleY - 8;
+      if (this.bricks.filter(Boolean).length <= 3 && this.sinceHit > 8000) {
+        const at = this.bricks.findIndex(Boolean);
+        const dx =
+          40 + (((at % 10) + 0.5) * (this.width - 80)) / 10 - this.ball.x;
+        const dy = 106 + Math.floor(at / 10) * 28 - this.ball.y;
+        const length = Math.hypot(dx, dy);
+        this.ball.vx = (dx / length) * speed;
+        this.ball.vy = (dy / length) * speed;
+      }
       this.feedback.sound("hit");
     }
     const brickWidth = (this.width - 80) / 10;
@@ -122,13 +155,26 @@ export class BreakoutGame implements Game2DInstance {
         this.ball.y + 8 > y &&
         this.ball.y - 8 < y + 22
       ) {
-        this.bricks[i] = false;
-        this.score += 10;
+        this.sinceHit = 0;
+        this.armor[i] = Math.max(0, this.armor[i] - 1);
+        this.bricks[i] = this.armor[i] > 0;
+        this.score += this.bricks[i] ? 5 : 10;
+        if (!this.bricks[i] && this.stage === 3 && i % 7 === 0) {
+          for (const neighbor of [i - 1, i + 1])
+            if (
+              Math.floor(neighbor / 10) === Math.floor(i / 10) &&
+              this.bricks[neighbor]
+            ) {
+              this.bricks[neighbor] = false;
+              this.armor[neighbor] = 0;
+              this.score += 10;
+            }
+        }
         this.feedback.burst(
           x + (brickWidth - 4) / 2,
           y + 11,
           `hsl(${180 + Math.floor(i / 10) * 22} 80% 65%)`,
-          "+10",
+          this.bricks[i] ? "+5 · ARMOR" : "+10",
         );
         this.feedback.sound("collect");
         if (previousY + 8 <= y || previousY - 8 >= y + 22) this.ball.vy *= -1;
@@ -212,6 +258,26 @@ export class BreakoutGame implements Game2DInstance {
         22,
       );
       ctx.shadowBlur = 0;
+      if (this.armor[i] > 1) {
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(
+          42 + (i % 10) * width,
+          97 + Math.floor(i / 10) * 28,
+          width - 8,
+          18,
+        );
+      }
+      if (this.stage === 3 && i % 7 === 0) {
+        ctx.fillStyle = "#fff";
+        ctx.font = "14px system-ui";
+        ctx.textAlign = "center";
+        ctx.fillText(
+          "✦",
+          40 + ((i % 10) + 0.5) * width,
+          112 + Math.floor(i / 10) * 28,
+        );
+      }
       ctx.fillStyle = "#ffffff50";
       ctx.fillRect(
         40 + (i % 10) * width + 2,
@@ -268,15 +334,35 @@ export class BreakoutGame implements Game2DInstance {
   getScore(): number {
     return this.score;
   }
+  getMetrics() {
+    const completed = this.stage === 3 && !this.bricks.some(Boolean);
+    const medal: "gold" | "silver" | "bronze" =
+      this.lives === 3 && this.elapsed < 300000
+        ? "gold"
+        : this.lives >= 2
+          ? "silver"
+          : "bronze";
+    return {
+      sectors: completed ? 3 : this.stage - 1,
+      lives: this.lives,
+      completed,
+      ...(completed ? { medal } : {}),
+    };
+  }
   getResult(): { title: string; detail: string } {
     return {
       title: this.bricks.some(Boolean) ? "Run complete" : "All sectors cleared",
-      detail: `Sector ${this.stage} of 3 · ${this.score} points`,
+      detail: `Sector ${this.stage} of 3 · ${this.score} points · ${Math.floor(this.elapsed / 1000)}s${this.getMetrics().medal ? ` · ${this.getMetrics().medal} medal` : ""}`,
     };
   }
   getState(): Record<string, unknown> {
     return {
       version: 1,
+      armor: [...this.armor],
+      elapsed: this.elapsed,
+      sinceHit: this.sinceHit,
+      randomState: this.random.state,
+      mode: this.mode,
       stage: this.stage,
       paddle: this.paddle,
       ball: { ...this.ball },
@@ -291,6 +377,11 @@ export class BreakoutGame implements Game2DInstance {
     const data = z
       .object({
         version: z.literal(1),
+        armor: z.array(z.number().int().min(0).max(2)).length(60).optional(),
+        elapsed: z.number().min(0).max(604800000).default(0),
+        sinceHit: z.number().min(0).max(604800000).default(0),
+        randomState: z.number().int().min(0).max(4294967295).default(42),
+        mode: z.enum(["classic", "daily"]).default("classic"),
         stage: z.number().int().min(1).max(3).default(1),
         paddle: z.number().min(0).max(960),
         ball: z.object({
@@ -300,13 +391,15 @@ export class BreakoutGame implements Game2DInstance {
           vy: z.number().min(-600).max(600),
         }),
         bricks: z.array(z.boolean()).length(60),
-        score: z.number().int().min(0).max(1800),
+        score: z.number().int().min(0).max(10000),
         lives: z.number().int().min(1).max(3),
         launched: z.boolean(),
         difficulty: z.enum(["easy", "normal", "hard"]),
       })
       .parse(state);
     Object.assign(this, data);
+    this.armor = data.armor ?? data.bricks.map((active) => (active ? 1 : 0));
+    this.random.state = data.randomState;
     this.actionHeld = false;
     this.trail = [];
     this.feedback.clear();

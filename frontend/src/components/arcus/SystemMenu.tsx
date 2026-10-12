@@ -28,9 +28,9 @@ export function SystemMenu({ isOpen, onClose }: SystemMenuProps) {
 
   const menuItems = [
     { label: "Home", path: "/home", icon: Home },
-    { label: "Store", path: "/store", icon: ShoppingBag },
-    { label: "Library", path: "/library", icon: Library },
-    { label: "Achievements", path: "/achievements", icon: Trophy },
+    { label: "Games", path: "/games", icon: ShoppingBag },
+    { label: "Favorites", path: "/favorites", icon: Library },
+    { label: "Progress", path: "/progress", icon: Trophy },
     { label: "Profile", path: "/profile", icon: User },
   ];
 

@@ -2,6 +2,8 @@
  * API Client - Axios wrapper for local app (no auth required)
  */
 import axios from "axios";
+import type { GameMetrics } from "../sdk/GameSDK";
+import type { SaveEnvelope } from "../services/saves";
 import type { AxiosError } from "axios";
 
 export function apiBaseUrl(value = import.meta.env.VITE_API_URL || ""): string {
@@ -109,7 +111,93 @@ export interface GameSession {
   duration_seconds: number;
   score: number;
   difficulty?: string;
+  mode: string;
+  rules_version: number;
 }
+
+export interface CompletionReceipt {
+  high_score: number;
+  is_new_high_score: boolean;
+  awards: { slug: string; title: string; description: string | null }[];
+  medal?: string | null;
+}
+export interface ModeRecord {
+  game_slug: string;
+  profile_id: number;
+  player: string;
+  mode: string;
+  difficulty: string;
+  rules_version: number;
+  high_score: number;
+}
+export const progressApi = {
+  complete: async (
+    slug: string,
+    data: {
+      session_id: string;
+      playtime_seconds: number;
+      score: number;
+      difficulty: string;
+      mode: string;
+      rules_version: number;
+      metrics: GameMetrics;
+    },
+    profileId: number,
+  ) =>
+    (
+      await api.post<CompletionReceipt>(
+        `/progress/${slug}/complete`,
+        data,
+        playerConfig(profileId),
+      )
+    ).data,
+  records: async (household = false) =>
+    (
+      await api.get<ModeRecord[]>("/progress/records", {
+        ...playerConfig(),
+        params: { household },
+      })
+    ).data,
+  history: async (skip = 0, limit = 25, gameId?: number) =>
+    (
+      await api.get<{ sessions: GameSession[]; total: number }>(
+        "/progress/history",
+        { ...playerConfig(), params: { skip, limit, game_id: gameId } },
+      )
+    ).data,
+  recovery: async (profileId?: number) =>
+    (
+      await api.get<
+        { game_slug: string; data: SaveEnvelope; updated_at: string }[]
+      >("/progress/recovery", playerConfig(profileId))
+    ).data,
+  saveRecovery: async (slug: string, data: SaveEnvelope, profileId: number) =>
+    (
+      await api.put(
+        `/progress/recovery/${slug}`,
+        { data },
+        playerConfig(profileId),
+      )
+    ).data,
+  deleteRecovery: async (slug: string, profileId: number, sessionId?: string) =>
+    (
+      await api.delete(`/progress/recovery/${slug}`, {
+        ...playerConfig(profileId),
+        params: { session_id: sessionId },
+      })
+    ).data,
+};
+export const dataApi = {
+  export: async (): Promise<unknown> => (await api.get("/data/export")).data,
+  restore: async (data: unknown) =>
+    (
+      await api.post<{
+        imported: number;
+        profile_map: Record<string, number>;
+        session_map: Record<string, string>;
+      }>("/data/import", data, { timeout: 60000 })
+    ).data,
+};
 
 export interface OverallStats {
   total_playtime_seconds: number;

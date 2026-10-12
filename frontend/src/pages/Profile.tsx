@@ -89,7 +89,7 @@ export function Profile() {
             formatPlaytime(overallStats?.total_playtime_seconds ?? 0),
           ],
           ["Sessions", overallStats?.total_sessions ?? 0],
-          ["Library", entries.length],
+          ["Favorites", entries.length],
           ["Achievements", `${awards.unlocked} / ${awards.total}`],
         ].map(([label, value]) => (
           <div className="detail-panel" key={label}>

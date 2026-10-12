@@ -3,11 +3,7 @@ import * as THREE from "three";
 import { SnakeGame } from "../games/snake/Snake";
 import { RaptorRunGame } from "../games/raptor-run/RaptorRun";
 import { BreakoutGame } from "../games/breakout/Breakout";
-import {
-  Merge2048Game,
-  slideLine,
-  moveBoard,
-} from "../games/merge-2048/Merge2048";
+import { Merge2048Game, moveBoard } from "../games/merge-2048/Merge2048";
 import { FlightController } from "../games/stellar-flight/FlightController";
 import {
   crossGate,
@@ -126,7 +122,14 @@ it.each([
   [[0, 2, 0, 2], [4, 0, 0, 0], 4],
   [[4, 0, 8, 0], [4, 8, 0, 0], 0],
 ])("2048 merges each tile only once", (input, output, score) => {
-  expect(slideLine(input as number[])).toEqual({ line: output, score });
+  const result = moveBoard(
+    [...(input as number[]), ...Array(12).fill(0)],
+    "left",
+  );
+  expect({ line: result.board.slice(0, 4), score: result.score }).toEqual({
+    line: output,
+    score,
+  });
 });
 it("2048 spawns only after a changed move and does not repeat a held direction", () => {
   vi.spyOn(Math, "random").mockReturnValue(0);
@@ -359,4 +362,98 @@ it("flight ground contact matches raycasts against the actual rendered terrain t
         material.dispose();
       }
     }
+});
+it.each([SnakeGame, RaptorRunGame, BreakoutGame, Merge2048Game])(
+  "restoring RNG state preserves the future simulation",
+  (Game) => {
+    const original = new Game(),
+      restored = new Game();
+    original.init(canvas(), { ...config, seed: 123, mode: "classic" });
+    restored.init(canvas(), { ...config, seed: 999, mode: "classic" });
+    restored.setState(original.getState());
+    for (let i = 0; i < 90; i++) {
+      const input = {
+        ...idle,
+        up: i % 20 < 10,
+        right: i % 20 >= 10,
+        action: i % 30 === 0,
+      };
+      expect(restored.update(16, input)).toBe(original.update(16, input));
+      expect(restored.getState()).toEqual(original.getState());
+    }
+  },
+);
+it("terminal 2048 allows undo in relaxed mode but not challenge mode", () => {
+  const board = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2, 4, 8, 16, 32, 64];
+  for (const mode of ["classic", "challenge"]) {
+    const game = new Merge2048Game();
+    game.init(canvas(), { ...config, mode });
+    game.setState({
+      version: 1,
+      score: 100,
+      board,
+      mode,
+      undo: { board: [2, 2, 0, 0, ...Array(12).fill(0)], score: 0 },
+    });
+    expect(game.update(16, idle)).toBe(false);
+    expect(game.getStatus()).toBe(
+      mode === "classic" ? "recoverable" : "complete",
+    );
+    if (mode === "classic") {
+      game.recover();
+      expect(game.update(16, idle)).toBe(true);
+      expect(game.getScore()).toBe(0);
+    }
+  }
+});
+it("Snake consumes two ordered taps in one simulation step", () => {
+  const game = new SnakeGame();
+  game.init(canvas(), config);
+  game.update(1, {
+    ...idle,
+    pressed: ["ArrowUp", "ArrowLeft"],
+    up: true,
+    left: true,
+  });
+  expect(game.getState().turns).toEqual(["up", "left"]);
+});
+it("Snake sprint finishes at sixty seconds and maze walls are validated", () => {
+  const game = new SnakeGame();
+  game.init(canvas(), { ...config, mode: "sprint" });
+  expect(game.update(60000, idle)).toBe(false);
+  expect(game.getResult().title).toBe("Sprint complete");
+  game.init(canvas(), { ...config, mode: "maze" });
+  expect((game.getState().walls as unknown[]).length).toBeGreaterThan(0);
+  expect(() =>
+    game.setState({ ...game.getState(), walls: [{ x: 999, y: 999 }] }),
+  ).toThrow();
+});
+it("Breakout armored bricks take two hits and explosive bricks clear neighbors", () => {
+  const game = new BreakoutGame();
+  game.init(canvas(), config);
+  const state = game.getState();
+  game.setState({
+    ...state,
+    stage: 2,
+    launched: true,
+    ball: { x: 80, y: 106, vx: 0, vy: 0 },
+    armor: Array(60).fill(2),
+  });
+  game.update(1, idle);
+  expect((game.getState().bricks as boolean[])[0]).toBe(true);
+  expect(game.getScore()).toBe(5);
+  game.update(1, idle);
+  expect((game.getState().bricks as boolean[])[0]).toBe(false);
+  expect(game.getScore()).toBe(15);
+  game.setState({
+    ...state,
+    stage: 3,
+    launched: true,
+    ball: { x: 80, y: 106, vx: 0, vy: 0 },
+  });
+  game.update(1, idle);
+  expect((game.getState().bricks as boolean[]).slice(0, 2)).toEqual([
+    false,
+    false,
+  ]);
 });

@@ -13,6 +13,8 @@ export interface GameConfig {
   height?: number;
   fps?: number;
   difficulty?: "easy" | "normal" | "hard";
+  mode?: string;
+  seed?: number;
   [key: string]: unknown;
 }
 
@@ -33,7 +35,26 @@ export interface InputState {
 
   // Raw key map for custom bindings
   keys: Record<string, boolean>;
+  /** Presses consumed once per simulation step; axes retain analog magnitude. */
+  pressed?: string[];
+  axes?: { x: number; y: number };
+  throttle?: number;
 }
+
+export interface GameMetrics {
+  jumps?: number;
+  max_altitude?: number;
+  max_speed?: number;
+  crashed?: boolean;
+  gates?: number;
+  misses?: number;
+  sectors?: number;
+  lives?: number;
+  highest_tile?: number;
+  completed?: boolean;
+  medal?: "gold" | "silver" | "bronze";
+}
+export type GameStatus = "playing" | "recoverable" | "complete";
 
 /** Game type discriminator */
 export type GameType = "2d" | "3d";
@@ -62,7 +83,9 @@ export interface GameInstanceBase {
   setState?(state: Record<string, unknown>): void;
 
   /** Bounded measurements used for local achievement qualification. */
-  getMetrics?(): { jumps?: number; max_altitude?: number; crashed?: boolean };
+  getMetrics?(): GameMetrics;
+  getStatus?(): GameStatus;
+  recover?(): void;
 
   /** Get current score (for stats) */
   getScore?(): number;
@@ -100,65 +123,10 @@ export interface Game3DInstance<
 export type GameInstance<TConfig extends GameConfig = GameConfig> =
   Game2DInstance<TConfig> | Game3DInstance<TConfig>;
 
-/** Legacy backwards-compatible interface (defaults to 2D) */
-export interface LegacyGameInstance {
-  init(canvas: HTMLCanvasElement, config?: GameConfig): void | Promise<void>;
-  update(deltaTime: number, input: InputState): boolean;
-  render(ctx?: CanvasRenderingContext2D): void;
-  onPause?(): void;
-  onResume?(): void;
-  destroy?(): void;
-  getState?(): Record<string, unknown>;
-  setState?(state: Record<string, unknown>): void;
-  getScore?(): number;
+/** Type guards used by the renderer. Games are loaded through descriptors. */
+export function is2DGame(game: GameInstance): game is Game2DInstance {
+  return game.type === "2d";
 }
-
-/** Check if a game is 2D */
-export function is2DGame(
-  game: GameInstance | LegacyGameInstance,
-): game is Game2DInstance {
-  return "type" in game ? game.type === "2d" : true; // Legacy defaults to 2D
-}
-
-/** Check if a game is 3D */
-export function is3DGame(
-  game: GameInstance | LegacyGameInstance,
-): game is Game3DInstance {
-  return "type" in game && game.type === "3d";
-}
-
-/** Game factory function type */
-export type GameFactory = () => GameInstance | LegacyGameInstance;
-
-/** Registry of available games */
-const gameRegistry: Map<string, GameFactory> = new Map();
-
-/** Register a game with the SDK */
-export function registerGame(slug: string, factory: GameFactory): void {
-  gameRegistry.set(slug, factory);
-  if (import.meta.env.DEV) {
-    console.log(`[GameSDK] Registered game: ${slug}`);
-  }
-}
-
-/** Get a game instance by slug */
-export function getGame(
-  slug: string,
-): GameInstance | LegacyGameInstance | null {
-  const factory = gameRegistry.get(slug);
-  if (!factory) {
-    console.warn(`[GameSDK] Game not found: ${slug}`);
-    return null;
-  }
-  return factory();
-}
-
-/** Check if a game is registered */
-export function hasGame(slug: string): boolean {
-  return gameRegistry.has(slug);
-}
-
-/** List all registered games */
-export function listGames(): string[] {
-  return Array.from(gameRegistry.keys());
+export function is3DGame(game: GameInstance): game is Game3DInstance {
+  return game.type === "3d";
 }

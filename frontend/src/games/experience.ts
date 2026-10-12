@@ -64,7 +64,7 @@ const experiences: Record<string, GameExperience> = {
   "stellar-flight": {
     accent: "#8edbf5",
     mood: "Chase the horizon",
-    goal: "Fly through the gates across Earth, Mars, and space.",
+    goal: "Finish a twelve-gate course, or explore Earth, Mars, and space in free flight.",
     tip: "Start with gentle turns. Watch ground clearance and line up with the next gate before accelerating.",
     controls: [
       {
@@ -76,8 +76,8 @@ const experiences: Record<string, GameExperience> = {
       { action: "Throttle", keyboard: "Shift / Ctrl", controller: "RT / LT" },
       {
         action: "Change world",
-        keyboard: "1 / 2 / 3",
-        controller: "Keyboard 1 / 2 / 3",
+        keyboard: "M / 1 / 2 / 3 (free flight)",
+        controller: "Y (free flight)",
       },
     ],
   },

@@ -1,10 +1,13 @@
 /** Spatial focus follows the visible layout and scrolls the selected control into view. */
 export function moveMenuFocus(
   direction: "Up" | "Down" | "Left" | "Right",
+  root?: ParentNode,
 ): void {
   const controls = Array.from(
-    document.querySelectorAll<HTMLElement>(
-      "header a, header button, main button:not(:disabled), main a[href], main input:not(:disabled), main select:not(:disabled)",
+    (root ?? document).querySelectorAll<HTMLElement>(
+      root
+        ? "button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled)"
+        : "header a, header button, main button:not(:disabled), main a[href], main input:not(:disabled), main select:not(:disabled)",
     ),
   ).filter(
     (element) =>
@@ -38,4 +41,16 @@ export function moveMenuFocus(
   }
   target?.focus({ preventScroll: true });
   target?.scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+
+export function activateControl(): void {
+  const focused = document.activeElement;
+  if (
+    focused instanceof HTMLInputElement &&
+    ["text", "search"].includes(focused.type)
+  ) {
+    window.dispatchEvent(
+      new CustomEvent("nexus-keyboard", { detail: focused }),
+    );
+  } else (focused as HTMLElement | null)?.click();
 }

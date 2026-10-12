@@ -9,13 +9,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlalchemy.ext.asyncio import async_sessionmaker
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.trustedhost import TrustedHostMiddleware
-from starlette.responses import JSONResponse
+from starlette.responses import FileResponse, JSONResponse
+from starlette.staticfiles import StaticFiles
 
 from app.config import Settings, get_settings
 from app.database import engine, init_db, make_engine
 from app.middleware import RequestGuard
-from app.routers import achievements, games, library, profiles, saves, stats
+from app.routers import achievements, data, games, library, profiles, progress, saves, stats
 from app.seed import sync_games
 
 logger = logging.getLogger(__name__)
@@ -94,11 +96,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         ("Saves", saves.router),
         ("Stats", stats.router),
         ("Achievements", achievements.router),
+        ("Progress", progress.router),
+        ("Data", data.router),
     ):
         application.include_router(router, prefix=f"/api/{name.lower()}", tags=[name])
 
     @application.get("/")
-    async def root() -> dict[str, str]:
+    async def root():
+        if configuration.FRONTEND_DIR and (configuration.FRONTEND_DIR / "index.html").is_file():
+            return FileResponse(
+                configuration.FRONTEND_DIR / "index.html", headers={"Cache-Control": "no-cache"}
+            )
         return {
             "name": configuration.APP_NAME,
             "version": configuration.APP_VERSION,
@@ -114,6 +122,23 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             return JSONResponse({"status": "unhealthy"}, status_code=503)
         return {"status": "healthy"}
 
+    if configuration.FRONTEND_DIR:
+
+        class ConsoleFiles(StaticFiles):
+            async def get_response(self, path, scope):
+                if path == "api" or path.startswith("api/"):
+                    raise StarletteHTTPException(404)
+                try:
+                    return await super().get_response(path, scope)
+                except StarletteHTTPException as error:
+                    if error.status_code == 404 and "." not in path.rsplit("/", 1)[-1]:
+                        return FileResponse(
+                            configuration.FRONTEND_DIR / "index.html",
+                            headers={"Cache-Control": "no-cache"},
+                        )
+                    raise
+
+        application.mount("/", ConsoleFiles(directory=configuration.FRONTEND_DIR))
     return application
 
 

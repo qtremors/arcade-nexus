@@ -5,6 +5,7 @@ import { Store } from "./pages/Store";
 import { Library } from "./pages/Library";
 import { Profile } from "./pages/Profile";
 import { Achievements } from "./pages/Achievements";
+import { Progress } from "./pages/Progress";
 import { Settings } from "./pages/Settings";
 import { GamePlayer } from "./pages/GamePlayer";
 import { Layout } from "./components/Layout";
@@ -17,6 +18,7 @@ import { useProfileStore } from "./stores/profileStore";
 import { useSettingsStore } from "./stores/settingsStore";
 import { flushCompletions } from "./services/sessionQueue";
 import "./App.css";
+import { ControllerKeyboard } from "./components/ControllerKeyboard";
 const hasBooted = () => {
   try {
     return sessionStorage.getItem("arcade_nexus_session_booted") === "true";
@@ -102,8 +104,14 @@ function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<Navigate to="/home" replace />} />
             <Route path="home" element={<Dashboard />} />
-            <Route path="store" element={<Store />} />
-            <Route path="library" element={<Library />} />
+            <Route path="games" element={<Store />} />
+            <Route path="store" element={<Navigate to="/games" replace />} />
+            <Route path="favorites" element={<Library />} />
+            <Route
+              path="library"
+              element={<Navigate to="/favorites" replace />}
+            />
+            <Route path="progress" element={<Progress />} />
             <Route path="profile" element={<Profile />} />
             <Route path="achievements" element={<Achievements />} />
             <Route path="settings" element={<Settings />} />
@@ -116,6 +124,7 @@ function App() {
     <ErrorBoundary>
       <ToastProvider>
         <div className="app-root">{content}</div>
+        <ControllerKeyboard />
       </ToastProvider>
     </ErrorBoundary>
   );

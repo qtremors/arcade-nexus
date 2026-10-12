@@ -63,6 +63,8 @@ export class GamepadManager {
       (p) => p?.connected,
     );
     if (!pad) {
+      if (this.padId)
+        window.dispatchEvent(new Event("nexus-controller-disconnected"));
       this.pressed.clear();
       this.padId = null;
       return;

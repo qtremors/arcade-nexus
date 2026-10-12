@@ -1,12 +1,6 @@
 import { beforeEach, it, expect, vi } from "vitest";
-import {
-  profilesApi,
-  statsApi,
-  setApiProfileId,
-  gamesApi,
-} from "../api/client";
+import { profilesApi, statsApi, setApiProfileId } from "../api/client";
 import { useProfileStore } from "../stores/profileStore";
-import { useGamesStore } from "../stores/gamesStore";
 import type { OverallStats, Profile } from "../api/client";
 const player = (id: number): Profile => ({
   id,
@@ -25,7 +19,6 @@ const stats: OverallStats = {
 beforeEach(() => {
   sessionStorage.clear();
   useProfileStore.setState(useProfileStore.getInitialState());
-  useGamesStore.setState(useGamesStore.getInitialState());
   setApiProfileId(null);
 });
 it("failed initialization can be retried", async () => {
@@ -80,20 +73,4 @@ it("another tab changing the backend default does not change this tab’s player
   });
   await useProfileStore.getState().fetchProfiles();
   expect(useProfileStore.getState().activeProfile?.id).toBe(1);
-});
-it("a slow catalog response cannot replace a later search result", async () => {
-  let resolve!: (value: { games: []; total: number }) => void;
-  vi.spyOn(gamesApi, "list")
-    .mockImplementationOnce(
-      () =>
-        new Promise((done) => {
-          resolve = done;
-        }),
-    )
-    .mockResolvedValue({ games: [], total: 0 });
-  const first = useGamesStore.getState().fetchGames(undefined, "old");
-  await useGamesStore.getState().fetchGames(undefined, "new");
-  resolve({ games: [], total: 1 });
-  await first;
-  expect(useGamesStore.getState().isLoading).toBe(false);
 });

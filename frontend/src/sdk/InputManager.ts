@@ -1,4 +1,5 @@
 import type { InputState } from "./GameSDK";
+import { useSettingsStore } from "../stores/settingsStore";
 export function isEditing(target: EventTarget | null): boolean {
   return (
     target instanceof HTMLElement &&
@@ -45,7 +46,7 @@ export class InputManager {
     )
       event.preventDefault();
     this.keys[event.code] = true;
-    this.presses.add(event.code);
+    if (!event.repeat) this.presses.add(event.code);
   };
   private up = (event: KeyboardEvent): void => {
     this.keys[event.code] = false;
@@ -67,14 +68,27 @@ export class InputManager {
       if (!pressed) this.blockedButtons.delete(key);
       return pressed && !this.blockedButtons.has(key);
     };
-    const x = gamepad?.axes[0] ?? 0,
-      y = gamepad?.axes[1] ?? 0;
+    const { deadZone, bindings } = useSettingsStore.getState();
+    const axis = (value: number) =>
+      Math.abs(value) <= deadZone
+        ? 0
+        : (Math.sign(value) * (Math.abs(value) - deadZone)) / (1 - deadZone);
+    const x = axis(gamepad?.axes[0] ?? 0),
+      y = axis(gamepad?.axes[1] ?? 0);
+    const key = (action: string, defaults: string[]) =>
+      bindings[action]
+        ? keys[bindings[action]]
+        : defaults.some((code) => keys[code]);
     return {
-      up: !!(keys.ArrowUp || keys.KeyW || button(12) || y < -0.5),
-      down: !!(keys.ArrowDown || keys.KeyS || button(13) || y > 0.5),
-      left: !!(keys.ArrowLeft || keys.KeyA || button(14) || x < -0.5),
-      right: !!(keys.ArrowRight || keys.KeyD || button(15) || x > 0.5),
-      action: !!(keys.Space || keys.Enter || button(0)),
+      up: !!(key("up", ["ArrowUp", "KeyW"]) || button(12) || y < -0.5),
+      down: !!(key("down", ["ArrowDown", "KeyS"]) || button(13) || y > 0.5),
+      left: !!(key("left", ["ArrowLeft", "KeyA"]) || button(14) || x < -0.5),
+      right: !!(key("right", ["ArrowRight", "KeyD"]) || button(15) || x > 0.5),
+      action: !!(key("action", ["Space", "Enter"]) || button(0)),
+      axes: { x, y },
+      pressed: [...this.presses],
+      throttle:
+        (gamepad?.buttons[7]?.value ?? 0) - (gamepad?.buttons[6]?.value ?? 0),
       cancel: !!(keys.Escape || button(1)),
       pause: !!(keys.KeyP || keys.Escape || button(9)),
       keys: {
@@ -83,6 +97,7 @@ export class InputManager {
         ControlLeft: !!(keys.ControlLeft || button(6)),
         KeyQ: !!(keys.KeyQ || button(4)),
         KeyE: !!(keys.KeyE || button(5)),
+        KeyM: !!(keys.KeyM || button(3)),
       },
     };
   }

@@ -1,5 +1,6 @@
+import { Random } from "../../sdk/Random";
 import { z } from "zod";
-import type { Game2DInstance, InputState } from "../../sdk/GameSDK";
+import type { Game2DInstance, InputState, GameConfig } from "../../sdk/GameSDK";
 import { GameFeedback } from "../feedback";
 import { useSettingsStore } from "../../stores/settingsStore";
 interface TileMotion {
@@ -49,27 +50,13 @@ export function moveBoard(
   }
   return { board: next, score, motions, merged };
 }
-export function slideLine(line: number[]): { line: number[]; score: number } {
-  const values = line.filter(Boolean),
-    result: number[] = [];
-  let score = 0;
-  for (let i = 0; i < values.length; i++) {
-    if (values[i] === values[i + 1]) {
-      const merged = values[i] * 2;
-      result.push(merged);
-      score += merged;
-      i++;
-    } else result.push(values[i]);
-  }
-  return {
-    line: [...result, ...Array(line.length - result.length).fill(0)],
-    score,
-  };
-}
 export class Merge2048Game implements Game2DInstance {
   readonly type = "2d" as const;
   private board = Array<number>(16).fill(0);
   private score = 0;
+  private random = new Random();
+  private mode = "classic";
+  private terminal = false;
   private held: string | null = null;
   private width = 960;
   private height = 640;
@@ -81,7 +68,9 @@ export class Merge2048Game implements Game2DInstance {
   private merged: number[] = [];
   private spawned: number | null = null;
   private feedback = new GameFeedback();
-  init(canvas: HTMLCanvasElement): void {
+  init(canvas: HTMLCanvasElement, config?: GameConfig): void {
+    this.random = new Random(config?.seed);
+    this.mode = config?.mode ?? "classic";
     this.width = canvas.width;
     this.height = canvas.height;
     this.spawn();
@@ -92,8 +81,8 @@ export class Merge2048Game implements Game2DInstance {
       .map((value, i) => (value === 0 ? i : -1))
       .filter((i) => i >= 0);
     if (empty.length) {
-      this.spawned = empty[Math.floor(Math.random() * empty.length)];
-      this.board[this.spawned] = Math.random() < 0.9 ? 2 : 4;
+      this.spawned = empty[Math.floor(this.random.next() * empty.length)];
+      this.board[this.spawned] = this.random.next() < 0.9 ? 2 : 4;
     }
   }
   update(dt: number, input: InputState): boolean {
@@ -101,16 +90,11 @@ export class Merge2048Game implements Game2DInstance {
     this.animation = Math.max(0, this.animation - dt);
     const undoPressed = !!(input.keys.KeyZ || input.cancel);
     if (undoPressed && !this.undoHeld && this.undo) {
-      this.board = [...this.undo.board];
-      this.score = this.undo.score;
-      this.undo = null;
-      this.won = this.board.some((value) => value >= 2048);
-      this.animation = 0;
-      this.held = null;
-      this.feedback.clear();
-      this.feedback.sound("hit");
+      this.recover();
     }
     this.undoHeld = undoPressed;
+    this.terminal = !this.hasMoves();
+    if (this.terminal) return false;
     const direction = input.left
       ? "left"
       : input.right
@@ -128,7 +112,10 @@ export class Merge2048Game implements Game2DInstance {
     this.held = direction;
     const result = moveBoard(this.board, direction);
     if (this.board.some((value, i) => value !== result.board[i])) {
-      this.undo = { board: [...this.board], score: this.score };
+      this.undo =
+        this.mode === "challenge"
+          ? null
+          : { board: [...this.board], score: this.score };
       this.board = result.board;
       this.score += result.score;
       this.motions = result.motions;
@@ -139,7 +126,15 @@ export class Merge2048Game implements Game2DInstance {
       if (result.score)
         this.feedback.burst(790, 265, "#67e8f9", `+${result.score}`);
     }
-    this.won ||= this.board.some((value) => value >= 2048);
+    if (!this.won && this.board.some((value) => value >= 2048)) {
+      this.won = true;
+      this.feedback.burst(760, 320, "#edc96c", "2048! KEEP GOING");
+      this.feedback.sound("collect");
+    }
+    this.terminal = !this.hasMoves();
+    return !this.terminal;
+  }
+  private hasMoves(): boolean {
     return this.board.some(
       (value, i) =>
         value === 0 ||
@@ -278,6 +273,8 @@ export class Merge2048Game implements Game2DInstance {
   getState(): Record<string, unknown> {
     return structuredClone({
       version: 1,
+      randomState: this.random.state,
+      mode: this.mode,
       board: this.board,
       score: this.score,
       undo: this.undo,
@@ -287,6 +284,8 @@ export class Merge2048Game implements Game2DInstance {
     const data = z
       .object({
         version: z.literal(1),
+        randomState: z.number().int().min(0).max(4294967295).default(42),
+        mode: z.enum(["classic", "challenge"]).default("classic"),
         board: z
           .array(
             z
@@ -316,14 +315,35 @@ export class Merge2048Game implements Game2DInstance {
           .default(null),
       })
       .parse(state);
+    this.random.state = data.randomState;
+    this.mode = data.mode;
+    this.terminal = false;
     this.board = data.board;
     this.score = data.score;
-    this.undo = data.undo;
+    this.undo = this.mode === "challenge" ? null : data.undo;
     this.undoHeld = false;
     this.animation = 0;
     this.feedback.clear();
     this.held = null;
     this.won = this.board.some((v) => v >= 2048);
+  }
+  getStatus(): "playing" | "recoverable" | "complete" {
+    return this.terminal ? (this.undo ? "recoverable" : "complete") : "playing";
+  }
+  recover(): void {
+    if (!this.undo) return;
+    this.board = [...this.undo.board];
+    this.score = this.undo.score;
+    this.undo = null;
+    this.terminal = false;
+    this.animation = 0;
+    this.held = null;
+    this.won = this.board.some((v) => v >= 2048);
+    this.feedback.clear();
+    this.feedback.sound("hit");
+  }
+  getMetrics() {
+    return { highest_tile: Math.max(...this.board), completed: this.won };
   }
   getResult(): { title: string; detail: string } {
     return {

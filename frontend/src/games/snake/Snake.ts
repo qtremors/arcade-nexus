@@ -1,3 +1,4 @@
+import { Random } from "../../sdk/Random";
 /**
  * Zen Snake - Minimalist Snake with Premium Aesthetics
  *
@@ -63,6 +64,11 @@ export class SnakeGame implements Game2DInstance {
 
   // Game state
   private score = 0;
+  private random = new Random();
+  private mode = "classic";
+  private elapsed = 0;
+  private cause = "Run complete";
+  private walls: Point[] = [];
   private gameOver = false;
   private moveTimer = 0;
   private moveInterval = 120; // ms per move
@@ -82,28 +88,43 @@ export class SnakeGame implements Game2DInstance {
   };
 
   init(canvas: HTMLCanvasElement, config?: GameConfig): void {
+    this.random = new Random(config?.seed);
+    this.mode = config?.mode ?? "classic";
+    this.elapsed = 0;
+    this.cellSize =
+      typeof config?.grid_size === "number"
+        ? Math.max(20, Math.min(40, config.grid_size))
+        : 28;
     this.ctx = canvas.getContext("2d")!;
     this.width = canvas.width;
     this.height = canvas.height;
 
-    // Apply difficulty
-    if (config?.difficulty) {
-      switch (config.difficulty) {
-        case "easy":
-          this.moveInterval = 150;
-          break;
-        case "hard":
-          this.moveInterval = 90;
-          break;
-        case "normal":
-        default:
-          this.moveInterval = 120;
-          break;
-      }
-    }
+    const baseInterval =
+      typeof config?.initial_speed === "number"
+        ? Math.max(80, Math.min(120, config.initial_speed))
+        : 120;
+    this.moveInterval =
+      baseInterval *
+      (config?.difficulty === "easy"
+        ? 1.25
+        : config?.difficulty === "hard"
+          ? 0.75
+          : 1);
 
     // Calculate grid
     this.calculateGrid();
+    this.walls =
+      this.mode === "maze"
+        ? Array.from({ length: Math.max(1, this.rows - 8) }, (_, i) => ({
+            x: Math.floor(this.cols / 3),
+            y: i + 4,
+          })).concat(
+            Array.from({ length: Math.max(1, this.rows - 8) }, (_, i) => ({
+              x: Math.floor((this.cols * 2) / 3),
+              y: i + 4,
+            })),
+          )
+        : [];
     this.startNewGame();
   }
 
@@ -144,7 +165,9 @@ export class SnakeGame implements Game2DInstance {
 
   private spawnFood(): void {
     const empty: Point[] = [];
-    const occupied = new Set(this.snake.map((p) => `${p.x},${p.y}`));
+    const occupied = new Set(
+      [...this.snake, ...this.walls].map((p) => `${p.x},${p.y}`),
+    );
     for (let y = 0; y < this.rows; y++)
       for (let x = 0; x < this.cols; x++) {
         if (!occupied.has(`${x},${y}`)) empty.push({ x, y });
@@ -153,7 +176,7 @@ export class SnakeGame implements Game2DInstance {
       this.gameOver = true;
       return;
     }
-    this.food = empty[Math.floor(Math.random() * empty.length)];
+    this.food = empty[Math.floor(this.random.next() * empty.length)];
   }
 
   private spawnParticles(x: number, y: number): void {
@@ -179,10 +202,16 @@ export class SnakeGame implements Game2DInstance {
 
   update(dt: number, input: InputState): boolean {
     if (this.gameOver) return false;
+    this.elapsed += dt;
+    if (this.mode === "sprint" && this.elapsed >= 60000) {
+      this.cause = "Sprint complete";
+      this.gameOver = true;
+      return false;
+    }
     this.feedback.update(dt);
 
     // Handle input
-    const requested = input.up
+    const requested: Direction | null = input.up
       ? "up"
       : input.down
         ? "down"
@@ -197,15 +226,31 @@ export class SnakeGame implements Game2DInstance {
       left: "right",
       right: "left",
     };
-    const last = this.turns.at(-1) ?? this.direction;
-    if (
-      requested &&
-      requested !== this.inputDirection &&
-      requested !== last &&
-      requested !== opposite[last] &&
-      this.turns.length < 2
-    )
-      this.turns.push(requested);
+    const bindings = useSettingsStore.getState().bindings;
+    const defaults: Record<Direction, string[]> = {
+      up: ["ArrowUp", "KeyW"],
+      down: ["ArrowDown", "KeyS"],
+      left: ["ArrowLeft", "KeyA"],
+      right: ["ArrowRight", "KeyD"],
+    };
+    const pressed = (input.pressed ?? [])
+      .map((code) =>
+        (Object.keys(defaults) as Direction[]).find((direction) =>
+          bindings[direction]
+            ? code === bindings[direction]
+            : defaults[direction].includes(code),
+        ),
+      )
+      .filter((direction): direction is Direction => !!direction);
+    for (const turn of pressed.length
+      ? pressed
+      : requested && requested !== this.inputDirection
+        ? [requested]
+        : []) {
+      const last = this.turns.at(-1) ?? this.direction;
+      if (turn !== last && turn !== opposite[last] && this.turns.length < 2)
+        this.turns.push(turn);
+    }
     this.inputDirection = requested;
     this.nextDirection = this.turns[0] ?? this.nextDirection;
 
@@ -252,8 +297,10 @@ export class SnakeGame implements Game2DInstance {
       head.x < 0 ||
       head.x >= this.cols ||
       head.y < 0 ||
-      head.y >= this.rows
+      head.y >= this.rows ||
+      this.walls.some((p) => p.x === head.x && p.y === head.y)
     ) {
+      this.cause = "Watch the walls";
       this.gameOver = true;
       return false;
     }
@@ -265,6 +312,7 @@ export class SnakeGame implements Game2DInstance {
         (s) => s.x === head.x && s.y === head.y,
       )
     ) {
+      this.cause = "Leave an escape route";
       this.gameOver = true;
       return false;
     }
@@ -310,6 +358,23 @@ export class SnakeGame implements Game2DInstance {
 
     // Grid
     this.renderGrid();
+    ctx.fillStyle = "#a78bfa";
+    for (const wall of this.walls)
+      ctx.fillRect(
+        this.gridOffsetX + wall.x * this.cellSize + 2,
+        this.gridOffsetY + wall.y * this.cellSize + 2,
+        this.cellSize - 4,
+        this.cellSize - 4,
+      );
+    if (this.mode === "sprint") {
+      ctx.font = "18px system-ui";
+      ctx.fillStyle = "#fff";
+      ctx.fillText(
+        `${Math.max(0, 60 - Math.floor(this.elapsed / 1000))}s left`,
+        110,
+        40,
+      );
+    }
 
     // Food with glow
     this.renderFood();
@@ -551,6 +616,11 @@ export class SnakeGame implements Game2DInstance {
   getState(): Record<string, unknown> {
     return structuredClone({
       version: 1,
+      randomState: this.random.state,
+      mode: this.mode,
+      elapsed: this.elapsed,
+      walls: this.walls,
+      cellSize: this.cellSize,
       score: this.score,
       snake: this.snake,
       food: this.food,
@@ -573,6 +643,11 @@ export class SnakeGame implements Game2DInstance {
     const data = z
       .object({
         version: z.literal(1),
+        randomState: z.number().int().min(0).max(4294967295).default(42),
+        mode: z.enum(["classic", "maze", "sprint"]).default("classic"),
+        elapsed: z.number().min(0).max(604800000).default(0),
+        walls: z.array(point).max(400).default([]),
+        cellSize: z.number().min(20).max(40).default(28),
         score: z.number().int().nonnegative().max(2147483647),
         snake: z.array(point).min(3).max(10000),
         food: point,
@@ -589,12 +664,22 @@ export class SnakeGame implements Game2DInstance {
     const occupied = new Set(data.snake.map((p) => `${p.x},${p.y}`));
     if (
       occupied.size !== data.snake.length ||
-      [...data.snake, data.food].some(
+      [...data.snake, ...data.walls, data.food].some(
         (p) => p.x >= data.cols || p.y >= data.rows,
       ) ||
-      occupied.has(`${data.food.x},${data.food.y}`)
+      occupied.has(`${data.food.x},${data.food.y}`) ||
+      data.walls.some(
+        (p) =>
+          occupied.has(`${p.x},${p.y}`) ||
+          (p.x === data.food.x && p.y === data.food.y),
+      )
     )
       throw new Error("Invalid Snake save");
+    this.random.state = data.randomState;
+    this.mode = data.mode;
+    this.elapsed = data.elapsed;
+    this.walls = data.walls;
+    this.cellSize = data.cellSize;
     this.cols = data.cols;
     this.rows = data.rows;
     this.gridOffsetX = (this.width - this.cols * this.cellSize) / 2;
@@ -618,7 +703,7 @@ export class SnakeGame implements Game2DInstance {
       title:
         this.snake.length === this.cols * this.rows
           ? "Grid completed"
-          : "Run complete",
+          : this.cause,
       detail: `${this.score} points · Length ${this.snake.length}`,
     };
   }

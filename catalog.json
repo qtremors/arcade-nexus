@@ -1,0 +1,101 @@
+{
+  "snake": {
+    "rulesVersion": 2,
+    "scoreUnit": "points",
+    "difficulty": true,
+    "modes": [
+      {
+        "id": "classic",
+        "label": "Classic"
+      },
+      {
+        "id": "maze",
+        "label": "Garden maze"
+      },
+      {
+        "id": "sprint",
+        "label": "60-second sprint"
+      }
+    ],
+    "config": {
+      "grid_size": 28,
+      "initial_speed": 120
+    },
+    "title": "Neon Snake"
+  },
+  "raptor-run": {
+    "rulesVersion": 2,
+    "scoreUnit": "metres",
+    "difficulty": true,
+    "modes": [
+      {
+        "id": "classic",
+        "label": "Endless"
+      },
+      {
+        "id": "daily",
+        "label": "Daily trail"
+      }
+    ],
+    "config": {
+      "gravity": 2500,
+      "jump_force": 850,
+      "initial_speed": 400
+    },
+    "title": "Raptor Run"
+  },
+  "breakout": {
+    "rulesVersion": 2,
+    "scoreUnit": "points",
+    "difficulty": true,
+    "modes": [
+      {
+        "id": "classic",
+        "label": "Sector campaign"
+      },
+      {
+        "id": "daily",
+        "label": "Daily sectors"
+      }
+    ],
+    "config": {},
+    "title": "Neon Breakout"
+  },
+  "merge-2048": {
+    "rulesVersion": 2,
+    "scoreUnit": "points",
+    "difficulty": false,
+    "modes": [
+      {
+        "id": "classic",
+        "label": "Relaxed \u00b7 undo allowed"
+      },
+      {
+        "id": "challenge",
+        "label": "Challenge \u00b7 no undo"
+      }
+    ],
+    "config": {},
+    "title": "Merge 2048"
+  },
+  "stellar-flight": {
+    "rulesVersion": 2,
+    "scoreUnit": "points",
+    "difficulty": false,
+    "modes": [
+      {
+        "id": "course",
+        "label": "12-gate course"
+      },
+      {
+        "id": "classic",
+        "label": "Free flight \u00b7 peak speed"
+      }
+    ],
+    "config": {
+      "model_path": "/models/Jet.glb",
+      "initial_speed": 50
+    },
+    "title": "Stellar Flight"
+  }
+}

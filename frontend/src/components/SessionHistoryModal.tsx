@@ -1,36 +1,36 @@
-/**
- * Session History Modal
- * Displays detailed gameplay session history in a modal dialog
- */
-import { useEffect, useState, useRef } from "react";
-import { useModalFocus } from "../hooks/useModalFocus";
-import { X, Clock } from "lucide-react";
-import { formatPlaytime } from "../utils/formatting";
-import { LoadingSpinner } from "./LoadingSpinner";
+import { useEffect, useRef, useState } from "react";
+import { progressApi } from "../api/client";
 import type { GameSession } from "../api/client";
-
-interface SessionHistoryModalProps {
+import { useModalFocus } from "../hooks/useModalFocus";
+import { useGamepad } from "../hooks/useGamepad";
+import { formatPlaytime } from "../utils/formatting";
+interface Props {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  gameId?: number; // Optional filter
+  gameId?: number;
   sessions: GameSession[];
   loading?: boolean;
+  initialSort?: "date" | "score" | "duration";
 }
-
 export function SessionHistoryModal({
   isOpen,
   onClose,
   title,
-  sessions,
-  loading = false,
+  gameId,
   initialSort = "date",
-}: SessionHistoryModalProps & { initialSort?: "date" | "score" | "duration" }) {
+}: Props) {
   const dialog = useRef<HTMLDivElement>(null);
   useModalFocus(dialog, isOpen);
-  const [sortConfig, setSortConfig] = useState<{
-    key: keyof GameSession;
-    direction: "asc" | "desc";
+  const [page, setPage] = useState({ sessions: [] as GameSession[], total: 0 });
+  const [skip, setSkip] = useState(0),
+    [error, setError] = useState(""),
+    [loading, setLoading] = useState(true),
+    [retry, setRetry] = useState(0);
+  const [sort, setSort] = useState<{
+    key:
+      "game_title" | "end_time" | "difficulty" | "duration_seconds" | "score";
+    desc: boolean;
   }>({
     key:
       initialSort === "score"
@@ -38,188 +38,175 @@ export function SessionHistoryModal({
         : initialSort === "duration"
           ? "duration_seconds"
           : "end_time",
-    direction: "desc",
+    desc: true,
   });
-
-  // Handle sort click
-  const handleSort = (key: keyof GameSession) => {
-    let direction: "asc" | "desc" = "desc";
-    if (sortConfig.key === key && sortConfig.direction === "desc") {
-      direction = "asc";
-    }
-    setSortConfig({ key, direction });
-  };
-
-  // Sort sessions
-  const sortedSessions = [...sessions].sort((a, b) => {
-    const aValue = a[sortConfig.key];
-    const bValue = b[sortConfig.key];
-
-    if (aValue === bValue) return 0;
-    if (aValue === undefined || aValue === null) return 1;
-    if (bValue === undefined || bValue === null) return -1;
-
-    // Handle dates strings
-    if (sortConfig.key === "end_time" || sortConfig.key === "start_time") {
-      return sortConfig.direction === "asc"
-        ? new Date(aValue as string).getTime() -
-            new Date(bValue as string).getTime()
-        : new Date(bValue as string).getTime() -
-            new Date(aValue as string).getTime();
-    }
-
-    // Generic sort
-    if (sortConfig.direction === "asc") {
-      return aValue > bValue ? 1 : -1;
-    } else {
-      return aValue < bValue ? 1 : -1;
-    }
-  });
-
-  // Close on escape key
   useEffect(() => {
-    const handleEsc = (e: KeyboardEvent) => {
+    if (!isOpen) return;
+    let active = true;
+    void progressApi
+      .history(skip, 25, gameId)
+      .then((data) => {
+        if (active) {
+          setPage(data);
+          setError("");
+        }
+      })
+      .catch((e) => {
+        if (active) setError(e.message);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isOpen, skip, retry, gameId]);
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        e.stopImmediatePropagation();
+        e.preventDefault();
         onClose();
       }
     };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [isOpen, onClose]);
+  useGamepad((button) => {
     if (!isOpen) return;
-    window.addEventListener("keydown", handleEsc);
-    return () => window.removeEventListener("keydown", handleEsc);
-  }, [onClose, isOpen]);
-
+    if (button === "B") onClose();
+    if (button === "A") (document.activeElement as HTMLElement)?.click();
+    if (["Up", "Down", "Left", "Right"].includes(button)) {
+      const buttons = Array.from(
+        dialog.current?.querySelectorAll<HTMLButtonElement>(
+          "button:not(:disabled)",
+        ) ?? [],
+      );
+      const i = buttons.indexOf(document.activeElement as HTMLButtonElement);
+      buttons[
+        (i + (["Up", "Left"].includes(button) ? -1 : 1) + buttons.length) %
+          buttons.length
+      ]?.focus();
+    }
+  });
   if (!isOpen) return null;
-
+  const rows = [...page.sessions].sort((a, b) => {
+    const av = a[sort.key] ?? "",
+      bv = b[sort.key] ?? "";
+    return (
+      (typeof av === "number" && typeof bv === "number"
+        ? av - bv
+        : String(av).localeCompare(String(bv))) * (sort.desc ? -1 : 1)
+    );
+  });
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
-        onClick={onClose}
-      />
-
-      {/* Modal Content */}
-      <div
-        ref={dialog}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-        className="session-history-dialog relative w-full max-w-4xl bg-[#1a1b26] border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[80vh]"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-white/5 bg-white/5">
-          <div className="flex items-center gap-3">
-            <Clock className="text-cyan-400" size={24} />
-            <h2 className="text-2xl font-bold text-white uppercase tracking-tight">
-              {title}
-            </h2>
-          </div>
-          <button
-            aria-label="Close session history"
-            onClick={onClose}
-            className="p-2 hover:bg-white/10 rounded-lg transition-colors text-white/50 hover:text-white"
-          >
-            <X size={24} />
-          </button>
+    <div
+      className="game-overlay"
+      ref={dialog}
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+    >
+      <section className="detail-panel history-panel">
+        <div className="section-heading">
+          <h2>{title}</h2>
+          <button onClick={onClose}>Close history</button>
         </div>
-
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-0">
-          {loading ? (
-            <div className="py-20 flex justify-center">
-              <LoadingSpinner text="Loading History..." />
-            </div>
-          ) : sessions.length === 0 ? (
-            <div className="py-20 text-center text-white/60 flex flex-col items-center">
-              <Clock size={48} className="mb-4 opacity-20" />
-              <p>No play history found.</p>
-            </div>
-          ) : (
-            <table className="w-full text-left border-collapse">
-              <thead className="sticky top-0 bg-[#1a1b26] z-10 text-xs uppercase font-mono tracking-wider text-white/40 border-b border-white/5 shadow-md">
+        <p>Sorted within this page · {page.total} recorded sessions</p>
+        {error ? (
+          <p role="alert">
+            {error}{" "}
+            <button onClick={() => setRetry((n) => n + 1)}>
+              Retry history
+            </button>
+          </p>
+        ) : loading ? (
+          <p role="status">Loading sessions…</p>
+        ) : (
+          <div className="table-scroll">
+            <table>
+              <thead>
                 <tr>
-                  <th
-                    className="px-6 py-4 font-normal cursor-pointer hover:text-white transition-colors"
-                    onClick={() => handleSort("game_title")}
-                  >
-                    Game
-                  </th>
-                  <th
-                    className="px-6 py-4 font-normal cursor-pointer hover:text-white transition-colors"
-                    onClick={() => handleSort("end_time")}
-                  >
-                    Date{" "}
-                    {sortConfig.key === "end_time" &&
-                      (sortConfig.direction === "asc" ? "↑" : "↓")}
-                  </th>
-                  <th
-                    className="px-6 py-4 font-normal cursor-pointer hover:text-white transition-colors"
-                    onClick={() => handleSort("difficulty")}
-                  >
-                    Difficulty
-                  </th>
-                  <th
-                    className="px-6 py-4 font-normal text-right cursor-pointer hover:text-white transition-colors"
-                    onClick={() => handleSort("duration_seconds")}
-                  >
-                    Duration{" "}
-                    {sortConfig.key === "duration_seconds" &&
-                      (sortConfig.direction === "asc" ? "↑" : "↓")}
-                  </th>
-                  <th
-                    className="px-6 py-4 font-normal text-right cursor-pointer hover:text-white transition-colors"
-                    onClick={() => handleSort("score")}
-                  >
-                    Score{" "}
-                    {sortConfig.key === "score" &&
-                      (sortConfig.direction === "asc" ? "↑" : "↓")}
-                  </th>
+                  {(
+                    [
+                      ["game_title", "Game"],
+                      ["end_time", "Date"],
+                      ["difficulty", "Difficulty"],
+                      ["duration_seconds", "Duration"],
+                      ["score", "Score"],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <th
+                      key={key}
+                      aria-sort={
+                        sort.key === key
+                          ? sort.desc
+                            ? "descending"
+                            : "ascending"
+                          : "none"
+                      }
+                    >
+                      <button
+                        onClick={() =>
+                          setSort({
+                            key,
+                            desc: sort.key === key ? !sort.desc : true,
+                          })
+                        }
+                      >
+                        {label}{" "}
+                        {sort.key === key ? (sort.desc ? "↓" : "↑") : ""}
+                      </button>
+                    </th>
+                  ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
-                {sortedSessions.map((session) => (
-                  <tr
-                    key={session.id}
-                    className="group hover:bg-white/5 transition-colors"
-                  >
-                    <td className="px-6 py-4">
-                      <div className="font-bold text-white flex items-center gap-2">
-                        {session.game_title}
-                      </div>
+              <tbody>
+                {rows.map((row) => (
+                  <tr key={row.id}>
+                    <td>
+                      {row.game_title}
+                      <small>
+                        {row.mode} · rules {row.rules_version}
+                      </small>
                     </td>
-                    <td className="px-6 py-4 text-white/70 font-mono text-sm">
-                      <div className="flex flex-col">
-                        <span>
-                          {new Date(session.end_time).toLocaleDateString()}
-                        </span>
-                        <span className="text-xs text-white/60">
-                          {new Date(session.end_time).toLocaleTimeString()}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-white/70 font-mono text-sm capitalize">
-                      {session.difficulty || "-"}
-                    </td>
-                    <td className="px-6 py-4 text-right font-mono text-cyan-400">
-                      {formatPlaytime(session.duration_seconds)}
-                    </td>
-                    <td className="px-6 py-4 text-right font-mono text-yellow-500 font-bold">
-                      {session.score.toLocaleString()}
-                    </td>
+                    <td>{new Date(row.end_time).toLocaleString()}</td>
+                    <td>{row.difficulty ?? "normal"}</td>
+                    <td>{formatPlaytime(row.duration_seconds)}</td>
+                    <td>{row.score.toLocaleString()}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          )}
+            {!rows.length && <p>No completed sessions yet.</p>}
+          </div>
+        )}
+        <div className="pagination">
+          <button
+            disabled={!skip || loading}
+            onClick={() => {
+              setLoading(true);
+              setSkip((n) => Math.max(0, n - 25));
+            }}
+          >
+            Previous page
+          </button>
+          <span>
+            {page.total
+              ? `${skip + 1}–${Math.min(skip + 25, page.total)} of ${page.total}`
+              : "0 sessions"}
+          </span>
+          <button
+            disabled={skip + 25 >= page.total || loading}
+            onClick={() => {
+              setLoading(true);
+              setSkip((n) => n + 25);
+            }}
+          >
+            Next page
+          </button>
         </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-white/5 bg-white/5 flex justify-between items-center text-xs text-white/60 font-mono uppercase tracking-widest">
-          <span>Total Sessions: {sessions.length}</span>
-          <span>Detailed Log</span>
-        </div>
-      </div>
+      </section>
     </div>
   );
 }

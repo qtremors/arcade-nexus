@@ -15,7 +15,7 @@ import { HEALTH_URL } from "../api/client";
 import { isEditing } from "../sdk/InputManager";
 import { useGamepad } from "../hooks/useGamepad";
 import { useProfileStore } from "../stores/profileStore";
-import { moveMenuFocus } from "../sdk/menuNavigation";
+import { moveMenuFocus, activateControl } from "../sdk/menuNavigation";
 
 interface LayoutProps {
   children?: ReactNode;
@@ -31,7 +31,7 @@ export function Layout({ children }: LayoutProps) {
   const player = useProfileStore((state) => state.activeProfile);
   const isGaming =
     location.pathname.startsWith("/play") ||
-    location.pathname.startsWith("/game");
+    location.pathname.startsWith("/game/");
 
   // Live clock state
   const [time, setTime] = useState(() => new Date());
@@ -86,7 +86,7 @@ export function Layout({ children }: LayoutProps) {
     }
     if (menuOpen || document.querySelector('[aria-modal="true"]')) return;
     if (button === "LB" || button === "RB") {
-      const routes = ["/home", "/store", "/library", "/achievements"];
+      const routes = ["/home", "/games", "/favorites", "/progress"];
       const at = Math.max(0, routes.indexOf(location.pathname));
       navigate(
         routes[
@@ -98,9 +98,23 @@ export function Layout({ children }: LayoutProps) {
     if (location.pathname === "/home" && !["Up", "Down"].includes(button))
       return; // The game shelf owns left/right and confirm input.
     const focused = document.activeElement as HTMLElement | null;
-    if (button === "A") focused?.click();
+    if (button === "A") activateControl();
     if (button === "B") navigate("/home");
     if (["Up", "Down", "Left", "Right"].includes(button)) {
+      if (
+        focused instanceof HTMLSelectElement &&
+        ["Left", "Right"].includes(button)
+      ) {
+        focused.selectedIndex = Math.max(
+          0,
+          Math.min(
+            focused.options.length - 1,
+            focused.selectedIndex + (button === "Right" ? 1 : -1),
+          ),
+        );
+        focused.dispatchEvent(new Event("change", { bubbles: true }));
+        return;
+      }
       if (
         focused instanceof HTMLInputElement &&
         focused.type === "range" &&
@@ -147,9 +161,9 @@ export function Layout({ children }: LayoutProps) {
             <nav aria-label="Main navigation">
               {[
                 { path: "/home", label: "Home", icon: Home },
-                { path: "/store", label: "Store", icon: ShoppingBag },
-                { path: "/library", label: "Library", icon: LibraryIcon },
-                { path: "/achievements", label: "Achievements", icon: Trophy },
+                { path: "/games", label: "Games", icon: ShoppingBag },
+                { path: "/favorites", label: "Favorites", icon: LibraryIcon },
+                { path: "/progress", label: "Progress", icon: Trophy },
               ].map(({ path, label, icon: Icon }) => (
                 <Link
                   key={path}

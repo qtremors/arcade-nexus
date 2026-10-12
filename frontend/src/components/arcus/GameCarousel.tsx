@@ -49,7 +49,7 @@ export function GameCarousel({
           <p className="eyebrow">
             <span className="accent-dot" />
             {stats?.last_session
-              ? "Jump back in"
+              ? "Recently played"
               : "Your next favourite"} / {game.category}
           </p>
           <h2>{game.title}</h2>
@@ -81,7 +81,7 @@ export function GameCarousel({
           </button>
           <p className="featured-note">
             <Gamepad2 size={15} />
-            Keyboard & controller · Saved progress
+            Keyboard & controller · Automatic recovery
           </p>
         </div>
         <div className="featured-art" key={game.slug}>

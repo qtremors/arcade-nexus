@@ -93,7 +93,7 @@ async def test_legacy_upgrade_preserves_ids_progress_and_backups(tmp_path, versi
         async with engine.connect() as connection:
             assert (
                 await connection.execute(text("SELECT version_num FROM alembic_version"))
-            ).scalar() == "0003"
+            ).scalar() == "0004"
             assert (
                 await connection.execute(text("SELECT data FROM game_saves WHERE id=7"))
             ).scalar() == '{"score":12}'

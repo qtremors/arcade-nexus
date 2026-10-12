@@ -22,10 +22,24 @@ export class FlightController {
 
   update(dt: number, input: InputState) {
     // Throttle
-    if (input.keys["ShiftLeft"] || input.keys["ShiftRight"]) {
-      this.speed += this.acceleration * dt;
-    } else if (input.keys["ControlLeft"] || input.keys["ControlRight"]) {
-      this.speed -= this.deceleration * dt;
+    if (
+      input.keys["ShiftLeft"] ||
+      input.keys["ShiftRight"] ||
+      (input.throttle ?? 0) > 0
+    ) {
+      this.speed +=
+        this.acceleration *
+        dt *
+        ((input.throttle ?? 0) > 0 ? input.throttle! : 1);
+    } else if (
+      input.keys["ControlLeft"] ||
+      input.keys["ControlRight"] ||
+      (input.throttle ?? 0) < 0
+    ) {
+      this.speed -=
+        this.deceleration *
+        dt *
+        ((input.throttle ?? 0) < 0 ? -input.throttle! : 1);
     }
 
     // Clamp speed
@@ -43,6 +57,8 @@ export class FlightController {
     // Roll: A/D or Left/Right arrows
     if (input.left) this.inputRoll = 1;
     if (input.right) this.inputRoll = -1;
+    if (input.axes?.x) this.inputRoll = -input.axes.x;
+    if (input.axes?.y) this.inputPitch = input.axes.y;
 
     // Yaw: Q/E keys
     if (input.keys["KeyQ"]) this.inputYaw = 1;

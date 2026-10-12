@@ -4,8 +4,10 @@ Syncs games with code definition while preserving user progress
 """
 
 import asyncio
+import json
 import logging
 from copy import deepcopy
+from pathlib import Path
 
 from sqlalchemy import select, text
 
@@ -142,6 +144,9 @@ INITIAL_GAMES.extend(
 )
 
 
+CATALOG = json.loads((Path(__file__).resolve().parents[2] / "catalog.json").read_text())
+
+
 async def sync_games(skip_init: bool = False, *, session_factory=AsyncSessionLocal):
     """
     Smart sync: Add new games, update existing, deactivate removed.
@@ -166,9 +171,51 @@ async def sync_games(skip_init: bool = False, *, session_factory=AsyncSessionLoc
         # 1. Add new games and update existing ones
         for definition in INITIAL_GAMES:
             game_data = deepcopy(definition)
+            game_data["config"] = CATALOG[game_data["slug"]]["config"]
             achievements = game_data.pop("achievements", [])
+            milestones = {
+                "breakout": [
+                    {
+                        "slug": "sector-master",
+                        "title": "Sector Master",
+                        "description": "Clear all three sectors",
+                        "unlock_condition": {"sectors": 3},
+                    },
+                    {
+                        "slug": "perfect-campaign",
+                        "title": "Perfect Campaign",
+                        "description": "Finish the campaign with all three lives",
+                        "unlock_condition": {"sectors": 3, "lives": 3},
+                    },
+                ],
+                "merge-2048": [
+                    {
+                        "slug": "tile-2048",
+                        "title": "2048!",
+                        "description": "Build a 2048 tile",
+                        "unlock_condition": {"highest_tile": 2048},
+                    }
+                ],
+                "stellar-flight": [
+                    {
+                        "slug": "course-complete",
+                        "title": "Course Graduate",
+                        "description": "Finish a twelve-gate course",
+                        "unlock_condition": {"completed": True},
+                    },
+                    {
+                        "slug": "clean-course",
+                        "title": "Perfect Line",
+                        "description": "Clear all twelve course gates",
+                        "unlock_condition": {"gates": 12, "completed": True},
+                    },
+                ],
+            }
+            achievements.extend(milestones.get(game_data["slug"], []))
             for achievement in achievements:
                 slug = achievement["slug"]
+                if "unlock_condition" in achievement:
+                    continue
                 if slug.startswith("score-"):
                     achievement["unlock_condition"] = {"score": int(slug.split("-")[1])}
                 elif slug == "first-bite":
@@ -180,7 +227,7 @@ async def sync_games(skip_init: bool = False, *, session_factory=AsyncSessionLoc
                 elif slug == "ace":
                     achievement["unlock_condition"] = {"flight_seconds": 600}
                 elif slug == "mach-1":
-                    achievement["unlock_condition"] = {"score": 340}
+                    achievement["unlock_condition"] = {"max_speed": 340}
                 else:
                     achievement["unlock_condition"] = {"event": slug}
             slug = game_data["slug"]

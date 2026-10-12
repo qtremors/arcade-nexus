@@ -38,6 +38,9 @@ class GameSession(Base):
     difficulty: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
     metrics: Mapped[dict] = mapped_column(JSON, default=dict, server_default="{}", nullable=False)
+    mode: Mapped[str] = mapped_column(String(40), default="classic", server_default="classic")
+    rules_version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    completion: Mapped[dict | None] = mapped_column(JSON, nullable=True)
 
     # Relationships
     user = relationship("User", back_populates="sessions")

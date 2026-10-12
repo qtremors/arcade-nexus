@@ -21,6 +21,14 @@ class SessionMetrics(RequestSchema):
     jumps: Annotated[int, Field(ge=0, le=1_000_000, strict=True)] | None = None
     max_altitude: Annotated[float, Field(ge=0, le=10_000_000, allow_inf_nan=False)] | None = None
     crashed: bool | None = None
+    max_speed: Annotated[float, Field(ge=0, le=450, allow_inf_nan=False)] | None = None
+    gates: Annotated[int, Field(ge=0, le=1_000_000, strict=True)] | None = None
+    misses: Annotated[int, Field(ge=0, le=1_000_000, strict=True)] | None = None
+    sectors: Annotated[int, Field(ge=0, le=3, strict=True)] | None = None
+    lives: Annotated[int, Field(ge=0, le=3, strict=True)] | None = None
+    highest_tile: Annotated[int, Field(ge=0, le=1_048_576, strict=True)] | None = None
+    completed: bool | None = None
+    medal: Literal["gold", "silver", "bronze"] | None = None
 
 
 class SessionRecord(RequestSchema):
@@ -33,6 +41,12 @@ class SessionRecord(RequestSchema):
 
 class ScoreSubmit(RequestSchema):
     score: Score
+
+
+class CompletionRecord(SessionRecord):
+    session_id: UUID
+    mode: str = Field("classic", pattern=r"^[a-z0-9-]{1,40}$")
+    rules_version: int = Field(1, ge=1, le=10000, strict=True)
 
 
 class GameStatsResponse(ResponseSchema):
@@ -81,3 +95,5 @@ class SessionResponse(ResponseSchema):
     duration_seconds: int
     score: int
     difficulty: str | None
+    mode: str = "classic"
+    rules_version: int = 1

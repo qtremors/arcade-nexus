@@ -46,15 +46,19 @@ export function Store() {
   );
   const categories = [...new Set(games.map((g) => g.category))].sort();
   const add = async (game: Game) => {
-    if (libraryGameIds.has(game.id)) {
-      navigate(`/play/${game.slug}`);
-      return;
-    }
     setAddingGameId(game.id);
     try {
+      if (libraryGameIds.has(game.id)) {
+        await libraryApi.remove(game.id);
+        setLibraryGameIds(
+          (ids) => new Set([...ids].filter((id) => id !== game.id)),
+        );
+        showToast(`${game.title} removed from favorites`, "success");
+        return;
+      }
       await libraryApi.add(game.id);
       setLibraryGameIds((ids) => new Set([...ids, game.id]));
-      showToast(`${game.title} added to your library`, "success");
+      showToast(`${game.title} added to favorites`, "success");
     } catch (err) {
       showToast((err as Error).message, "error");
     } finally {
@@ -65,7 +69,7 @@ export function Store() {
     <div className="console-page">
       <PageHeading
         kicker="DISCOVER SOMETHING GOOD"
-        title="Game Store"
+        title="Games"
         aside={
           <span className="pill">
             <Check size={14} />
@@ -79,14 +83,14 @@ export function Store() {
         <label className="search-field">
           <Search size={18} />
           <input
-            aria-label="Search store games"
+            aria-label="Search games"
             placeholder="Find your next game…"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
           {searchQuery && (
             <button
-              aria-label="Clear store search"
+              aria-label="Clear games search"
               onClick={() => setSearchQuery("")}
             >
               <X size={16} />
@@ -116,7 +120,7 @@ export function Store() {
         <LoadingCards />
       ) : error ? (
         <EmptyState
-          title="Store unavailable"
+          title="Games unavailable"
           action={
             <button
               className="primary-action"
@@ -151,20 +155,25 @@ export function Store() {
       ) : (
         <div className="catalog-grid">
           {filtered.map((game) => (
-            <GameCard
-              key={game.id}
-              game={game}
-              variant="store"
-              actionLabel={
-                addingGameId === game.id
-                  ? "Adding…"
-                  : libraryGameIds.has(game.id)
-                    ? "Play"
-                    : "Add to library"
-              }
-              disabled={addingGameId !== null}
-              onClick={() => void add(game)}
-            />
+            <div className="catalog-entry" key={game.id}>
+              <GameCard
+                key={game.id}
+                game={game}
+                variant="store"
+                actionLabel="Play"
+                disabled={addingGameId !== null}
+                onClick={() => navigate(`/play/${game.slug}`)}
+              />
+              <button
+                className="favorite-toggle"
+                aria-pressed={libraryGameIds.has(game.id)}
+                aria-label={`${libraryGameIds.has(game.id) ? "Unfavorite" : "Favorite"} ${game.title}`}
+                disabled={addingGameId !== null}
+                onClick={() => void add(game)}
+              >
+                {libraryGameIds.has(game.id) ? "★ Favorited" : "☆ Favorite"}
+              </button>
+            </div>
           ))}
         </div>
       )}

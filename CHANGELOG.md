@@ -2,9 +2,19 @@
 
 > **Project:** Arcade Nexus  
 > **Version:** 1.4.1  
-> **Last Updated:** 2026-02-11
+> **Last Updated:** 2026-10-12
 
 ---
+
+## Unreleased
+
+- Added a single local launcher, production frontend serving, and a manual validation command. No CI/CD.
+- Simplified navigation to Home, Games, Favorites and Progress; added real Continue, five-second recovery snapshots, backup export/import as copies, and visible result retries.
+- Made completion atomic with replayed receipts, versioned mode/difficulty records, qualified awards, household comparisons and paginated history.
+- Centralized game definitions and tuning; saved seeded gameplay randomness, fixed catch-up input consumption, and separated session effects from presentation.
+- Added Snake maze/sprint, Raptor patterns/milestones, Breakout armored/explosive sectors and medals, relaxed/challenge 2048 with terminal undo, and finite scored Flight courses alongside free flight.
+- Added daily challenges, controller text entry, remapping/dead-zone settings, Flight analog controls/world cycling and disconnect pause.
+- Updated local regression coverage, setup/architecture documentation and the physical-device/playtest checklist.
 
 ## [1.4.1] - 2026-02-11
 

@@ -66,7 +66,7 @@ def test_catalog_sync_is_repeatable_and_preserves_progress(player):
 
     player.portal.call(sync)
     assert INITIAL_GAMES == original
-    assert player.get("/api/achievements").json()["total"] == 17
+    assert player.get("/api/achievements").json()["total"] == 22
     assert player.get("/api/saves/snake").json()["saves"][0]["data"]["score"] == 100
 
 
@@ -88,7 +88,7 @@ def test_inactive_games_preserve_history_and_saves_but_reject_new_play(player, g
     assert player.post("/api/stats/snake/start").status_code == 404
     assert player.post("/api/stats/snake/score", json={"score": 100}).status_code == 404
     assert player.post("/api/saves/snake", json={"slot": 1, "data": {}}).status_code == 404
-    assert player.get("/api/achievements").json()["total"] == 13
+    assert player.get("/api/achievements").json()["total"] == 18
     assert player.delete("/api/saves/snake/1").status_code == 204
 
 

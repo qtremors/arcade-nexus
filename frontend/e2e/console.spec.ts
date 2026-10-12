@@ -38,14 +38,20 @@ const pause = async (page: Page) => {
 };
 const save = async (page: Page, slug: string, slot = 1) => {
   await page.getByRole("button", { name: "Save game", exact: true }).click();
-  const [response] = await Promise.all([
-    page.waitForResponse(
-      (r) =>
-        r.url().endsWith(`/api/saves/${slug}`) &&
-        r.request().method() === "POST",
-    ),
-    page.getByRole("button", { name: new RegExp(`^Slot ${slot} ·`) }).click(),
-  ]);
+  const responsePromise = page.waitForResponse(
+    (r) =>
+      r.url().endsWith(`/api/saves/${slug}`) && r.request().method() === "POST",
+  );
+  const slotButton = page.getByRole("button", {
+    name: new RegExp(`^Slot ${slot} ·`),
+  });
+  const occupied = !(await slotButton.textContent())?.includes("Empty");
+  await slotButton.click();
+  if (occupied)
+    await page
+      .getByRole("button", { name: "Replace save", exact: true })
+      .click();
+  const response = await responsePromise;
   expect(response.ok()).toBeTruthy();
   const record = (await response.json()) as {
     data: { state: Record<string, unknown> };
@@ -59,25 +65,23 @@ test("store search, library changes, settings, and profile switching work", asyn
   request,
 }) => {
   await page.goto("/store");
-  await page.getByLabel("Search store games").fill("Breakout");
+  await page.getByLabel("Search games").fill("Breakout");
   await expect(
-    page.getByRole("button", { name: "Add to library Neon Breakout" }),
+    page.getByRole("button", { name: "Favorite Neon Breakout" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Add to library Neon Snake" }),
+    page.getByRole("button", { name: "Favorite Neon Snake" }),
   ).toHaveCount(0);
-  await page
-    .getByRole("button", { name: "Add to library Neon Breakout" })
-    .click();
+  await page.getByRole("button", { name: "Favorite Neon Breakout" }).click();
   await expect(
     page.getByRole("button", { name: "Play Neon Breakout" }),
   ).toBeVisible();
-  await page.getByRole("link", { name: "Library", exact: true }).click();
-  await page.getByLabel("Search library games").fill("snake");
+  await page.getByRole("link", { name: "Favorites", exact: true }).click();
+  await page.getByLabel("Search favorites").fill("snake");
   await expect(
     page.getByRole("button", { name: "PLAY Neon Breakout" }),
   ).toHaveCount(0);
-  await page.getByLabel("Search library games").fill("");
+  await page.getByLabel("Search favorites").fill("");
   await expect(
     page.getByRole("button", { name: "PLAY Neon Breakout" }),
   ).toBeVisible();
@@ -91,7 +95,7 @@ test("store search, library changes, settings, and profile switching work", asyn
   ).toBeVisible();
   await page.getByRole("button", { name: "Remove Neon Breakout" }).click();
   await page.getByRole("button", { name: "Remove game", exact: true }).click();
-  await expect(page.getByText("Library Empty")).toBeVisible();
+  await expect(page.getByText("No favorites yet")).toBeVisible();
   await page.getByRole("button", { name: "Open system menu" }).click();
   await page.getByRole("button", { name: "Settings", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "System menu" })).toHaveCount(
@@ -192,6 +196,7 @@ test("Snake, Raptor, and Breakout respond to controls, pause, saves, and resize"
       page.getByRole("heading", { name: "Paused", exact: true }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Quit to console" }).click();
+    await expect(page).toHaveURL(/\/home$/);
     await page.setViewportSize({ width: 1440, height: 900 });
     const history = (await (
       await request.get("/api/stats/sessions", {
@@ -210,7 +215,11 @@ test("Stellar Flight loads WebGL, accelerates, changes maps, and saves", async (
   request,
   profileId,
 }, info) => {
-  await start(page, "stellar-flight");
+  await page.goto("/play/stellar-flight?mode=classic");
+  await page.getByRole("button", { name: "Start game", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Pause (Esc / P)" }),
+  ).toBeVisible();
   await page.keyboard.press("ArrowUp", { delay: 300 });
   await page.keyboard.down("ShiftLeft");
   await expect(page.locator(".flight-hud")).toContainText("Speed 3", {
@@ -251,7 +260,7 @@ test("failed result submissions survive reload and replay only once", async ({
   request,
   profileId,
 }) => {
-  await page.route("**/api/stats/**/session", (route) => route.abort());
+  await page.route("**/api/progress/**/complete", (route) => route.abort());
   await start(page, "merge-2048");
   await page.keyboard.press("ArrowRight", { delay: 100 });
   await pause(page);
@@ -265,8 +274,9 @@ test("failed result submissions survive reload and replay only once", async ({
         ).length,
     ),
   ).toBe(1);
-  await page.unroute("**/api/stats/**/session");
-  await page.reload();
+  await page.unroute("**/api/progress/**/complete");
+  await page.goto("/settings");
+  await page.getByRole("button", { name: "Retry pending results" }).click();
   await expect
     .poll(async () =>
       page.evaluate(
@@ -499,10 +509,16 @@ test("controller actions cross menus and gameplay without leaking confirm or pau
         navigator.getGamepads()[0]!.buttons as unknown as { pressed: boolean }[]
       )[id].pressed = false;
     }, id);
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
     await page.waitForTimeout(80);
   };
   await page.goto("/settings");
-  const slider = page.getByRole("slider");
+  const slider = page.getByRole("slider", { name: /Sound volume/ });
   await slider.focus();
   await press(15);
   await expect(slider).toHaveValue("55");
@@ -512,7 +528,7 @@ test("controller actions cross menus and gameplay without leaking confirm or pau
   await press(0);
   await expect(mute).toBeChecked();
   await press(5);
-  await expect(page).toHaveURL(/\/store$/);
+  await expect(page).toHaveURL(/\/games$/);
   await page.goto("/play/breakout");
   await expect(
     page.getByRole("button", { name: "Start game", exact: true }),
@@ -563,8 +579,8 @@ test("featured shelf, catalog empty states, and controller guide are usable", as
     page.getByRole("button", { name: "Select Raptor Run", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await page.screenshot({ path: info.outputPath("oled-home.png") });
-  await page.getByRole("link", { name: "Store", exact: true }).click();
-  await page.getByLabel("Search store games").fill("no-such-title");
+  await page.getByRole("link", { name: "Games", exact: true }).click();
+  await page.getByLabel("Search games").fill("no-such-title");
   await expect(
     page.getByRole("heading", { name: "No games found" }),
   ).toBeVisible();
@@ -572,14 +588,14 @@ test("featured shelf, catalog empty states, and controller guide are usable", as
     .getByRole("button", { name: "Clear filters", exact: true })
     .click();
   await expect(
-    page.getByRole("button", { name: "Add to library Neon Snake" }),
+    page.getByRole("button", { name: "Favorite Neon Snake" }),
   ).toBeVisible();
   await page.getByLabel("Game category").selectOption("puzzle");
   await expect(
-    page.getByRole("button", { name: "Add to library Merge 2048" }),
+    page.getByRole("button", { name: "Favorite Merge 2048" }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Add to library Neon Snake" }),
+    page.getByRole("button", { name: "Favorite Neon Snake" }),
   ).toHaveCount(0);
   await page.goto("/play/breakout");
   await page.getByRole("button", { name: "Controller", exact: true }).click();
@@ -598,16 +614,16 @@ test("catalog errors recover and desktop windows keep actions visible", async ({
   await page.route("**/api/games", (route) => route.abort());
   await page.goto("/store");
   await expect(
-    page.getByRole("heading", { name: "Store unavailable" }),
+    page.getByRole("heading", { name: "Games unavailable" }),
   ).toBeVisible();
   await page.unroute("**/api/games");
   await page.getByRole("button", { name: "Try again", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "Add to library Neon Snake" }),
+    page.getByRole("button", { name: "Favorite Neon Snake" }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Add to library Neon Snake" }).click();
-  await page.getByRole("link", { name: "Library", exact: true }).click();
-  await page.getByLabel("Search library games").fill("no-such-title");
+  await page.getByRole("button", { name: "Favorite Neon Snake" }).click();
+  await page.getByRole("link", { name: "Favorites", exact: true }).click();
+  await page.getByLabel("Search favorites").fill("no-such-title");
   await expect(
     page.getByRole("heading", { name: "No matching games" }),
   ).toBeVisible();
@@ -627,4 +643,268 @@ test("catalog errors recover and desktop windows keep actions visible", async ({
   }
   await page.getByRole("link", { name: "Home", exact: true }).click();
   await expect(page.getByRole("button", { name: /^Start / })).toBeVisible();
+});
+
+test("automatic recovery survives losing the page and Continue restores the board", async ({
+  page,
+  profileId,
+}, info) => {
+  await start(page, "merge-2048");
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowDown");
+  await pause(page);
+  const before = await page.evaluate(
+    () =>
+      JSON.parse(
+        Object.entries(localStorage).find(
+          ([key]) =>
+            key.startsWith("nexus-recovery-v2:") && key.endsWith(":merge-2048"),
+        )![1],
+      ).state,
+  );
+  const context = page.context();
+  await page.close();
+  const reopened = await context.newPage();
+  await reopened.addInitScript((id) => {
+    sessionStorage.setItem("arcade_nexus_session_booted", "true");
+    sessionStorage.setItem("nexus-profile", String(id));
+  }, profileId);
+  await reopened.goto("/home");
+  await reopened.getByRole("link", { name: /Merge 2048.*Continue/ }).click();
+  await expect(
+    reopened.getByRole("heading", { name: "Paused", exact: true }),
+  ).toBeVisible();
+  expect(await save(reopened, "merge-2048")).toEqual(before);
+  await reopened.screenshot({ path: info.outputPath("continue-restored.png") });
+});
+test("terminal undo keeps the result uncommitted until the player finishes", async ({
+  page,
+  request,
+  profileId,
+}) => {
+  const headers = { "X-Profile-ID": String(profileId) };
+  await request.post("/api/saves/merge-2048", {
+    headers,
+    data: {
+      slot: 1,
+      data: {
+        format: 2,
+        game: "merge-2048",
+        difficulty: "normal",
+        mode: "classic",
+        rules_version: 2,
+        state: {
+          version: 1,
+          mode: "classic",
+          score: 100,
+          board: [
+            2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2, 4, 8, 16, 32, 64,
+          ],
+          undo: { board: [2, 2, 0, 0, ...Array(12).fill(0)], score: 0 },
+        },
+      },
+    },
+  });
+  await page.goto("/play/merge-2048");
+  await page.getByRole("button", { name: "Load game", exact: true }).click();
+  await page.getByRole("button", { name: /^Slot 1 ·/ }).click();
+  await page.getByRole("button", { name: "Resume", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Undo last move", exact: true })
+    .waitFor();
+  expect(
+    (await (await request.get("/api/progress/history", { headers })).json())
+      .total,
+  ).toBe(0);
+  await page
+    .getByRole("button", { name: "Undo last move", exact: true })
+    .click();
+  await pause(page);
+  const restored = await save(page, "merge-2048");
+  expect(restored.score).toBe(0);
+  expect(restored.board).toEqual([2, 2, 0, 0, ...Array(12).fill(0)]);
+  await page.getByRole("button", { name: "Quit to console" }).click();
+  await expect(page).toHaveURL(/\/home$/);
+  expect(
+    (await (await request.get("/api/progress/history", { headers })).json())
+      .total,
+  ).toBe(1);
+});
+test("backup download and restore preserve players and browser preferences", async ({
+  page,
+  request,
+  profileId,
+}, info) => {
+  await start(page, "merge-2048");
+  await pause(page);
+  await save(page, "merge-2048");
+  await page.getByRole("button", { name: "Quit to console" }).click();
+  await expect(page).toHaveURL(/\/home$/);
+  await page.goto("/settings");
+  await page.getByLabel("Mute sounds").check();
+  const downloadPromise = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export backup", exact: true })
+    .click();
+  const download = await downloadPromise;
+  const file = info.outputPath("backup.json");
+  await download.saveAs(file);
+  await page.getByLabel("Mute sounds").uncheck();
+  await page.locator('input[type="file"]').setInputFiles(file);
+  await page
+    .getByRole("button", { name: "Restore backup", exact: true })
+    .click();
+  await expect(page.getByLabel("Mute sounds")).toBeChecked();
+  const players = (await (await request.get("/api/profiles")).json())
+    .profiles as { id: number; username: string }[];
+  const original = players.find((p) => p.id === profileId)!;
+  const copy = players.find(
+    (p) =>
+      p.id !== profileId &&
+      p.username.startsWith(original.username.slice(0, 32)) &&
+      p.username.includes("restored"),
+  )!;
+  expect(copy).toBeDefined();
+  const headers = { "X-Profile-ID": String(copy.id) };
+  expect(
+    (await (await request.get("/api/saves/merge-2048", { headers })).json())
+      .total,
+  ).toBe(1);
+  expect(
+    (await (await request.get("/api/progress/history", { headers })).json())
+      .total,
+  ).toBe(1);
+});
+test("controller text entry and disconnect pause work", async ({ page }) => {
+  await page.addInitScript(() => {
+    const pad = {
+      connected: true,
+      index: 0,
+      id: "Text test",
+      mapping: "standard",
+      axes: [0, 0],
+      buttons: Array.from({ length: 17 }, () => ({ pressed: false, value: 0 })),
+    };
+    Object.defineProperty(navigator, "getGamepads", { value: () => [pad] });
+  });
+  const press = async (id: number) => {
+    await page.evaluate((id) => {
+      (
+        navigator.getGamepads()[0]!.buttons[id] as unknown as {
+          pressed: boolean;
+        }
+      ).pressed = true;
+    }, id);
+    await page.waitForTimeout(100);
+    await page.evaluate((id) => {
+      (
+        navigator.getGamepads()[0]!.buttons[id] as unknown as {
+          pressed: boolean;
+        }
+      ).pressed = false;
+    }, id);
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+    );
+    await page.waitForTimeout(80);
+  };
+  await page.goto("/games");
+  await page.getByLabel("Search games").focus();
+  await press(0);
+  const keyboard = page.getByRole("dialog", { name: "Controller keyboard" });
+  await expect(keyboard).toBeVisible();
+  await keyboard.getByRole("button", { name: "S", exact: true }).focus();
+  await press(0);
+  await keyboard.getByRole("button", { name: "Done", exact: true }).focus();
+  await press(0);
+  await expect(page.getByLabel("Search games")).toHaveValue("S");
+  await start(page, "breakout");
+  await page.evaluate(() => {
+    (
+      navigator.getGamepads()[0] as unknown as { connected: boolean }
+    ).connected = false;
+  });
+  await expect(
+    page.getByRole("heading", { name: "Paused", exact: true }),
+  ).toBeVisible();
+});
+
+test("finished Breakout sectors and Flight courses award medals in one receipt", async ({
+  page,
+  request,
+  profileId,
+}, info) => {
+  const headers = { "X-Profile-ID": String(profileId) };
+  for (const [slug, mode, state] of [
+    [
+      "breakout",
+      "classic",
+      {
+        version: 1,
+        stage: 3,
+        paddle: 480,
+        ball: { x: 480, y: 500, vx: 150, vy: -350 },
+        bricks: Array(60).fill(false),
+        score: 1500,
+        lives: 3,
+        launched: false,
+        difficulty: "normal",
+        elapsed: 180000,
+      },
+    ],
+    [
+      "stellar-flight",
+      "course",
+      {
+        version: 1,
+        mode: "course",
+        elapsed: 100,
+        maxAltitude: 350,
+        position: [0, 300, -1],
+        rotation: [0, 0, 0, 1],
+        speed: 100,
+        bestSpeed: 100,
+        map: 0,
+        gatesPassed: 11,
+        gatesMissed: 0,
+        gate: { position: [0, 300, 0], rotation: [0, 0, 0, 1] },
+      },
+    ],
+  ] as const) {
+    expect(
+      (
+        await request.post(`/api/saves/${slug}`, {
+          headers,
+          data: {
+            slot: 1,
+            data: {
+              format: 2,
+              game: slug,
+              mode,
+              rules_version: 2,
+              difficulty: "normal",
+              state,
+            },
+          },
+        })
+      ).ok(),
+    ).toBeTruthy();
+    await page.goto(`/play/${slug}`);
+    await page.getByRole("button", { name: "Load game", exact: true }).click();
+    await page.getByRole("button", { name: /^Slot 1 ·/ }).click();
+    await page.getByRole("button", { name: "Resume", exact: true }).click();
+    await expect(page.getByText("GOLD MEDAL", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("New achievements")).toBeVisible();
+    await page.screenshot({ path: info.outputPath(`${slug}-complete.png`) });
+    const history = (
+      await (await request.get("/api/progress/history", { headers })).json()
+    ).sessions;
+    expect(
+      history.find((s: { game_slug: string }) => s.game_slug === slug).metrics
+        .completed,
+    ).toBe(true);
+  }
 });

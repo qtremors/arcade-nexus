@@ -1,300 +1,44 @@
-# Arcade Nexus - Developer Documentation
+# Development
 
-> Comprehensive documentation for developers working on Arcade Nexus.
+## Runtime and architecture
 
-**Version:** 1.4.1 | **Last Updated:** 2026-02-11
+Use Python 3.12 (`backend/.python-version`), Node 24 (`frontend/.nvmrc`), uv and npm. Dependencies are locked in `backend/uv.lock` and `frontend/package-lock.json`. Run `python arcade.py --setup` once, then `python arcade.py --dev`. No CI/CD services or workflows are configured.
 
----
+React owns the console and menus. `GameCanvas` renders session presentation; `useGameSession` manages asynchronous lifecycle effects, clocks, and persistence; `services/lifecycle.ts` validates phase transitions. The SDK engine owns a fixed 60 Hz simulation, bounded catch-up, frame sampling, rendering, and input consumption. Game state stays outside React.
 
-## Table of Contents
+`catalog.json` owns bundled modes, rules versions, score units, difficulty support, and tuning defaults. The Python seed consumes it; frontend descriptors validate it and attach lazy loaders and controls metadata. Game state/configuration validation remains game-specific. There is no legacy synchronous registry. Catalog marketing copy and achievement definitions live in the backend seed; controls and tips live in `games/experience.ts`.
 
-- [Architecture Overview](#architecture-overview)
-- [Project Structure](#project-structure)
-- [Database Schema](#database-schema)
-- [API Routes](#api-routes)
-- [Environment Variables](#environment-variables)
-- [Game SDK](#game-sdk)
-- [Testing](#testing)
-- [Troubleshooting](#troubleshooting)
+FastAPI serves the API and optionally the built frontend at one loopback origin. SQLite uses foreign keys, WAL and migrations. `0004_progress` adds mode records, recovery, and stored completion receipts. Startup creates a backup before upgrading an existing database. Do not edit previously applied migrations.
 
----
+## Contracts
 
-## Architecture Overview
+- All player requests carry `X-Profile-ID`; activation is per browser tab. Profiles are local selectors, not authentication.
+- `POST /api/stats/{slug}/start` reserves a session UUID. A temporary server outage permits local play; completion can create a missing session.
+- `POST /api/progress/{slug}/complete` commits immutable result, playtime, mode record and qualified awards in one transaction. The stored receipt is replayed exactly for an identical UUID/payload. Conflicting payloads return 409. Existing legacy completed sessions can be upgraded without double-counting duration.
+- The browser completion queue persists before sending, retries temporary failures with bounded backoff, and retains permanent 4xx failures for explicit retry/export in Settings. Existing v1 queue entries remain readable.
+- `GET /api/progress/records?household=true` includes other active local players. Compare like modes/difficulties/rules; an aggregate legacy high score remains available through stats for compatibility.
+- `GET /api/progress/history?skip=0&limit=25&game_id=...` returns a real total and a page of completed sessions. Table sorting is explicitly within the loaded page.
+- `GET /api/progress/recovery`, `PUT/DELETE /api/progress/recovery/{slug}` manage one recovery save per player/game, independently of manual slots.
+- Save envelope format 2 carries game, mode, rules version, difficulty, config, RNG-containing game state, score, timestamp and originating session UUID. Format 1 defaults to classic/rules 1. Each game validates its state and defaults newly introduced fields for old full saves; incomplete/future saves fail visibly.
+- Continue/load restores a board as a **new session**. It does not reopen an immutable completed UUID. Recovery captures state, not a promise to recover every millisecond of pre-crash playtime.
+- `GET /api/data/export`, `POST /api/data/import` provide validated database JSON. The browser wrapper adds origin-specific preferences, recovery, and queued results. Import is transactional for database data; profile/session IDs are remapped, names are disambiguated, and originals stay intact. Browser storage failures after import are reported separately.
 
-Arcade Nexus follows a **client-server** architecture with a React frontend and FastAPI backend:
+Use `/docs` or `/openapi.json` on the running server for the authoritative endpoint/schema reference. Compatibility stats/award endpoints remain available; new gameplay uses the single completion endpoint.
 
-```
-┌──────────────────────────────────────────────────────────────┐
-│                         FRONTEND                              │
-│   React 19 + TypeScript + Vite + Tailwind + Zustand          │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐   │
-│  │   Your Game  │───▶│  Game Engine │───▶│   Canvas 2D  │   │
-│  │  (GameSDK)   │    │   (Loop)     │    │  or Three.js │   │
-│  └──────────────┘    └──────────────┘    └──────────────┘   │
-└──────────────────────────────────────────────────────────────┘
-                              │ HTTP API
-                              ▼
-┌──────────────────────────────────────────────────────────────┐
-│                         BACKEND                               │
-│              FastAPI + SQLAlchemy + Pydantic                  │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐   │
-│  │   Routers    │───▶│   Schemas    │───▶│   Models     │   │
-│  │  (API)       │    │  (Validate)  │    │  (ORM)       │   │
-│  └──────────────┘    └──────────────┘    └──────────────┘   │
-│                              │                                │
-│                              ▼                                │
-│                     ┌──────────────┐                         │
-│                     │    SQLite    │                         │
-│                     └──────────────┘                         │
-└──────────────────────────────────────────────────────────────┘
-```
+## Configuration
 
-### Key Design Decisions
+Backend settings are environment variables or `backend/.env` (see `app/config.py`). `DATA_DIR` selects persistent data; `DATABASE_URL` accepts SQLite only. `HOST` defaults to `127.0.0.1`, `PORT` to 8000. `FRONTEND_DIR` enables static production serving. `ALLOWED_HOSTS` and `CORS_ORIGINS` accept explicit JSON lists. `ALLOW_GAME_CREATION` defaults false. Normal request bodies are limited to 1 MB; data import accepts up to 20 MB. There is no `SECRET_KEY` requirement.
 
-| Decision | Rationale |
-|----------|-----------|
-| SQLite (async) | Simple, file-based, no server needed for local gaming |
-| Zustand | Minimal state management, works great with React 19 |
-| Game SDK pattern | Decouples games from platform, easy to add new games |
-| Local profiles | No authentication needed, Netflix-style UX |
+Vite proxies `/api` and `/health` to the local backend; `ARCADE_BACKEND_URL` overrides that development target. The normal launcher uses a fixed origin and serves production assets without Vite.
 
----
+## Local checks
 
-## Project Structure
+`python scripts/check.py` runs Ruff, pytest, ESLint, Vitest, TypeScript and Vite production build. Add `--browser` for Playwright. Browser tests launch isolated servers and a temporary database; never point them at a real household database. Install Chromium with `npx playwright install chromium` from frontend. `CHROMIUM_PATH` optionally chooses a local binary; `/usr/bin/chromium` is supported when present.
 
-```
-arcade-nexus/
-├── frontend/                 # React + TypeScript + Vite
-│   ├── src/
-│   │   ├── api/              # Axios API client
-│   │   ├── components/       # UI components
-│   │   │   ├── GameCanvas.tsx    # Core game rendering
-│   │   │   ├── Layout.tsx        # App shell
-│   │   │   └── arcus/           # Common UI components
-│   │   ├── contexts/         # React contexts
-│   │   ├── games/            # Game implementations
-│   │   │   ├── snake/            # 2D Canvas game
-│   │   │   ├── raptor-run/       # 2D Canvas game
-│   │   │   └── stellar-flight/    # 3D Three.js game
-│   │   ├── pages/            # Route pages
-│   │   ├── sdk/              # Game SDK
-│   │   │   ├── GameSDK.ts        # Interfaces & registry
-│   │   │   ├── GameEngine.ts     # Game loop
-│   │   │   └── InputManager.ts   # Keyboard handling
-│   │   ├── stores/           # Zustand stores
-│   │   └── App.tsx           # Root component
-│   ├── public/               # Static assets
-│   │   ├── games/            # Game thumbnails (SVG)
-│   │   └── models/           # 3D models (GLTF)
-│   └── package.json
-│
-├── backend/                  # FastAPI + SQLAlchemy
-│   ├── app/
-│   │   ├── models/           # SQLAlchemy ORM models
-│   │   │   ├── user.py           # Profile model
-│   │   │   ├── game.py           # Game metadata
-│   │   │   ├── library.py        # User's game collection
-│   │   │   ├── stats.py          # Play statistics
-│   │   │   ├── save.py           # Save states
-│   │   │   └── achievement.py    # Achievements
-│   │   ├── routers/          # API endpoints
-│   │   ├── schemas/          # Pydantic schemas
-│   │   ├── utils/            # Helpers
-│   │   ├── main.py           # FastAPI app entry
-│   │   ├── config.py         # Settings
-│   │   ├── database.py       # DB connection
-│   │   └── seed.py           # Initial data
-│   ├── tests/                # pytest tests
-│   └── pyproject.toml
-│
-├── README.md
-├── DEVELOPMENT.md            # This file
-├── CHANGELOG.md
-├── LICENSE.md
-└── TASKS.md
-```
+High-value regression checks cover idempotent receipts, legacy completion upgrade, profile isolation, transactional backup restore, pagination, saved RNG trajectories, terminal undo, actual board moves, catch-up input consumption, and browser save/retry/controller journeys. Run relevant checks during editing and the full local script before sharing a change.
 
----
+Settings exposes bounded browser-stored samples of recent game initialization and frame-interval p50/p95; export JSON when comparing devices. Headless software-rendered browser results are functional evidence, not native GPU, input-latency, memory-leak, or game-balance certification. Use [PLAYTEST.md](docs/PLAYTEST.md) for those checks.
 
-## Database Schema
+## Scope
 
-### Models Overview (6 total)
-
-| Model | Purpose | Key Fields |
-|-------|---------|------------|
-| **User** | Local profiles | `username`, `avatar`, `is_default` |
-| **Game** | Game metadata | `slug`, `title`, `category`, `config` |
-| **UserLibrary** | User's game collection | `user_id`, `game_id`, `last_played` |
-| **PlayStats** | Per-user per-game stats | `total_playtime_seconds`, `high_score`, `sessions_count` |
-| **GameSave** | Save slots (1-5) | `slot`, `data` (JSON), `thumbnail` |
-| **Achievement** | Achievement definitions | `slug`, `title`, `unlock_condition` |
-| **AchievementUnlocked** | User's unlocked achievements | `user_id`, `achievement_id`, `unlocked_at` |
-
-### Relationships
-
-```
-User ─────1:N───── UserLibrary ─────N:1───── Game
-  │                                           │
-  ├───1:N───── PlayStats ─────N:1─────────────┤
-  │                                           │
-  ├───1:N───── GameSave ─────N:1──────────────┤
-  │                                           │
-  └───1:N───── AchievementUnlocked            │
-                      │                       │
-                    N:1                       │
-                      │                       │
-               Achievement ─────N:1───────────┘
-```
-
----
-
-## API Routes
-
-### Profiles (`/api/profiles`)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/` | List all profiles |
-| GET | `/active` | Get active profile |
-| POST | `/` | Create profile |
-| GET | `/{id}` | Get profile by ID |
-| PUT | `/{id}` | Update profile |
-| POST | `/{id}/activate` | Switch to profile |
-| DELETE | `/{id}` | Delete profile (soft) |
-
-### Games (`/api/games`)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/` | List games (supports `?category=`, `?search=`) |
-| GET | `/categories` | List all categories |
-| GET | `/{slug}` | Get game by slug |
-| POST | `/` | Create game (admin) |
-
-### Library (`/api/library`)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/` | Get user's library |
-| POST | `/{game_id}` | Add game to library |
-| DELETE | `/{game_id}` | Remove from library |
-
-### Stats (`/api/stats`)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/` | Get overall stats |
-| GET | `/{game_slug}` | Get game-specific stats |
-| POST | `/{game_slug}/start` | Start play session |
-| POST | `/{game_slug}/session` | Record playtime |
-| POST | `/{game_slug}/score` | Submit high score |
-
-### Saves (`/api/saves`)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/{game_slug}` | List saves for game |
-| POST | `/{game_slug}` | Create/update save |
-| DELETE | `/{game_slug}/{slot}` | Delete save slot |
-
-### Achievements (`/api/achievements`)
-
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/` | List all achievements with unlock status |
-| GET | `/{game_slug}` | List achievements for game |
-| POST | `/unlock` | Unlock achievement (body: `{game_slug, achievement_slug}`) |
-
----
-
-## Environment Variables
-
-### Backend (`.env`)
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `SECRET_KEY` | Session signing key | Auto-generated (dev only) |
-| `DATABASE_URL` | SQLite connection | `sqlite+aiosqlite:///./arcade_nexus.db` |
-| `DEBUG` | Enable debug mode | `True` |
-| `CORS_ORIGINS` | Allowed origins | `["http://localhost:5173"]` |
-
-### Frontend (`.env`)
-
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `VITE_API_URL` | Backend URL | `http://localhost:8000` |
-
----
-
-## Game SDK
-
-See [frontend/src/sdk/README.md](frontend/src/sdk/README.md) for comprehensive SDK documentation.
-
-### Quick Reference
-
-```typescript
-// Implement GameInstance interface
-export class MyGame implements Game2DInstance {
-    readonly type = '2d';
-    
-    init(canvas: HTMLCanvasElement, config: GameConfig): void { }
-    update(deltaTime: number, input: InputState): boolean { return true; }
-    render(ctx: CanvasRenderingContext2D): void { }
-    getScore(): number { return this.score; }
-}
-
-// Register with SDK
-registerGame('my-game', () => new MyGame());
-```
-
----
-
-## Testing
-
-### Backend
-
-```bash
-cd backend
-uv run pytest                    # All tests
-uv run pytest tests/test_api.py  # Specific file
-uv run pytest -v                 # Verbose
-```
-
-### Frontend
-
-```bash
-cd frontend
-npm test              # All tests (vitest)
-npm test -- --watch   # Watch mode
-```
-
----
-
-## Troubleshooting
-
-### Common Issues
-
-| Issue | Solution |
-|-------|----------|
-| **Backend session errors** | Set `SECRET_KEY` in `.env` for persistence |
-| **3D games not loading** | Enable WebGL in browser settings |
-| **CORS errors** | Add your origin to `CORS_ORIGINS` in config |
-| **Database locked** | Close other connections, restart backend |
-
-### Debug Mode
-
-```bash
-# Backend with auto-reload
-cd backend
-uv run uvicorn app.main:app --reload --log-level debug
-
-# Frontend with dev tools
-cd frontend
-npm run dev
-```
-
----
-
-<p align="center">
-  <a href="README.md">← Back to README</a>
-</p>
+Keep five games coherent before adding another. Native installers, network multiplayer, account authentication and third-party game plugins are outside this iteration. Full nonvisual access to real-time canvas games needs dedicated design; preserve semantic menus, focus trapping, reduced motion, and keyboard navigation when changing the shell.

@@ -1690,3 +1690,198 @@ kbd {
 .game-stage:not([data-state="playing"]) .flight-hud {
   visibility: hidden;
 }
+
+/* Return-to-play, records and data tools share the console's existing surfaces. */
+.continue-shelf {
+  margin: 0 0 24px;
+}
+.continue-shelf h2 {
+  font-size: 20px;
+  margin-bottom: 12px;
+}
+.continue-shelf > div {
+  display: flex;
+  gap: 14px;
+  overflow-x: auto;
+  padding: 4px;
+}
+.continue-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 230px;
+  text-decoration: none;
+  color: inherit;
+}
+.continue-card b {
+  color: var(--accent, #7de8c4);
+}
+.continue-card small,
+.continue-card span {
+  color: #b4b9c3;
+}
+.daily-challenge {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin-bottom: 24px;
+  padding: 18px 24px;
+}
+.daily-challenge p {
+  margin: 6px 0;
+  color: #afb5be;
+}
+.catalog-entry {
+  position: relative;
+  min-width: 0;
+}
+.favorite-toggle {
+  width: 100%;
+  padding: 10px;
+  background: #101312;
+  border: 1px solid #303634;
+  border-radius: 0 0 12px 12px;
+  color: #cbd5d1;
+}
+.favorite-toggle[aria-pressed="true"] {
+  color: #7de8c4;
+}
+.table-scroll {
+  overflow: auto;
+}
+.table-scroll table {
+  width: 100%;
+  border-collapse: collapse;
+  white-space: nowrap;
+}
+.table-scroll th,
+.table-scroll td {
+  padding: 14px 18px;
+  text-align: left;
+  border-bottom: 1px solid #29302e;
+}
+.table-scroll td small {
+  display: block;
+  color: #9da8a3;
+  font-size: 12px;
+  margin-top: 4px;
+}
+.table-scroll th button {
+  background: none;
+  color: inherit;
+  border: 0;
+  padding: 4px;
+}
+.history-panel {
+  width: min(1000px, 94vw);
+  max-height: 85vh;
+  overflow: auto;
+}
+.section-heading,
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.pagination {
+  padding-top: 18px;
+}
+.binding-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.import-backup {
+  display: block;
+  margin: 16px 0;
+}
+.import-backup input {
+  display: block;
+  max-width: 100%;
+  margin-top: 8px;
+}
+.controller-keyboard {
+  width: min(620px, 92vw);
+  border: 1px solid #7de8c4;
+  border-radius: 20px;
+  background: #111615;
+  color: #eef8f3;
+  padding: 24px;
+}
+.controller-keyboard::backdrop {
+  background: #000b;
+}
+.controller-keyboard output {
+  display: block;
+  min-height: 48px;
+  padding: 12px;
+  background: #050807;
+  border: 1px solid #35433c;
+  margin: 16px 0;
+  overflow-wrap: anywhere;
+}
+.keyboard-keys {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 8px;
+}
+.keyboard-keys button,
+.keyboard-actions button {
+  min-height: 44px;
+  background: #23322b;
+  border: 1px solid #496155;
+  color: #fff;
+  border-radius: 8px;
+}
+.keyboard-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.keyboard-actions button {
+  flex: 1;
+}
+.mode-choices {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+  justify-content: center;
+}
+.mode-choices legend {
+  font-size: 13px;
+  color: #aab6b1;
+}
+.mode-choices .game-button {
+  font-size: 13px;
+  padding: 8px 12px;
+}
+.recovery-summary {
+  background: #14211a;
+  border: 1px solid #345746;
+  padding: 12px;
+  border-radius: 12px;
+  margin: 12px 0;
+}
+.recovery-summary p {
+  font-size: 12px;
+  color: #c0d8ca;
+}
+.game-menu-panel {
+  max-height: 90vh;
+  overflow: auto;
+}
+@media (max-width: 700px) {
+  .daily-challenge {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .keyboard-keys {
+    gap: 4px;
+  }
+  .keyboard-keys button {
+    min-height: 38px;
+  }
+}

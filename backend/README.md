@@ -13,7 +13,7 @@ uv run python run.py
 uv run python run.py --reload
 ```
 
-The API listens on http://127.0.0.1:8000. Documentation is at /docs; /health checks access to the versioned database. The frontend still uses its existing Vite development workflow; browser launching, static frontend hosting, and executable packaging are separate work.
+The API listens on http://127.0.0.1:8000. Documentation is at /docs; /health checks access to the versioned database. The root launcher (`python arcade.py`) serves the built frontend and API together and opens the browser. Use `python arcade.py --dev` for both reload servers. Native executable packaging is separate work.
 
 Copy .env.example to .env if you need custom settings. The .env file and relative DATABASE_URL paths are resolved against this backend directory, so launching from another working directory does not create an accidental second database. HOST and PORT configure the launcher. Reload is off unless explicitly requested.
 
@@ -41,7 +41,7 @@ New installations use the OS application-data directory:
 
 An existing backend/arcade_nexus.db takes precedence for compatibility. Set DATABASE_URL explicitly to choose another location. DATA_DIR controls the new-installation location.
 
-Startup runs Alembic migrations before synchronizing the bundled game catalog. Revision 0001 describes the previous v1.4.1 schema. Revision 0002 adds session identities, nullable completion times, database constraints, and indexes. Revision 0003 adds bounded session measurements for jump, altitude and safe-flight achievements. A complete, unversioned v1.4.1 database is adopted automatically; partial or older schemas with missing columns fail with an explicit error rather than being silently stamped.
+Startup runs Alembic migrations before synchronizing the bundled game catalog. Revision 0001 describes the previous v1.4.1 schema. Revision 0002 adds session identities, nullable completion times, database constraints, and indexes. Revision 0003 adds bounded session measurements for jump, altitude and safe-flight achievements. Revision 0004 adds mode-specific records, recovery saves and immutable atomic completion receipts. A complete, unversioned v1.4.1 database is adopted automatically; partial or older schemas with missing columns fail with an explicit error rather than being silently stamped.
 
 Before upgrading an existing file, the backend creates a SQLite backup next to it, such as arcade_nexus.pre-legacy.db or arcade_nexus.pre-0001.db. Subsequent attempts create additional backups instead of overwriting earlier ones. The SQLite backup API includes committed WAL data. Schema changes run in an explicit transaction; a failed migration rolls back instead of leaving half-upgraded tables.
 
@@ -87,13 +87,13 @@ await fetch(api + '/stats/snake/start', {
   body: JSON.stringify({ session_id: sessionId }),
 });
 
-await fetch(api + '/stats/snake/session', {
+await fetch(api + '/progress/snake/complete', {
   method: 'POST', headers,
   body: JSON.stringify({
     session_id: sessionId,
     playtime_seconds: 30,
     score: 50,
-    difficulty: 'normal',
+    difficulty: 'normal', mode: 'classic', rules_version: 2, metrics: {},
   }),
 });
 ```
@@ -130,4 +130,4 @@ The launcher binds to loopback by default. Trusted hosts and browser origins are
 
 These controls do not authenticate local programs. Keep HOST at 127.0.0.1 for normal use. HTTP API errors avoid exposing SQL statements or echoing full save payloads. Runtime errors are logged locally.
 
-See REVIEW.md for the file-by-file findings and remaining integration work.
+See ../DEVELOPMENT.md for current atomic completion, export/import and recovery contracts. REVIEW.md is a historical assessment.

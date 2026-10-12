@@ -42,7 +42,7 @@ export function Library() {
     if (
       !(await ask({
         title: "Remove this game?",
-        message: `${entry.game.title} will leave your library. Your saves, scores, and achievements are kept.`,
+        message: `${entry.game.title} will leave your favorites. Your saves, scores, and achievements are kept.`,
         confirmText: "Remove game",
       }))
     )
@@ -77,11 +77,11 @@ export function Library() {
       {confirmation}
       <PageHeading
         kicker="ALL YOUR FAVOURITES"
-        title="My Library"
+        title="Favorites"
         aside={
           <button
             className="secondary-action"
-            onClick={() => navigate("/store")}
+            onClick={() => navigate("/games")}
           >
             Discover games ↗
           </button>
@@ -93,14 +93,14 @@ export function Library() {
         <label className="search-field">
           <Search size={18} />
           <input
-            aria-label="Search library games"
+            aria-label="Search favorites"
             placeholder="Search your collection…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
           {query && (
             <button
-              aria-label="Clear library search"
+              aria-label="Clear favorites search"
               onClick={() => setQuery("")}
             >
               <X size={16} />
@@ -110,7 +110,7 @@ export function Library() {
         <label className="filter-field">
           Sort by
           <select
-            aria-label="Sort library"
+            aria-label="Sort favorites"
             value={sort}
             onChange={(e) => setSort(e.target.value)}
           >
@@ -127,7 +127,7 @@ export function Library() {
         <LoadingCards />
       ) : error ? (
         <EmptyState
-          title="Library unavailable"
+          title="Favorites unavailable"
           action={
             <button
               className="primary-action"
@@ -144,13 +144,13 @@ export function Library() {
         </EmptyState>
       ) : !entries.length ? (
         <EmptyState
-          title="Library Empty"
+          title="No favorites yet"
           action={
             <button
               className="primary-action"
-              onClick={() => navigate("/store")}
+              onClick={() => navigate("/games")}
             >
-              Go to Store
+              Browse games
             </button>
           }
         >
@@ -182,7 +182,7 @@ export function Library() {
                 onClick={() => void remove(entry)}
                 disabled={removingId !== null}
                 aria-label={`Remove ${entry.game.title}`}
-                title="Remove from library"
+                title="Remove from favorites"
               >
                 <Trash2 size={16} />
               </button>

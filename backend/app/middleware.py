@@ -16,6 +16,11 @@ class RequestGuard:
             await self.app(scope, receive, send)
             return
         headers = dict(scope["headers"])
+        maximum = (
+            20 * 1024 * 1024
+            if scope["path"] == "/api/data/import"
+            else self.settings.MAX_REQUEST_BYTES
+        )
         origin = headers.get(b"origin")
         host = headers.get(b"host", b"").decode("latin-1")
         same_origin = f"{scope['scheme']}://{host}"
@@ -39,7 +44,7 @@ class RequestGuard:
                     scope, receive, send
                 )
                 return
-            if length > self.settings.MAX_REQUEST_BYTES:
+            if length > maximum:
                 await JSONResponse({"detail": "Request body is too large"}, status_code=413)(
                     scope, receive, send
                 )
@@ -51,7 +56,7 @@ class RequestGuard:
             if message["type"] == "http.disconnect":
                 return
             chunk = message.get("body", b"")
-            if len(body) + len(chunk) > self.settings.MAX_REQUEST_BYTES:
+            if len(body) + len(chunk) > maximum:
                 await JSONResponse({"detail": "Request body is too large"}, status_code=413)(
                     scope, receive, send
                 )

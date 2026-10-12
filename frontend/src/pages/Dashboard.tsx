@@ -1,3 +1,5 @@
+import { recoveries } from "../services/recovery";
+import type { SaveEnvelope } from "../services/saves";
 import { useEffect, useState, useMemo } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -8,6 +10,8 @@ import { useProfileStore } from "../stores/profileStore";
 import { GameCarousel } from "../components/arcus/GameCarousel";
 import { EmptyState, LoadingCards, PageHeading } from "../components/ConsoleUI";
 export function Dashboard() {
+  const [saved, setSaved] = useState<SaveEnvelope[]>([]);
+  const [statsError, setStatsError] = useState("");
   const [games, setGames] = useState<Game[]>([]);
   const { overallStats, activeProfile, fetchOverallStats } = useProfileStore();
   const [activeIndex, setActiveIndex] = useState(0);
@@ -30,11 +34,21 @@ export function Dashboard() {
       .finally(() => {
         if (active) setLoading(false);
       });
-    void fetchOverallStats(true);
+    void fetchOverallStats(true)
+      .then(() => {
+        if (active) setStatsError("");
+      })
+      .catch((err) => {
+        if (active) setStatsError(err.message);
+      });
+    if (activeProfile)
+      void recoveries(activeProfile.id).then((data) => {
+        if (active) setSaved(data);
+      });
     return () => {
       active = false;
     };
-  }, [fetchOverallStats, retry]);
+  }, [fetchOverallStats, retry, activeProfile]);
   const displayGames = useMemo(() => {
     const stats = overallStats?.games ?? [];
     return [...games].sort((a, b) => {
@@ -72,13 +86,58 @@ export function Dashboard() {
         kicker="YOUR PERSONAL ARCADE"
         title={`Good to see you${activeProfile ? `, ${activeProfile.username}` : ""}.`}
         aside={
-          <Link className="text-link" to="/library">
-            Your library <ArrowUpRight size={15} />
+          <Link className="text-link" to="/favorites">
+            Your favorites <ArrowUpRight size={15} />
           </Link>
         }
       >
         A quick escape. A new best. A game at your own pace.
       </PageHeading>
+      {statsError && (
+        <p role="alert">
+          Records are temporarily unavailable.{" "}
+          <button onClick={() => setRetry((n) => n + 1)}>Retry records</button>
+        </p>
+      )}
+      {!!saved.length && (
+        <section className="continue-shelf" aria-label="Continue playing">
+          <h2>Continue playing</h2>
+          <div>
+            {saved.map((save) => (
+              <Link
+                className="detail-panel continue-card"
+                key={save.game}
+                to={`/play/${save.game}?continue=1`}
+              >
+                <strong>
+                  {games.find((g) => g.slug === save.game)?.title ?? save.game}
+                </strong>
+                <span>
+                  {save.score.toLocaleString()} · {save.mode} ·{" "}
+                  {save.difficulty}
+                </span>
+                <small>
+                  {save.saved_at
+                    ? new Date(save.saved_at).toLocaleString()
+                    : "Saved run"}
+                </small>
+                <b>Continue →</b>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+      <div className="daily-challenge detail-panel">
+        <div>
+          <strong>Today's trail</strong>
+          <p>
+            One shared Raptor layout. Switch players and beat a household best.
+          </p>
+        </div>
+        <Link className="secondary-action" to="/play/raptor-run?mode=daily">
+          Play daily challenge
+        </Link>
+      </div>
       {loading ? (
         <LoadingCards />
       ) : error ? (

@@ -92,6 +92,8 @@ async def get_session_history(
             duration_seconds=session.duration_seconds,
             score=session.score,
             difficulty=session.difficulty,
+            mode=session.mode,
+            rules_version=session.rules_version,
         )
         for session in sessions
     ]
