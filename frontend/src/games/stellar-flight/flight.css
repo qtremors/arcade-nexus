@@ -1,0 +1,558 @@
+.game-stage[data-game="stellar-flight"] {
+  padding: 0;
+  background: #030711;
+}
+.game-stage[data-game="stellar-flight"] .game-canvas {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  aspect-ratio: auto;
+  object-fit: fill;
+  border: 0;
+  border-radius: 0;
+}
+.game-stage[data-game="stellar-flight"] .game-toolbar {
+  background: linear-gradient(#030711a0, transparent);
+  padding: 14px 26px;
+}
+.game-stage[data-game="stellar-flight"] .game-overlay {
+  background: linear-gradient(120deg, #040916e8, #070d20aa);
+  backdrop-filter: blur(5px);
+}
+.game-stage[data-game="stellar-flight"] .game-menu-panel[data-state="ready"] {
+  width: min(980px, 100%);
+  max-width: 980px;
+  padding: 24px 32px;
+  background: #0a1421ed;
+  border-color: #46677e;
+  box-shadow: 0 28px 100px #0009;
+}
+.game-stage[data-game="stellar-flight"]
+  .game-menu-panel[data-state="ready"]
+  h1 {
+  font:
+    700 clamp(38px, 6vw, 64px)/1 Rajdhani,
+    sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin: 16px 0;
+}
+.game-stage[data-game="stellar-flight"] .control-guide dl {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px 18px;
+  padding: 12px 16px;
+}
+.game-stage[data-game="stellar-flight"] .control-guide dl > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 0;
+  border: 0;
+}
+.game-stage[data-game="stellar-flight"] .control-guide dt {
+  font-size: 10px;
+  color: #a6bbce;
+}
+.game-stage[data-game="stellar-flight"] .control-guide dd {
+  font-size: 11px;
+  margin: 5px 0 0;
+}
+.game-stage[data-game="stellar-flight"] .mode-choices {
+  display: none;
+}
+.game-stage[data-game="stellar-flight"] .launch-record {
+  margin: 14px auto;
+}
+.flight-briefing {
+  margin: 20px 0;
+  text-align: left;
+}
+.flight-fleet {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+.flight-fleet-card {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0 12px;
+  border-bottom: 1px solid #50698155;
+}
+.flight-fleet-card svg {
+  height: 65px;
+  width: 100%;
+  fill: #203042;
+  stroke: var(--ship-color);
+  stroke-width: 1.2;
+  margin-bottom: 8px;
+}
+.flight-fleet-card .flight-blueprint-cockpit {
+  fill: var(--ship-color);
+  stroke: none;
+  opacity: 0.65;
+}
+.flight-fleet-card > span {
+  color: var(--ship-color);
+  font:
+    9px "JetBrains Mono",
+    monospace;
+  letter-spacing: 0.1em;
+}
+.flight-fleet-card strong {
+  font:
+    600 20px Rajdhani,
+    sans-serif;
+  color: #f1f5fc;
+  margin: 5px 0;
+}
+.flight-fleet-card small {
+  color: #9caec7;
+  font: 11px/1.5 system-ui;
+}
+.flight-pause-summary {
+  color: #c2d5e7;
+  font:
+    13px/1.8 "JetBrains Mono",
+    monospace;
+}
+.flagship-hud.flight-hud {
+  position: absolute;
+  inset: 64px 0 0;
+  max-width: none;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #e6f4ff;
+  white-space: normal;
+  pointer-events: none;
+  font:
+    11px/1.7 "JetBrains Mono",
+    monospace;
+}
+.flagship-hud .space-panel {
+  position: absolute;
+  padding: 8px 0;
+  text-shadow: 0 1px 6px #000;
+}
+.space-eyebrow {
+  display: block;
+  color: #93afbf;
+  font-size: 9px;
+  letter-spacing: 0.16em;
+  margin-bottom: 7px;
+}
+.flagship-hud .space-location {
+  left: 26px;
+  top: 15px;
+  padding-right: 126px;
+  min-height: 112px;
+  max-width: 390px;
+}
+.space-heading {
+  display: block;
+  font:
+    600 25px/1.15 Rajdhani,
+    sans-serif;
+  color: #e3f5ff;
+}
+.space-location-detail {
+  display: block;
+  color: #8fa7bb;
+  font-size: 9px;
+  margin-top: 8px;
+  max-width: 215px;
+}
+.space-radar {
+  position: absolute;
+  right: 8px;
+  top: 0;
+  width: 100px;
+  height: 100px;
+}
+.flagship-hud .space-contract {
+  top: 15px;
+  right: 26px;
+  width: 280px;
+  border-top: 1px solid #a5bbcf35;
+  padding-top: 10px;
+}
+.space-contract-title {
+  display: block;
+  color: #fff0cf;
+  font:
+    600 22px/1.1 Rajdhani,
+    sans-serif;
+  margin-bottom: 7px;
+}
+.space-contract-detail {
+  color: #aebdce;
+  font-size: 10px;
+  display: block;
+}
+.space-contract-progress {
+  width: 100%;
+  height: 3px;
+  appearance: none;
+  border: 0;
+  margin-top: 10px;
+  opacity: 0.65;
+}
+.space-contract-progress::-webkit-progress-bar {
+  background: #283644;
+}
+.space-contract-progress::-webkit-progress-value {
+  background: #ffd890;
+}
+.space-contract-progress::-moz-progress-bar {
+  background: #ffd890;
+}
+.flagship-hud .space-speed {
+  left: 26px;
+  bottom: 55px;
+  min-width: 230px;
+  border-left: 2px solid #a6daed65;
+  padding-left: 14px;
+}
+.space-speed-value {
+  font:
+    500 58px/0.9 Rajdhani,
+    sans-serif;
+  letter-spacing: -0.03em;
+}
+.space-speed-value + span {
+  color: #8fb0c4;
+  margin-left: 10px;
+  font-size: 12px;
+}
+.space-trip,
+.space-score {
+  display: block;
+  font-size: 10px;
+  color: #a2bacd;
+  margin-top: 10px;
+}
+.space-score {
+  color: #ffde9e;
+}
+.flagship-hud .space-fleet {
+  right: 26px;
+  bottom: 55px;
+  width: 260px;
+  border-top: 1px solid #a5bbcf35;
+  padding-top: 12px;
+}
+.space-ship {
+  display: block;
+  font:
+    600 25px/1.1 Rajdhani,
+    sans-serif;
+  color: #dceffc;
+}
+.space-level,
+.space-unlock {
+  color: #8facbe;
+  font-size: 10px;
+  display: block;
+  margin: 7px 0;
+}
+.space-meters {
+  margin: 12px 0;
+}
+.space-meters label {
+  margin: 8px 0;
+  display: flex;
+  justify-content: space-between;
+  color: #a7c2d5;
+  font-size: 10px;
+}
+.space-meters progress {
+  appearance: none;
+  width: 138px;
+  height: 4px;
+  border: 0;
+  border-radius: 2px;
+  overflow: hidden;
+  background: #27344d;
+}
+.space-meters progress::-webkit-progress-bar {
+  background: #27344d;
+}
+.space-meters progress::-webkit-progress-value {
+  background: #93d9ea;
+}
+.space-meters progress::-moz-progress-bar {
+  background: #93d9ea;
+}
+.space-meters .space-shield::-webkit-progress-value {
+  background: #c1cde6;
+}
+.space-meters .space-upgrade::-webkit-progress-value {
+  background: #ffd890;
+}
+.flagship-hud .space-race {
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 55px;
+  min-width: 280px;
+  max-width: calc(100% - 660px);
+  text-align: center;
+}
+.space-race-heading {
+  color: #b7cde0;
+  letter-spacing: 0.1em;
+  font-size: 10px;
+}
+.space-race-pips {
+  color: #ffd890;
+  font-size: 21px;
+  letter-spacing: 0.15em;
+  margin: 7px 0;
+}
+.space-race-detail {
+  color: #d9e9f6;
+  font-size: 10px;
+}
+.space-race-best {
+  color: #829dad;
+  font-size: 9px;
+  display: block;
+  margin-top: 5px;
+}
+.space-event {
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 76%;
+  padding: 8px 14px;
+  border-left: 2px solid #93ccdf;
+  background: #09141cc9;
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.space-event.is-visible {
+  opacity: 1;
+}
+.space-status {
+  color: #b6e5f8;
+  font-size: 11px;
+}
+.space-controls {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: 90%;
+  text-align: center;
+  color: #b6d1e1;
+  font-size: 10px;
+}
+.space-controls span {
+  color: #6f8da2;
+}
+.space-race-result {
+  position: absolute;
+  top: 9%;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 70%;
+  padding: 12px 20px;
+  border-bottom: 1px solid #e5bc7650;
+  color: #ffe2a6;
+  background: #171711d9;
+  text-align: center;
+  letter-spacing: 0.1em;
+}
+.space-race-result[data-medal="silver"] {
+  border-color: #bdcee950;
+  color: #d6e6fa;
+}
+.space-race-result[data-medal="bronze"] {
+  border-color: #d4a17e50;
+  color: #e8bea2;
+}
+.space-race-result[hidden] {
+  display: none;
+}
+.space-instruments {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.space-target {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font:
+    10px "JetBrains Mono",
+    monospace;
+  letter-spacing: 0.08em;
+  color: #ffe3a4;
+  text-shadow: 0 1px 5px #000;
+  pointer-events: none;
+}
+.space-target[hidden] {
+  display: none;
+}
+.space-target[data-offscreen="true"] {
+  padding: 4px 8px;
+  background: #08121ac9;
+}
+.space-target[data-navigation="explore"] {
+  color: #d1bbff;
+}
+.flagship-hud[data-navigation="explore"] .space-race-pips {
+  color: #c4a6ff;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+}
+.flagship-hud.flight-warning .space-fleet {
+  border-color: #ff8a71;
+}
+.flagship-hud.is-boosting .space-speed-value {
+  color: #a3efff;
+}
+.game-stage[data-game="stellar-flight"]:not([data-state="playing"])
+  .flagship-hud,
+.game-stage[data-game="stellar-flight"]:not([data-state="playing"])
+  .space-target {
+  visibility: hidden;
+}
+@media (max-width: 1000px) {
+  .flagship-hud .space-speed {
+    min-width: 180px;
+  }
+  .flagship-hud .space-fleet {
+    width: 210px;
+  }
+  .flagship-hud .space-race {
+    max-width: calc(100% - 500px);
+    min-width: 220px;
+  }
+  .space-meters progress {
+    width: 100px;
+  }
+}
+@media (max-width: 700px) {
+  .flight-fleet {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .flight-fleet-card svg {
+    height: 45px;
+  }
+  .game-stage[data-game="stellar-flight"] .control-guide dl {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .game-stage[data-game="stellar-flight"] .game-menu-panel[data-state="ready"] {
+    padding: 20px;
+  }
+  .flagship-hud.flight-hud {
+    inset: 52px 0 0;
+  }
+  .flagship-hud .space-location {
+    left: 12px;
+    top: 12px;
+    min-height: 0;
+    max-width: 52%;
+    padding-right: 0;
+  }
+  .space-radar {
+    display: none;
+  }
+  .space-heading,
+  .space-ship {
+    font-size: 19px;
+  }
+  .space-location-detail {
+    font-size: 8px;
+  }
+  .flagship-hud .space-contract {
+    right: 12px;
+    top: 12px;
+    width: 40%;
+  }
+  .space-contract-title {
+    font-size: 17px;
+  }
+  .space-contract-detail {
+    font-size: 8px;
+  }
+  .flagship-hud .space-speed {
+    left: 12px;
+    bottom: 116px;
+    min-width: 0;
+    width: 40%;
+    padding-left: 9px;
+  }
+  .space-speed-value {
+    font-size: 42px;
+  }
+  .space-trip,
+  .space-score {
+    font-size: 8px;
+  }
+  .flagship-hud .space-fleet {
+    right: 12px;
+    bottom: 116px;
+    width: 45%;
+  }
+  .space-level,
+  .space-unlock {
+    font-size: 8px;
+  }
+  .space-meters progress {
+    width: 70px;
+  }
+  .flagship-hud .space-race {
+    bottom: 33px;
+    width: calc(100% - 24px);
+    max-width: none;
+    min-width: 0;
+  }
+  .space-race-pips {
+    font-size: 16px;
+    margin: 1px 0;
+  }
+  .space-controls {
+    font-size: 7px;
+    bottom: 9px;
+  }
+  .space-event {
+    top: 24%;
+    font-size: 10px;
+    padding: 7px 10px;
+  }
+  .space-race-result {
+    top: 14%;
+    font-size: 9px;
+  }
+}
+@media (max-height: 560px) and (min-width: 701px) {
+  .space-radar {
+    display: none;
+  }
+  .flagship-hud .space-location {
+    min-height: 0;
+    padding-right: 16px;
+  }
+  .space-event {
+    top: 21%;
+  }
+  .space-speed-value {
+    font-size: 40px;
+  }
+  .space-controls {
+    bottom: 7px;
+  }
+  .flagship-hud .space-panel {
+    bottom: 32px;
+  }
+}

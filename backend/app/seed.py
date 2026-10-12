@@ -68,12 +68,12 @@ INITIAL_GAMES = [
     {
         "slug": "stellar-flight",
         "title": "Stellar Flight",
-        "description": "Fly a cyan-gate training course across Earth, Mars, and space. Control pitch, roll, yaw and throttle; chase speed and altitude milestones.",
+        "description": "Race through an endless open universe. Explore procedural sectors, chain optional ring races, upgrade your engines, and unlock four distinct ships. Collisions never end your journey.",
         "category": Category.SIMULATION,
         "thumbnail": GAME_ASSETS["jet"],
         "config": {
             "model_path": "/models/Jet.glb",
-            "initial_speed": 50,
+            "initial_speed": 120,
         },
         "achievements": [
             {"slug": "mach-1", "title": "Supersonic", "description": "Reach speed of 340 units"},
@@ -199,15 +199,15 @@ async def sync_games(skip_init: bool = False, *, session_factory=AsyncSessionLoc
                 "stellar-flight": [
                     {
                         "slug": "course-complete",
-                        "title": "Course Graduate",
-                        "description": "Finish a twelve-gate course",
-                        "unlock_condition": {"completed": True},
+                        "title": "Ring Runner",
+                        "description": "Clear five race rings in a journey",
+                        "unlock_condition": {"gates": 5},
                     },
                     {
                         "slug": "clean-course",
-                        "title": "Perfect Line",
-                        "description": "Clear all twelve course gates",
-                        "unlock_condition": {"gates": 12, "completed": True},
+                        "title": "Star Explorer",
+                        "description": "Discover ten space sectors in a journey",
+                        "unlock_condition": {"sectors": 10},
                     },
                 ],
             }

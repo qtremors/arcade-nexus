@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import { Keyboard, Gamepad2 } from "lucide-react";
+import { FlightBriefing } from "./FlightBriefing";
 import { AudioManager } from "../sdk/AudioManager";
 import { savesApi } from "../api/client";
 import { useGameSession } from "../hooks/useGameSession";
@@ -72,7 +73,7 @@ export function GameCanvas(props: {
     </button>
   );
   return (
-    <div className="game-stage" data-state={state}>
+    <div className="game-stage" data-game={slug} data-state={state}>
       {confirmation}
       <canvas
         ref={canvas}
@@ -157,6 +158,7 @@ export function GameCanvas(props: {
               {state === "ready" && (
                 <>
                   <p className="launch-goal">{experience.goal}</p>
+                  {slug === "stellar-flight" && <FlightBriefing />}
                   <div className="control-guide">
                     <div className="controls-switch" aria-label="Control guide">
                       {(["keyboard", "controller"] as const).map((mode) => (
@@ -245,6 +247,11 @@ export function GameCanvas(props: {
               {state === "paused" && (
                 <>
                   <p className="game-menu-title">{title}</p>
+                  {slug === "stellar-flight" && (
+                    <p className="flight-pause-summary">
+                      {engine.current?.getResult()?.detail}
+                    </p>
+                  )}
                   <div className="game-pause-score">
                     {engine.current?.getScore() ?? 0}
                     <span> CURRENT SCORE</span>
@@ -261,7 +268,20 @@ export function GameCanvas(props: {
                     <p>{experience.tip}</p>
                   </details>
                   {button("Resume", resume)}
-                  {button("Restart", () => void restart())}
+                  {button("Restart", () => {
+                    if (slug !== "stellar-flight") {
+                      void restart();
+                      return;
+                    }
+                    void ask({
+                      title: "Start a new journey?",
+                      message:
+                        "Starting over resets this journey’s ship upgrades and exploration. Save it to a slot first if you want to return. Your saved slots stay available.",
+                      confirmText: "Start new journey",
+                    }).then((answer) => {
+                      if (answer) void restart();
+                    });
+                  })}
                   {engine.current?.canSave && (
                     <div>
                       {button("Save game", () => void openSaves("save"))}

@@ -141,3 +141,23 @@ def test_duplicate_import_entries_are_rejected_without_creating_players(player):
     records.append(records[0])
     assert player.post("/api/data/import", json=backup).status_code == 422
     assert len(player.get("/api/profiles").json()["profiles"]) == 1
+
+
+def test_endless_flight_accepts_upgraded_speed_and_exploration_metrics(player):
+    from uuid import uuid4
+
+    result = player.post(
+        "/api/progress/stellar-flight/complete",
+        json={
+            "session_id": str(uuid4()),
+            "playtime_seconds": 600,
+            "score": 12000,
+            "mode": "endless",
+            "rules_version": 3,
+            "metrics": {"max_speed": 1000, "sectors": 12, "gates": 25, "crashed": False},
+        },
+    )
+    assert result.status_code == 200
+    achievements = player.get("/api/achievements/stellar-flight").json()["achievements"]
+    assert next(a for a in achievements if a["slug"] == "clean-course")["unlocked"]
+    assert next(a for a in achievements if a["slug"] == "course-complete")["unlocked"]

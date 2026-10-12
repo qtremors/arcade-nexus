@@ -397,26 +397,6 @@ button:disabled {
   padding: 8px 16px;
   border-radius: 6px;
 }
-.flight-hud {
-  position: absolute;
-  bottom: 20px;
-  left: 20px;
-  color: white;
-  padding: 12px;
-  background: #081321d9;
-  border: 1px solid #5a8c9d;
-  border-left: 3px solid #67e8f9;
-  border-radius: 10px;
-  white-space: pre-line;
-  font:
-    12px/1.9 "JetBrains Mono",
-    monospace;
-  pointer-events: none;
-}
-.flight-hud.flight-warning {
-  border-left-color: #fb7185;
-  color: #fecdd3;
-}
 .console-confirmation {
   position: fixed;
   inset: 0;
@@ -476,12 +456,6 @@ button:disabled {
   }
   .game-toolbar button {
     padding: 8px;
-  }
-  .flight-hud {
-    left: 12px;
-    right: 12px;
-    bottom: 12px;
-    font-size: 10px;
   }
 }
 .reduce-motion *,

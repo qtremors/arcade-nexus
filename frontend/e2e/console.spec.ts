@@ -31,6 +31,9 @@ const start = async (page: Page, slug: string) => {
   ).toBeVisible();
 };
 const pause = async (page: Page) => {
+  await expect(
+    page.getByRole("button", { name: "Pause (Esc / P)" }),
+  ).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(
     page.getByRole("heading", { name: "Paused", exact: true }),
@@ -210,17 +213,16 @@ test("Snake, Raptor, and Breakout respond to controls, pause, saves, and resize"
       ).toBeGreaterThan(0);
   }
 });
-test("Stellar Flight loads WebGL, accelerates, changes maps, and saves", async ({
+test("Stellar Flight loads space, boosts, switches ships, and saves", async ({
   page,
   request,
   profileId,
 }, info) => {
-  await page.goto("/play/stellar-flight?mode=classic");
+  await page.goto("/play/stellar-flight?mode=endless");
   await page.getByRole("button", { name: "Start game", exact: true }).click();
   await expect(
     page.getByRole("button", { name: "Pause (Esc / P)" }),
   ).toBeVisible();
-  await page.keyboard.press("ArrowUp", { delay: 300 });
   await page.keyboard.down("ShiftLeft");
   await expect(page.locator(".flight-hud")).toContainText("Speed 3", {
     timeout: 20000,
@@ -235,11 +237,14 @@ test("Stellar Flight loads WebGL, accelerates, changes maps, and saves", async (
     )
     .toBeGreaterThanOrEqual(340);
   await page.keyboard.up("ShiftLeft");
-  await page.screenshot({ path: info.outputPath("flight-earth.png") });
-  await page.keyboard.press("Digit2", { delay: 100 });
-  await expect(page.locator(".flight-hud")).toContainText("Mars");
-  await page.keyboard.press("Digit3", { delay: 100 });
-  await expect(page.locator(".flight-hud")).toContainText("Space");
+  await expect(page.locator(".flight-hud")).toContainText("Nova Dart");
+  await page.screenshot({ path: info.outputPath("flight-dart.png") });
+  await page.keyboard.press("KeyV", { delay: 100 });
+  await expect(page.locator(".flight-hud")).toContainText("Legacy Jet");
+  await page.keyboard.press("KeyM", { delay: 100 });
+  await expect(page.locator(".flight-hud")).toContainText(
+    "New race plotted ahead",
+  );
   await page.screenshot({ path: info.outputPath("flight.png") });
   await pause(page);
   const state = await save(page, "stellar-flight");
@@ -451,7 +456,7 @@ test("primary menu focus and 2048 undo work through normal keyboard controls", a
   expect(original.undo).toBeNull();
 });
 
-test("Flight's course clears an actual gate and restores course progress", async ({
+test("Endless Flight clears a real ring and restores its full journey", async ({
   page,
 }, info) => {
   await start(page, "stellar-flight");
@@ -460,11 +465,13 @@ test("Flight's course clears an actual gate and restores course progress", async
     timeout: 20000,
   });
   await page.keyboard.up("ShiftLeft");
-  await page.screenshot({ path: info.outputPath("flight-course.png") });
+  await page.screenshot({ path: info.outputPath("flight-race.png") });
   await pause(page);
   const before = await save(page, "stellar-flight");
-  expect(before.gatesPassed).toBe(1);
-  expect(before.gate).not.toBeNull();
+  expect(Number(before.gatesPassed)).toBeGreaterThanOrEqual(1);
+  expect(before.gates).toHaveLength(5);
+  expect(Number(before.xp)).toBeGreaterThan(0);
+  expect(before.mode).toBe("endless");
   await page.getByRole("button", { name: "Quit to console" }).click();
   await page.getByText("Select Experience").waitFor();
   await page.goto("/play/stellar-flight");
@@ -475,6 +482,120 @@ test("Flight's course clears an actual gate and restores course progress", async
   ).toBeVisible();
   const restored = await save(page, "stellar-flight");
   expect(restored).toEqual(before);
+});
+
+test("Flight renders and saves every unlocked ship", async ({
+  page,
+  request,
+  profileId,
+}, info) => {
+  await start(page, "stellar-flight");
+  await pause(page);
+  const state = await save(page, "stellar-flight");
+  const response = await request.post("/api/saves/stellar-flight", {
+    headers: { "X-Profile-ID": String(profileId) },
+    data: {
+      slot: 2,
+      data: {
+        format: 2,
+        game: "stellar-flight",
+        mode: "endless",
+        rules_version: 4,
+        difficulty: "normal",
+        state: { ...state, xp: 6400, ship: "dart" },
+      },
+    },
+  });
+  expect(response.ok()).toBeTruthy();
+  await page.getByRole("button", { name: "Quit to console" }).click();
+  await page.getByText("Select Experience").waitFor();
+  await page.goto("/play/stellar-flight");
+  await page.getByRole("button", { name: "Load game", exact: true }).click();
+  await page.getByRole("button", { name: /^Slot 2 ·/ }).click();
+  await page.getByRole("button", { name: "Resume", exact: true }).click();
+  for (const [name, id] of [
+    ["Nova Dart", "dart"],
+    ["Vanguard", "twin"],
+    ["Star Manta", "crescent"],
+    ["Legacy Jet", "jet"],
+  ]) {
+    await expect(page.locator(".flight-hud")).toContainText(name);
+    await pause(page);
+    const selected = await save(page, "stellar-flight");
+    expect(selected.ship).toBe(id);
+    await page.getByRole("button", { name: "Resume", exact: true }).click();
+    await page.screenshot({ path: info.outputPath(`ship-${id}.png`) });
+    await page.keyboard.press("KeyV", { delay: 100 });
+  }
+});
+
+test("Flight surveys a real beacon, restores its camera, and fits a narrow viewport", async ({
+  page,
+}, info) => {
+  await start(page, "stellar-flight");
+  const playfield = await page
+    .getByLabel("Stellar Flight playfield")
+    .boundingBox();
+  expect(playfield!.width).toBeGreaterThan(1400);
+  await page.keyboard.press("KeyN");
+  await expect(page.locator(".space-race-heading")).toContainText(
+    "FREE EXPLORATION",
+  );
+  await page.keyboard.press("KeyW", { delay: 200 });
+  await page.keyboard.down("ShiftLeft");
+  await expect(page.locator(".space-location-detail")).toContainText(
+    "1 surveyed",
+    { timeout: 20000 },
+  );
+  await page.keyboard.up("ShiftLeft");
+  await page.keyboard.press("KeyC");
+  await expect(page.locator(".flight-hud")).toHaveAttribute(
+    "data-camera",
+    "nose",
+  );
+  await page.screenshot({ path: info.outputPath("flight-survey-nose.png") });
+  await pause(page);
+  const before = await save(page, "stellar-flight");
+  expect(before.navigation).toBe("explore");
+  expect(before.cameraView).toBe("nose");
+  expect(before.scanned).toHaveLength(1);
+  await page.getByRole("button", { name: "Restart", exact: true }).click();
+  await expect(
+    page.getByRole("alertdialog", { name: "Start a new journey?" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await page.getByRole("button", { name: "Quit to console" }).click();
+  await page.getByText("Select Experience").waitFor();
+  await page.goto("/play/stellar-flight");
+  await page.getByRole("button", { name: "Load game", exact: true }).click();
+  await page.getByRole("button", { name: /^Slot 1 ·/ }).click();
+  const restored = await save(page, "stellar-flight");
+  expect(restored).toEqual(before);
+  await page.getByRole("button", { name: "Resume", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Pause (Esc / P)" }),
+  ).toBeVisible();
+  await page.keyboard.press("KeyC");
+  await expect(page.locator(".flight-hud")).toHaveAttribute(
+    "data-camera",
+    "wide",
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  const viewport = await page
+    .getByLabel("Stellar Flight playfield")
+    .boundingBox();
+  expect(viewport!.width).toBe(390);
+  expect(viewport!.height).toBe(844);
+  await expect
+    .poll(async () =>
+      page.getByLabel("Stellar Flight playfield").evaluate((node) => {
+        const canvas = node as HTMLCanvasElement;
+        return Math.abs(canvas.width / canvas.height - 390 / 844);
+      }),
+    )
+    .toBeLessThan(0.01);
+  await expect(page.locator(".space-race-heading")).toBeVisible();
+  await page.screenshot({ path: info.outputPath("flight-narrow.png") });
 });
 
 test("controller actions cross menus and gameplay without leaking confirm or pause", async ({
@@ -832,7 +953,7 @@ test("controller text entry and disconnect pause work", async ({ page }) => {
   ).toBeVisible();
 });
 
-test("finished Breakout sectors and Flight courses award medals in one receipt", async ({
+test("Breakout awards medals and legacy Flight courses migrate to endless journeys", async ({
   page,
   request,
   profileId,
@@ -896,6 +1017,21 @@ test("finished Breakout sectors and Flight courses award medals in one receipt",
     await page.getByRole("button", { name: "Load game", exact: true }).click();
     await page.getByRole("button", { name: /^Slot 1 ·/ }).click();
     await page.getByRole("button", { name: "Resume", exact: true }).click();
+    if (slug === "stellar-flight") {
+      await expect(
+        page.getByRole("button", { name: "Pause (Esc / P)" }),
+      ).toBeVisible();
+      await expect(page.locator(".flight-hud")).toContainText(
+        "Gates 11 cleared",
+      );
+      await pause(page);
+      const migrated = await save(page, "stellar-flight");
+      expect(migrated.version).toBe(2);
+      expect(migrated.mode).toBe("endless");
+      expect(Number(migrated.xp)).toBeGreaterThan(0);
+      await page.screenshot({ path: info.outputPath("flight-migrated.png") });
+      continue;
+    }
     await expect(page.getByText("GOLD MEDAL", { exact: true })).toBeVisible();
     await expect(page.getByLabel("New achievements")).toBeVisible();
     await page.screenshot({ path: info.outputPath(`${slug}-complete.png`) });

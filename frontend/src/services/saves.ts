@@ -14,12 +14,30 @@ export const envelopeSchema = z.object({
 });
 export type SaveEnvelope = z.infer<typeof envelopeSchema>;
 export function readSave(value: unknown, slug: string): SaveEnvelope {
-  const result = envelopeSchema.parse(value);
+  let result = envelopeSchema.parse(value);
   if (result.game !== slug)
     throw new Error("This save belongs to another game.");
   const descriptor = getDescriptor(slug);
   if (result.rules_version > descriptor.rulesVersion)
     throw new Error("Update Arcade Nexus to open this newer save.");
+  // Old flight modes share one continuous journey now; state migration is validated by the game.
+  if (
+    slug === "stellar-flight" &&
+    result.rules_version <= 2 &&
+    ["classic", "course"].includes(result.mode)
+  )
+    result = {
+      ...result,
+      mode: "endless",
+      rules_version: descriptor.rulesVersion,
+      config: { ...result.config, mode: "endless" },
+    };
+  if (
+    slug === "stellar-flight" &&
+    result.mode === "endless" &&
+    result.rules_version < descriptor.rulesVersion
+  )
+    result = { ...result, rules_version: descriptor.rulesVersion };
   if (!descriptor.modes.some((mode) => mode.id === result.mode))
     throw new Error("This game mode is unavailable.");
   return { ...result, format: 2 };

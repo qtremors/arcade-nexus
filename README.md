@@ -39,9 +39,9 @@ This runs both reload servers and opens **http://127.0.0.1:5173**. Browser prefe
 | Raptor Run | Classic or daily seeded obstacle sequence. Jump, duck, and chase distance milestones. |
 | Neon Breakout | Three sectors with armored and explosive bricks, final-brick aiming assistance, and completion medals. Daily layouts also available. |
 | Merge 2048 | Relaxed play with one-move undo, including after a losing move; challenge mode disables undo. Reach 2048 and keep playing. |
-| Stellar Flight | Finish a 12-gate course scored by gates, misses, and time, or explore three worlds in free flight with a separate speed record. |
+| Stellar Flight | Explore an endless procedural universe, chase gold in timed ring races, complete contracts, and survey beacons to refuel. Level up your engines and handling, unlock four ships, and choose chase, nose, or wide cameras. Collisions preserve progress. |
 
-Pause with Escape/P or controller Start. Games pause on focus loss or controller disconnect. In menus, use directional controls and A/B; shoulder buttons change main tabs. Controller A on text fields opens an on-screen keyboard. Flight uses analog steering/triggers; Y cycles worlds in free flight. Each launch menu has a controls guide.
+Pause with Escape/P or controller Start. Games pause on focus loss or controller disconnect. In menus, use directional controls and A/B; shoulder buttons change main tabs. Controller A on text fields opens an on-screen keyboard. Flight uses analog steering/triggers; Y plots a new race, X switches ships, B toggles surveys, and right stick click changes the camera. Each launch menu has a controls guide.
 
 Recovery snapshots are taken every five seconds and on pause/exit, separately from five manual slots. Continue restores the saved state as a new play session, preserving earlier history without counting earlier playtime twice. Sudden termination can lose up to the interval since the last durable snapshot. Result submission is atomic and retryable; Settings keeps failures visible and exportable.
 

@@ -98,6 +98,9 @@ export class InputManager {
         KeyQ: !!(keys.KeyQ || button(4)),
         KeyE: !!(keys.KeyE || button(5)),
         KeyM: !!(keys.KeyM || button(3)),
+        KeyV: !!(keys.KeyV || button(2)),
+        KeyN: !!(keys.KeyN || button(1)),
+        KeyC: !!(keys.KeyC || button(11)),
       },
     };
   }

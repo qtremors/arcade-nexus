@@ -21,10 +21,10 @@ class SessionMetrics(RequestSchema):
     jumps: Annotated[int, Field(ge=0, le=1_000_000, strict=True)] | None = None
     max_altitude: Annotated[float, Field(ge=0, le=10_000_000, allow_inf_nan=False)] | None = None
     crashed: bool | None = None
-    max_speed: Annotated[float, Field(ge=0, le=450, allow_inf_nan=False)] | None = None
+    max_speed: Annotated[float, Field(ge=0, le=2000, allow_inf_nan=False)] | None = None
     gates: Annotated[int, Field(ge=0, le=1_000_000, strict=True)] | None = None
     misses: Annotated[int, Field(ge=0, le=1_000_000, strict=True)] | None = None
-    sectors: Annotated[int, Field(ge=0, le=3, strict=True)] | None = None
+    sectors: Annotated[int, Field(ge=0, le=1_000_000, strict=True)] | None = None
     lives: Annotated[int, Field(ge=0, le=3, strict=True)] | None = None
     highest_tile: Annotated[int, Field(ge=0, le=1_048_576, strict=True)] | None = None
     completed: bool | None = None

@@ -63,22 +63,22 @@ const experiences: Record<string, GameExperience> = {
   },
   "stellar-flight": {
     accent: "#8edbf5",
-    mood: "Chase the horizon",
-    goal: "Finish a twelve-gate course, or explore Earth, Mars, and space in free flight.",
-    tip: "Start with gentle turns. Watch ground clearance and line up with the next gate before accelerating.",
+    mood: "An endless frontier",
+    goal: "Endless space racing. Chain race rings, survey sectors, and unlock faster ships.",
+    tip: "Rings and close asteroid passes refill boost. Chain clean gates and discover new sectors to level up. Collisions slow you down; your progress stays. Save or Continue to keep your upgrades.",
     controls: [
       {
-        action: "Pitch / roll",
+        action: "Pitch / steer",
         keyboard: "Arrows / WASD",
         controller: "D-pad / left stick",
       },
       { action: "Yaw", keyboard: "Q / E", controller: "LB / RB" },
-      { action: "Throttle", keyboard: "Shift / Ctrl", controller: "RT / LT" },
-      {
-        action: "Change world",
-        keyboard: "M / 1 / 2 / 3 (free flight)",
-        controller: "Y (free flight)",
-      },
+      { action: "Boost", keyboard: "Shift / Space", controller: "RT / A" },
+      { action: "Brake", keyboard: "Ctrl", controller: "LT" },
+      { action: "Plot new race ahead", keyboard: "M", controller: "Y" },
+      { action: "Switch unlocked ship", keyboard: "V", controller: "X" },
+      { action: "Race / survey exploration", keyboard: "N", controller: "B" },
+      { action: "Camera view", keyboard: "C", controller: "Right stick click" },
     ],
   },
 };

@@ -1,118 +1,172 @@
-import { z } from "zod";
+import "./flight.css";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import type { Game3DInstance, GameConfig, InputState } from "../../sdk/GameSDK";
-import { FlightController } from "./FlightController";
-import { crossGate, terrainHeight, TERRAIN_STEP } from "./course";
 import { GameFeedback } from "../feedback";
+import { useSettingsStore } from "../../stores/settingsStore";
+import { SpaceJourney } from "./SpaceJourney";
+import { FlightHUD } from "./FlightHUD";
+import { FlightAudio } from "./FlightAudio";
+import { createShip, type ShipId } from "./ships";
+import { SECTOR_SIZE, type Sector } from "./universe";
 
 export class StellarFlightGame implements Game3DInstance {
   readonly type = "3d" as const;
-
+  private journey = new SpaceJourney();
   private scene!: THREE.Scene;
   private camera!: THREE.PerspectiveCamera;
   private renderer!: THREE.WebGLRenderer;
-  private jet: THREE.Group | null = null;
-  private terrain: THREE.Mesh | null = null;
-  private stars: THREE.Points | null = null;
-  private controller = new FlightController();
-
-  private isInitialized = false;
+  private canvas: HTMLCanvasElement | null = null;
+  private jet = new THREE.Group();
+  private ships = new Map<ShipId, THREE.Group>();
+  private sectors = new Map<string, THREE.Group>();
+  private gates: THREE.Mesh[] = [];
+  private raceRocks: THREE.InstancedMesh | null = null;
+  private rockGeometry = new THREE.IcosahedronGeometry(1, 1);
+  private rockMaterial = new THREE.MeshLambertMaterial({
+    color: 0x7d8b9d,
+    flatShading: true,
+  });
+  private streaks: THREE.LineSegments | null = null;
+  private streakPositions = new Float32Array(80 * 6);
+  private hud: FlightHUD | null = null;
+  private audio = new FlightAudio();
+  private survey = new THREE.Group();
+  private resize: ResizeObserver | null = null;
+  private renderDelta = 0;
+  private lastRender = 0;
+  private frameAverage = 16.7;
+  private qualityFrames = 0;
+  private pixelRatio = 1.4;
+  private pixelBudget = 1600000;
+  private pixelCeiling = 1.4;
+  private viewportWidth = 0;
+  private viewportHeight = 0;
+  private initialized = false;
   private disposed = false;
-  private mapKey: string | null = null;
-  private bestSpeed = 0;
-  private mode = "classic";
-  private elapsed = 0;
-  private courseFinished = false;
-  private worldHeld = false;
-  private maxAltitude = 150;
-  private crashed = false;
-  private readonly forward = new THREE.Vector3();
-  private readonly cameraOffset = new THREE.Vector3();
-  private readonly lookTarget = new THREE.Vector3();
-  private hud: HTMLDivElement | null = null;
-  private gate: THREE.Mesh<
-    THREE.TorusGeometry,
-    THREE.MeshBasicMaterial
-  > | null = null;
-  private gatesPassed = 0;
-  private gatesMissed = 0;
-  private gateMessage = "Follow the cyan gates";
-  private gateMessageTime = 0;
-  private previousPosition = new THREE.Vector3();
-  private gateNormal = new THREE.Vector3();
-  private bankRotation = new THREE.Euler(0, 0, 0, "YXZ");
-  private worldUp = new THREE.Vector3(0, 1, 0);
   private feedback = new GameFeedback();
-
-  // Maps
-  private currentMapIndex = 0;
-  private maps = [
-    { name: "Earth", sky: 0x87ceeb, ground: 0x4caf50, fog: 0x87ceeb },
-    { name: "Mars", sky: 0xff7043, ground: 0x8d6e63, fog: 0xffccbc },
-    { name: "Space", sky: 0x000000, ground: 0x111111, fog: 0x000000 },
-  ];
+  private currentShip: ShipId | null = null;
+  private bank = 0;
+  private hudTime = 0;
+  private hudDelta = 0;
+  private point = new THREE.Vector3();
+  private offset = new THREE.Vector3();
+  private dummy = new THREE.Object3D();
 
   async init(canvas: HTMLCanvasElement, config: GameConfig): Promise<void> {
-    this.mode = config.mode ?? "classic";
-    // 1. Setup Three.js
-    this.scene = new THREE.Scene();
-
-    const fov = 75;
-    const aspect = canvas.width / canvas.height;
-    this.camera = new THREE.PerspectiveCamera(fov, aspect, 0.1, 20000);
-    this.camera.position.set(0, 10, -20);
-    this.camera.lookAt(0, 0, 0);
-
-    this.renderer = new THREE.WebGLRenderer({
-      canvas,
-      antialias: true,
-      alpha: false,
-    });
-    this.renderer.setSize(canvas.width, canvas.height, false);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.15;
-
-    // 2. Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-    this.scene.add(ambientLight);
-    this.scene.add(new THREE.HemisphereLight(0xd9eaff, 0x69796b, 1.5));
-
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
-    dirLight.position.set(100, 200, 50);
-    this.scene.add(dirLight);
-
-    // Distant stars give the space map visible depth and motion reference.
-    const vertices = new Float32Array(2000 * 3);
-    for (let i = 0; i < 2000; i++) {
-      const theta = Math.random() * Math.PI * 2,
-        z = Math.random() * 2 - 1;
-      const radius = Math.sqrt(1 - z * z);
-      vertices.set(
-        [
-          8000 * radius * Math.cos(theta),
-          8000 * z,
-          8000 * radius * Math.sin(theta),
-        ],
-        i * 3,
+    this.journey = new SpaceJourney(
+      typeof config.seed === "number" ? config.seed : undefined,
+    );
+    if (
+      typeof config.initial_speed === "number" &&
+      Number.isFinite(config.initial_speed)
+    ) {
+      this.journey.controller.speed = Math.max(
+        35,
+        Math.min(this.journey.maxSpeed, config.initial_speed),
       );
+      this.journey.bestSpeed = this.journey.controller.speed;
     }
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute("position", new THREE.BufferAttribute(vertices, 3));
-    this.stars = new THREE.Points(
-      geometry,
-      new THREE.PointsMaterial({
-        color: 0xd9eaff,
-        size: 2,
-        sizeAttenuation: false,
+    this.canvas = canvas;
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0x030611);
+    this.scene.fog = new THREE.FogExp2(0x070d20, 0.00011);
+    this.camera = new THREE.PerspectiveCamera(
+      78,
+      canvas.width / canvas.height,
+      0.1,
+      18000,
+    );
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    const graphics = this.renderer.getContext();
+    const details = graphics.getExtension("WEBGL_debug_renderer_info");
+    if (
+      details &&
+      /swiftshader|llvmpipe|software/i.test(
+        String(graphics.getParameter(details.UNMASKED_RENDERER_WEBGL)),
+      )
+    )
+      this.pixelBudget = 480000;
+    this.resize = new ResizeObserver(() => this.resizeRenderer());
+    this.resize.observe(canvas);
+    this.resizeRenderer();
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.35;
+    this.scene.add(new THREE.AmbientLight(0xd6e3ed, 1.15));
+    const sun = new THREE.DirectionalLight(0xffd4a6, 2.6);
+    sun.position.set(-100, 200, 100);
+    this.scene.add(sun);
+    const rim = new THREE.DirectionalLight(0x547c9b, 0.8);
+    rim.position.set(100, 0, -100);
+    this.scene.add(rim);
+    const rockPositions = this.rockGeometry.attributes.position;
+    for (let i = 0; i < rockPositions.count; i++) {
+      const x = rockPositions.getX(i),
+        y = rockPositions.getY(i),
+        z = rockPositions.getZ(i);
+      const scale =
+        0.88 + 0.1 * Math.sin(x * 17 + y * 11) * Math.cos(z * 13 - y * 5);
+      rockPositions.setXYZ(i, x * scale, y * scale, z * scale);
+    }
+    this.rockGeometry.computeVertexNormals();
+    this.scene.add(this.jet);
+    for (const id of ["dart", "twin", "crescent"] as const) {
+      const ship = createShip(id);
+      ship.visible = false;
+      this.ships.set(id, ship);
+      this.jet.add(ship);
+    }
+    this.createSky();
+    const gateGeometry = new THREE.TorusGeometry(72, 2, 8, 64);
+    for (let i = 0; i < 5; i++) {
+      const gate = new THREE.Mesh(
+        gateGeometry,
+        new THREE.MeshBasicMaterial({
+          color: 0x67e8f9,
+          transparent: true,
+          opacity: 1,
+          fog: false,
+        }),
+      );
+      this.gates.push(gate);
+      this.scene.add(gate);
+      const ticks = new THREE.Mesh(
+        new THREE.TorusGeometry(80, 0.7, 4, 32),
+        new THREE.MeshBasicMaterial({
+          color: 0x7fa5c7,
+          transparent: true,
+          opacity: 0.45,
+        }),
+      );
+      gate.add(ticks);
+    }
+    this.raceRocks = new THREE.InstancedMesh(
+      this.rockGeometry,
+      this.rockMaterial,
+      10,
+    );
+    this.scene.add(this.raceRocks);
+    this.hud = new FlightHUD(canvas);
+    const beacon = new THREE.Mesh(
+      new THREE.TorusGeometry(34, 1.4, 6, 40),
+      new THREE.MeshBasicMaterial({ color: 0xb99bff, fog: false }),
+    );
+    beacon.rotation.x = Math.PI / 2;
+    this.survey.add(beacon);
+    const pillar = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.9, 0.9, 160, 6),
+      new THREE.MeshBasicMaterial({
+        color: 0xb99bff,
+        transparent: true,
+        opacity: 0.25,
       }),
     );
-    this.scene.add(this.stars);
-    // 3. Environment
-    this.setupMap(0);
-
-    // 4. Load Model
+    this.survey.add(pillar);
+    this.scene.add(this.survey);
+    this.syncWorld();
+    this.syncShip();
+    this.followCamera(1);
+    // The original asset is one option alongside three independently built hulls.
     const loader = new GLTFLoader();
     try {
       const gltf = await loader.loadAsync(
@@ -128,422 +182,510 @@ export class StellarFlightGame implements Game3DInstance {
         if (!(object instanceof THREE.Mesh)) return;
         for (const material of Array.isArray(object.material)
           ? object.material
-          : [object.material]) {
+          : [object.material])
           if (material instanceof THREE.MeshStandardMaterial)
             material.metalness = Math.min(material.metalness, 0.35);
-        }
       });
       const box = new THREE.Box3().setFromObject(gltf.scene);
-      const center = box.getCenter(new THREE.Vector3()),
-        size = box.getSize(new THREE.Vector3());
-      const centered = new THREE.Group();
+      const center = box.getCenter(new THREE.Vector3());
+      const size = box.getSize(new THREE.Vector3());
       gltf.scene.position.sub(center);
-      centered.add(gltf.scene);
-      centered.scale.setScalar(8 / Math.max(size.x, size.y, size.z, 0.001));
-      this.jet = new THREE.Group();
-      this.jet.add(centered);
-      this.scene.add(this.jet);
-    } catch (e) {
+      const model = new THREE.Group();
+      model.add(gltf.scene);
+      model.scale.setScalar(9 / Math.max(size.x, size.y, size.z, 0.001));
+      model.visible = false;
+      this.ships.set("jet", model);
+      this.jet.add(model);
+    } catch (error) {
       if (this.disposed) return;
-      console.warn("Using fallback aircraft", e);
-      // Fallback object
-      const geo = new THREE.ConeGeometry(1, 4, 8);
-      geo.rotateX(Math.PI / 2);
-      const mat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-      this.jet = new THREE.Group();
-      this.jet.add(new THREE.Mesh(geo, mat));
-      this.scene.add(this.jet);
+      console.warn(
+        "Original ship unavailable; procedural ships remain playable",
+        error,
+      );
     }
-
-    this.jet!.position.set(0, 100, 0);
-    this.controller.speed =
-      typeof config.initial_speed === "number" ? config.initial_speed : 50;
-    this.bestSpeed = this.controller.speed;
-    this.camera.position.set(0, 105, -16);
-    this.camera.lookAt(this.jet!.position);
-    this.hud = document.createElement("div");
-    this.hud.className = "flight-hud";
-    this.hud.setAttribute("aria-label", "Flight instruments");
-    canvas.parentElement?.appendChild(this.hud);
-    this.gate = new THREE.Mesh(
-      new THREE.TorusGeometry(28, 1.8, 8, 64),
-      new THREE.MeshBasicMaterial({ color: 0xffdd55, fog: false }),
+    this.initialized = true;
+    this.audio.pause();
+    this.hud?.update(this.journey, this.camera, 0);
+  }
+  private createSky() {
+    const positions = new Float32Array(1200 * 3);
+    const colors = new Float32Array(positions.length);
+    const color = new THREE.Color();
+    for (let i = 0; i < 1200; i++) {
+      const angle = Math.random() * Math.PI * 2,
+        y = Math.random() * 2 - 1;
+      const radius = Math.sqrt(1 - y * y);
+      positions.set(
+        [
+          9000 * radius * Math.cos(angle),
+          9000 * y,
+          9000 * radius * Math.sin(angle),
+        ],
+        i * 3,
+      );
+      color.setHSL(
+        0.12 + Math.random() * 0.55,
+        0.13,
+        0.4 + Math.random() * 0.5,
+      );
+      colors.set([color.r, color.g, color.b], i * 3);
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+    geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+    this.scene.add(
+      new THREE.Points(
+        geometry,
+        new THREE.PointsMaterial({
+          size: 1.8,
+          sizeAttenuation: false,
+          vertexColors: true,
+          fog: false,
+        }),
+      ),
     );
-    this.scene.add(this.gate);
-    this.placeGate(true);
-    this.isInitialized = true;
-  }
-  private placeGate(first = false): void {
-    if (!this.jet || !this.gate) return;
-    const index = this.gatesPassed + this.gatesMissed;
-    const lateral = first ? 0 : [35, -35, 0, 45, -45, 0][index % 6];
-    const vertical = first ? 0 : [10, 20, -10, 15, 0, -15][index % 6];
-    this.gate.position
-      .set(
-        lateral,
-        vertical,
-        Math.max(first ? 300 : 400, this.controller.speed * 3),
-      )
-      .applyQuaternion(this.jet.quaternion)
-      .add(this.jet.position);
-    // Keep training gates above ground on planet maps.
-    if (this.currentMapIndex !== 2)
-      this.gate.position.y = Math.max(
-        terrainHeight(
-          this.gate.position.x,
-          this.gate.position.z,
-          this.currentMapIndex,
-        ) + 70,
-        this.gate.position.y,
+    // Soft additive clouds form a distant nebula without network assets.
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 128;
+    const context = canvas.getContext("2d")!;
+    const gradient = context.createRadialGradient(64, 64, 0, 64, 64, 64);
+    gradient.addColorStop(0, "rgba(255,255,255,0.25)");
+    gradient.addColorStop(0.4, "rgba(255,255,255,0.08)");
+    gradient.addColorStop(1, "rgba(255,255,255,0)");
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, 128, 128);
+    const texture = new THREE.CanvasTexture(canvas);
+    for (let i = 0; i < 4; i++) {
+      const sprite = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: texture,
+          color: i % 2 ? 0x514261 : 0x234652,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+          fog: false,
+        }),
       );
-    this.gate.quaternion.copy(this.jet.quaternion);
-  }
-
-  private setupMap(index: number) {
-    const map = this.maps[index];
-    this.currentMapIndex = index;
-    if (this.stars) this.stars.visible = index === 2;
-
-    if (import.meta.env.DEV) {
-      console.log(
-        `[StellarFlight] Map switched to: ${map.name} (${this.currentMapIndex})`,
+      const angle = (i * Math.PI * 2) / 4 + 0.65;
+      sprite.position.set(
+        Math.sin(angle) * 6500,
+        Math.sin(angle * 3) * 1700,
+        Math.cos(angle) * 6500,
       );
+      sprite.scale.set(5000, 3200, 1);
+      this.scene.add(sprite);
     }
-
-    // Fog
-    if (map.name !== "Space") {
-      this.scene.fog = new THREE.FogExp2(map.fog, 0.00055);
-      this.scene.background = new THREE.Color(map.sky);
-    } else {
-      this.scene.fog = null;
-      this.scene.background = new THREE.Color(0x000000);
-    }
-
-    // Terrain
-    if (this.terrain) {
-      this.scene.remove(this.terrain);
-      this.disposeObject(this.terrain);
-      this.terrain = null;
-    }
-
-    if (map.name !== "Space") {
-      const planeGeo = new THREE.PlaneGeometry(10000, 10000, 64, 64);
-      planeGeo.setAttribute(
-        "color",
-        new THREE.BufferAttribute(
-          new Float32Array(planeGeo.attributes.position.count * 3),
-          3,
+    const sun = new THREE.Mesh(
+      new THREE.SphereGeometry(150, 20, 12),
+      new THREE.MeshBasicMaterial({ color: 0xffefc8, fog: false }),
+    );
+    sun.position.set(3400, 1350, 6200);
+    this.scene.add(sun);
+    const corona = new THREE.Sprite(
+      new THREE.SpriteMaterial({
+        map: texture,
+        color: 0xffb75e,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+        fog: false,
+      }),
+    );
+    corona.position.copy(sun.position);
+    corona.scale.set(1800, 1800, 1);
+    this.scene.add(corona);
+    for (let i = 0; i < 80; i++)
+      this.streakPositions.set(
+        [
+          (Math.random() - 0.5) * 100,
+          (Math.random() - 0.5) * 70,
+          Math.random() * 130,
+          0,
+          0,
+          0,
+        ],
+        i * 6,
+      );
+    const streakGeometry = new THREE.BufferGeometry();
+    streakGeometry.setAttribute(
+      "position",
+      new THREE.BufferAttribute(this.streakPositions, 3),
+    );
+    this.streaks = new THREE.LineSegments(
+      streakGeometry,
+      new THREE.LineBasicMaterial({
+        color: 0x8edbf5,
+        transparent: true,
+        opacity: 0.3,
+        depthWrite: false,
+      }),
+    );
+    this.scene.add(this.streaks);
+  }
+  private createSectorGroup(sector: Sector): THREE.Group {
+    const group = new THREE.Group();
+    group.userData.center = new THREE.Vector3(
+      ...sector.coordinates,
+    ).multiplyScalar(SECTOR_SIZE);
+    const center = group.userData.center as THREE.Vector3;
+    const asteroids = new THREE.InstancedMesh(
+      this.rockGeometry,
+      this.rockMaterial,
+      sector.asteroids.length,
+    );
+    sector.asteroids.forEach((body, index) => {
+      this.dummy.position.set(...body.position).sub(center);
+      this.dummy.scale.setScalar(body.radius);
+      asteroids.setColorAt(
+        index,
+        new THREE.Color(
+          index % 3 === 0 ? 0x889dab : index % 3 === 1 ? 0xa39488 : 0x77879b,
         ),
       );
-      const planeMat = new THREE.MeshStandardMaterial({
-        vertexColors: true,
-        flatShading: true,
-        roughness: 1,
-      });
-      this.terrain = new THREE.Mesh(planeGeo, planeMat);
-      this.terrain.rotation.x = -Math.PI / 2;
-      this.terrain.position.y = -50;
-      this.scene.add(this.terrain);
-      this.refreshTerrain();
-    }
-  }
-  private refreshTerrain(): void {
-    if (!this.terrain) return;
-    const centerX =
-      Math.round((this.jet?.position.x ?? 0) / TERRAIN_STEP) * TERRAIN_STEP;
-    const centerZ =
-      Math.round((this.jet?.position.z ?? 0) / TERRAIN_STEP) * TERRAIN_STEP;
-    this.terrain.position.x = centerX;
-    this.terrain.position.z = centerZ;
-    const geometry = this.terrain.geometry,
-      positions = geometry.attributes.position,
-      colors = geometry.attributes.color,
-      color = new THREE.Color();
-    for (let i = 0; i < positions.count; i++) {
-      const height = terrainHeight(
-        positions.getX(i) + centerX,
-        -positions.getY(i) + centerZ,
-        this.currentMapIndex,
-      );
-      positions.setZ(i, height + 50);
-      const elevation = Math.max(0, Math.min(1, (height + 190) / 280));
-      color.setHSL(
-        this.currentMapIndex === 1
-          ? 0.065
-          : height < -90
-            ? 0.55
-            : height > 45
-              ? 0.1
-              : 0.35,
-        this.currentMapIndex === 1 ? 0.38 : height > 45 ? 0.1 : 0.25,
-        0.15 + elevation * 0.2,
-      );
-      colors.setXYZ(i, color.r, color.g, color.b);
-    }
-    positions.needsUpdate = true;
-    colors.needsUpdate = true;
-    geometry.computeVertexNormals();
-    geometry.computeBoundingSphere();
-  }
-
-  update(deltaTime: number, input: InputState): boolean {
-    if (!this.isInitialized || !this.jet) return true;
-
-    if (this.courseFinished) return false;
-    const dt = deltaTime / 1000;
-    this.elapsed += dt;
-    this.previousPosition.copy(this.jet.position);
-    this.gateMessageTime = Math.max(0, this.gateMessageTime - dt);
-    this.controller.update(dt, input);
-
-    // Map Switching (Keys 1-3)
-    const key =
-      ["Digit1", "Digit2", "Digit3"].find((key) => input.keys[key]) ?? null;
-    if (this.mode === "classic") {
-      const cycle = !!input.keys.KeyM;
-      if (cycle && !this.worldHeld) {
-        this.setupMap((this.currentMapIndex + 1) % 3);
-        this.placeGate(true);
+      this.dummy.rotation.set(index * 0.7, index * 1.3, index * 0.5);
+      this.dummy.updateMatrix();
+      asteroids.setMatrixAt(index, this.dummy.matrix);
+    });
+    asteroids.computeBoundingSphere();
+    group.add(asteroids);
+    if (sector.planet) {
+      const radius = sector.planet.radius;
+      const geometry = new THREE.SphereGeometry(radius, 24, 16);
+      const positions = geometry.attributes.position;
+      const colors = new Float32Array(positions.count * 3),
+        color = new THREE.Color();
+      for (let i = 0; i < positions.count; i++) {
+        const y = positions.getY(i) / radius,
+          x = positions.getX(i) / radius,
+          z = positions.getZ(i) / radius;
+        const noise = Math.sin(x * 17 + z * 9) * Math.cos(y * 19 - x * 7);
+        if (sector.planetStyle === "gas")
+          color.setHSL(
+            0.08 + Math.sin(y * 30) * 0.025,
+            0.38,
+            0.31 + Math.sin(y * 35) * 0.09,
+          );
+        else if (sector.planetStyle === "ice")
+          color.setHSL(0.54, 0.2, 0.38 + Math.abs(y) * 0.25 + noise * 0.05);
+        else
+          color.setHSL(
+            noise > 0.12 ? 0.3 : 0.59,
+            noise > 0.12 ? 0.3 : 0.4,
+            0.2 + Math.abs(y) * 0.12 + noise * 0.04,
+          );
+        colors.set([color.r, color.g, color.b], i * 3);
       }
-      this.worldHeld = cycle;
-      if (key && key !== this.mapKey) {
-        this.setupMap(Number(key.slice(-1)) - 1);
-        this.placeGate(true);
-      }
-    }
-    this.mapKey = key;
-
-    // Apply rotation
-    const deltaRot = this.controller.getDeltaRotation(dt);
-    this.jet.rotateX(deltaRot.x);
-    this.jet.rotateY(deltaRot.y);
-    this.jet.rotateZ(deltaRot.z);
-    this.bankRotation.setFromQuaternion(this.jet.quaternion, "YXZ");
-    this.jet.rotateOnWorldAxis(
-      this.worldUp,
-      this.controller.getBankTurn(dt, this.bankRotation.z),
-    );
-
-    // Move forward
-    const forward = this.forward.set(0, 0, 1);
-    forward.applyQuaternion(this.jet.quaternion);
-    this.jet.position.add(forward.multiplyScalar(this.controller.speed * dt));
-    if (
-      this.terrain &&
-      (Math.abs(this.jet.position.x - this.terrain.position.x) > 600 ||
-        Math.abs(this.jet.position.z - this.terrain.position.z) > 600)
-    )
-      this.refreshTerrain();
-    if (this.gate) {
-      this.gateNormal.set(0, 0, 1).applyQuaternion(this.gate.quaternion);
-      const crossing = crossGate(
-        this.previousPosition.toArray(),
-        this.jet.position.toArray(),
-        this.gate.position.toArray(),
-        this.gateNormal.toArray(),
+      geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
+      const planet = new THREE.Mesh(
+        geometry,
+        new THREE.MeshLambertMaterial({ vertexColors: true }),
       );
-      if (crossing) {
-        if (crossing === "pass") {
-          this.gatesPassed++;
-          this.gateMessage = "GATE CLEARED";
-          this.feedback.sound("collect");
-        } else {
-          this.gatesMissed++;
-          this.gateMessage = "GATE MISSED · Line up the next";
-          this.feedback.sound("miss");
+      planet.position.set(...sector.planet.position).sub(center);
+      if (sector.planetStyle === "gas") {
+        const ring = new THREE.Mesh(
+          new THREE.RingGeometry(radius * 1.35, radius * 1.9, 48),
+          new THREE.MeshBasicMaterial({
+            color: 0xb9a98c,
+            side: THREE.DoubleSide,
+            transparent: true,
+            opacity: 0.22,
+            depthWrite: false,
+          }),
+        );
+        ring.rotation.set(1.1, 0.3, 0.2);
+        planet.add(ring);
+      }
+      const atmosphere = new THREE.Mesh(
+        new THREE.SphereGeometry(radius * 1.035, 20, 12),
+        new THREE.MeshBasicMaterial({
+          color: sector.planetStyle === "gas" ? 0xe9b58b : 0x65c9ff,
+          transparent: true,
+          opacity: 0.1,
+          side: THREE.BackSide,
+          depthWrite: false,
+        }),
+      );
+      planet.add(atmosphere);
+      group.add(planet);
+    }
+    return group;
+  }
+  private syncWorld() {
+    this.survey.position
+      .fromArray(this.journey.target)
+      .sub(this.journey.position);
+    this.survey.visible = this.journey.navigation === "explore";
+    const needed = new Set(this.journey.sectors.map((sector) => sector.key));
+    for (const [key, group] of this.sectors) {
+      if (needed.has(key)) continue;
+      this.scene.remove(group);
+      group.traverse((child) => {
+        if (child instanceof THREE.InstancedMesh) child.dispose();
+        else if (child instanceof THREE.Mesh) {
+          child.geometry.dispose();
+          for (const material of Array.isArray(child.material)
+            ? child.material
+            : [child.material])
+            material.dispose();
         }
-        this.gateMessageTime = 2;
-        if (this.mode === "course" && this.gatesPassed + this.gatesMissed >= 12)
-          this.courseFinished = true;
-        else this.placeGate();
+      });
+      this.sectors.delete(key);
+    }
+    for (const sector of this.journey.sectors) {
+      if (!this.sectors.has(sector.key)) {
+        const group = this.createSectorGroup(sector);
+        this.sectors.set(sector.key, group);
+        this.scene.add(group);
+      }
+      const group = this.sectors.get(sector.key)!;
+      // Ship stays at the render origin; distant journeys retain GPU precision.
+      group.position
+        .copy(group.userData.center as THREE.Vector3)
+        .sub(this.journey.position);
+    }
+    if (this.raceRocks) {
+      this.journey.raceObstacles.forEach((body, index) => {
+        this.dummy.position.set(...body.position).sub(this.journey.position);
+        this.dummy.scale.setScalar(body.radius);
+        this.dummy.rotation.set(index * 1.3, index * 0.6, 0);
+        this.dummy.updateMatrix();
+        this.raceRocks!.setMatrixAt(index, this.dummy.matrix);
+      });
+      this.raceRocks.instanceMatrix.needsUpdate = true;
+      this.raceRocks.computeBoundingSphere();
+    }
+    this.gates.forEach((mesh, i) => {
+      mesh.visible =
+        this.journey.navigation === "race" && i >= this.journey.gateIndex;
+      mesh.position
+        .fromArray(this.journey.gates[i].position)
+        .sub(this.journey.position);
+      mesh.quaternion.fromArray(this.journey.gates[i].rotation);
+      const material = mesh.material as THREE.MeshBasicMaterial;
+      material.color.setHex(i === this.journey.gateIndex ? 0xffd777 : 0x67e8f9);
+      material.opacity = i === this.journey.gateIndex ? 1 : 0.4;
+    });
+  }
+  private syncShip() {
+    if (this.currentShip === this.journey.ship) return;
+    if (this.journey.ship === "jet" && !this.ships.has("jet")) {
+      this.journey.ship = "dart";
+      this.journey.message = "Original GLB unavailable · Flying Nova Dart";
+      this.journey.messageTime = 4;
+    }
+    for (const [id, model] of this.ships)
+      model.visible = id === this.journey.ship;
+    this.currentShip = this.journey.ship;
+    this.jet.userData.ship = this.currentShip;
+  }
+  private followCamera(dt: number) {
+    this.bank +=
+      (-this.journey.controller.inputRoll *
+        (useSettingsStore.getState().reducedMotion ? 0.1 : 0.38) -
+        this.bank) *
+      Math.min(1, dt * 5);
+    this.jet.quaternion.copy(this.journey.rotation);
+    this.jet.rotateZ(this.bank);
+    const view = this.journey.cameraView;
+    this.jet.visible = view !== "nose";
+    this.offset.set(
+      0,
+      view === "wide" ? 10 : view === "nose" ? 1 : 5.5,
+      view === "wide" ? -34 : view === "nose" ? 2 : -22,
+    );
+    this.camera.position.copy(
+      this.offset.applyQuaternion(this.journey.rotation),
+    );
+    this.camera.up.set(0, 1, 0).applyQuaternion(this.journey.rotation);
+    this.camera.lookAt(
+      this.point.set(0, 0.5, 38).applyQuaternion(this.journey.rotation),
+    );
+    const fov =
+      (view === "nose" ? 80 : view === "wide" ? 66 : 70) +
+      (this.journey.boosting && !useSettingsStore.getState().reducedMotion
+        ? 9
+        : 0);
+    this.camera.fov += (fov - this.camera.fov) * Math.min(1, dt * 3);
+    this.camera.updateProjectionMatrix();
+    this.camera.updateMatrixWorld();
+  }
+  private resizeRenderer() {
+    if (!this.canvas || !this.renderer) return;
+    const width = Math.max(1, this.canvas.clientWidth),
+      height = Math.max(1, this.canvas.clientHeight);
+    const budget = Math.min(
+      window.devicePixelRatio || 1,
+      1.4,
+      Math.sqrt(this.pixelBudget / (width * height)),
+    );
+    this.pixelCeiling = Math.max(0.45, budget);
+    if (width !== this.viewportWidth || height !== this.viewportHeight) {
+      this.pixelRatio = this.pixelCeiling;
+      this.viewportWidth = width;
+      this.viewportHeight = height;
+    } else this.pixelRatio = Math.max(0.45, Math.min(this.pixelRatio, budget));
+    this.renderer.setPixelRatio(this.pixelRatio);
+    this.renderer.setSize(width, height, false);
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
+  }
+  update(deltaTime: number, input: InputState): boolean {
+    if (!this.initialized) return true;
+    this.audio.resume();
+    this.journey.update(deltaTime, input);
+    if (this.journey.event) this.feedback.sound(this.journey.event);
+    this.renderDelta += Math.min(0.1, deltaTime / 1000);
+    return true;
+  }
+  private syncVisuals(dt: number) {
+    this.syncWorld();
+    this.syncShip();
+    this.followCamera(dt);
+    this.audio.update(this.journey.controller.speed, this.journey.boosting);
+    const model = this.ships.get(this.journey.ship);
+    model?.traverse((object) => {
+      if (object.name === "exhaust")
+        object.scale.y = this.journey.boosting ? 1.8 : 0.7;
+    });
+    if (this.streaks) {
+      this.streaks.quaternion.copy(this.journey.rotation);
+      this.streaks.visible =
+        this.journey.controller.speed > 200 &&
+        !useSettingsStore.getState().reducedMotion;
+      for (let i = 0; i < 80; i++) {
+        const offset = i * 6;
+        this.streakPositions[offset + 2] -= this.journey.controller.speed * dt;
+        if (this.streakPositions[offset + 2] < -25)
+          this.streakPositions[offset + 2] += 155;
+        this.streakPositions[offset + 3] = this.streakPositions[offset];
+        this.streakPositions[offset + 4] = this.streakPositions[offset + 1];
+        this.streakPositions[offset + 5] =
+          this.streakPositions[offset + 2] + (this.journey.boosting ? 10 : 3);
+      }
+      this.streaks.geometry.attributes.position.needsUpdate = true;
+    }
+    this.hudTime -= dt;
+    this.hudDelta += dt;
+    if (this.hudTime <= 0) {
+      this.hud?.update(this.journey, this.camera, this.hudDelta);
+      this.hudDelta = 0;
+      this.hudTime = 0.08;
+    }
+  }
+  render(): void {
+    if (!this.initialized) return;
+    const now = performance.now();
+    if (this.lastRender > 0 && this.renderDelta > 0) {
+      this.frameAverage +=
+        (Math.min(200, now - this.lastRender) - this.frameAverage) * 0.04;
+      this.qualityFrames++;
+      if (
+        this.qualityFrames >= 45 &&
+        this.frameAverage > 34 &&
+        this.pixelRatio > 0.46
+      ) {
+        this.pixelRatio = Math.max(0.45, this.pixelRatio * 0.85);
+        this.resizeRenderer();
+        this.qualityFrames = 0;
+      } else if (
+        this.qualityFrames >= 150 &&
+        this.frameAverage < 22 &&
+        this.pixelRatio < this.pixelCeiling
+      ) {
+        this.pixelRatio = Math.min(this.pixelCeiling, this.pixelRatio * 1.1);
+        this.resizeRenderer();
+        this.qualityFrames = 0;
       }
     }
-
-    // Camera follow
-    this.jet.updateMatrixWorld(true);
-    const relativeCameraOffset = this.cameraOffset.set(0, 3.5, -13);
-    const cameraOffset = relativeCameraOffset.applyMatrix4(
-      this.jet.matrixWorld,
-    );
-
-    // Follow in aircraft space so high speeds do not leave the camera hundreds of units behind.
-    this.camera.position.copy(cameraOffset);
-    this.camera.up.set(0, 1, 0).applyQuaternion(this.jet.quaternion);
-    this.lookTarget
-      .set(0, 0, 8)
-      .applyQuaternion(this.jet.quaternion)
-      .add(this.jet.position);
-    this.camera.lookAt(this.lookTarget);
-    this.stars?.position.copy(this.camera.position);
-
-    this.bestSpeed = Math.max(this.bestSpeed, this.controller.speed);
-    this.maxAltitude = Math.max(this.maxAltitude, this.jet.position.y + 50);
-    const clearance =
-      this.jet.position.y -
-      terrainHeight(
-        this.jet.position.x,
-        this.jet.position.z,
-        this.currentMapIndex,
-      );
-    this.crashed = this.currentMapIndex !== 2 && clearance <= 2;
-    if (this.hud) {
-      const distance = this.gate
-        ? Math.round(this.jet.position.distanceTo(this.gate.position))
-        : 0;
-      this.hud.textContent = `${this.maps[this.currentMapIndex].name} · Speed ${Math.floor(this.controller.speed)} m/s · ${this.currentMapIndex === 2 ? "Altitude" : "Ground clearance"} ${Math.floor(this.currentMapIndex === 2 ? this.jet.position.y + 50 : clearance)} m\nGates ${this.gatesPassed} cleared / ${this.gatesMissed} missed${this.mode === "course" ? ` · ${this.gatesPassed + this.gatesMissed}/12 · ${Math.floor(this.elapsed)}s` : ""} · Next ${distance} m\n${clearance < 40 && this.currentMapIndex !== 2 ? "PULL UP · LOW ALTITUDE" : this.gateMessageTime > 0 ? this.gateMessage : `${this.gate && this.gate.position.clone().sub(this.jet.position).applyQuaternion(this.jet.quaternion.clone().invert()).x > 15 ? "STEER RIGHT →" : this.gate && this.gate.position.clone().sub(this.jet.position).applyQuaternion(this.jet.quaternion.clone().invert()).x < -15 ? "← STEER LEFT" : "GATE AHEAD"} · ${this.mode === "classic" ? "Y / M changes world" : "12 gates · Finish the course"}`}`;
-      this.hud.classList.toggle(
-        "flight-warning",
-        clearance < 40 && this.currentMapIndex !== 2,
-      );
-    }
-    return !this.crashed && !this.courseFinished;
-  }
-
-  render(): void {
-    if (!this.isInitialized) return;
+    this.lastRender = now;
+    this.syncVisuals(Math.min(0.25, this.renderDelta));
+    this.renderDelta = 0;
     this.renderer.render(this.scene, this.camera);
   }
-
-  getScore(): number {
-    return this.mode === "classic"
-      ? Math.floor(this.bestSpeed)
-      : Math.max(
-          0,
-          this.gatesPassed * 1000 -
-            this.gatesMissed * 250 +
-            (this.courseFinished
-              ? Math.max(0, Math.floor(3000 - this.elapsed * 10))
-              : 0),
-        );
+  onPause(): void {
+    this.audio.pause();
   }
-
+  onResume(): void {
+    this.audio.resume();
+    this.lastRender = 0;
+  }
+  getScore(): number {
+    return this.journey.score;
+  }
   getMetrics() {
     return {
-      max_altitude: Math.max(0, this.maxAltitude),
-      max_speed: this.bestSpeed,
-      gates: this.gatesPassed,
-      misses: this.gatesMissed,
-      completed: this.courseFinished,
-      ...(this.courseFinished
-        ? {
-            medal: (this.gatesMissed === 0 && this.elapsed < 180
-              ? "gold"
-              : this.gatesPassed >= 10
-                ? "silver"
-                : "bronze") as "gold" | "silver" | "bronze",
-          }
-        : {}),
-      crashed: this.crashed,
+      max_speed: this.journey.bestSpeed,
+      max_altitude: Math.min(10000000, this.journey.maxAltitude),
+      gates: Math.min(1000000, this.journey.gatesPassed),
+      misses: Math.min(1000000, this.journey.gatesMissed),
+      sectors: Math.min(1000000, this.journey.visited.size),
+      crashed: this.journey.collisions > 0,
+      completed: false,
+      ...(this.journey.lastRace ? { medal: this.journey.lastRace.medal } : {}),
     };
   }
   getState(): Record<string, unknown> {
-    if (!this.jet) throw new Error("Aircraft is not ready");
-    return {
-      version: 1,
-      mode: this.mode,
-      elapsed: this.elapsed,
-      courseFinished: this.courseFinished,
-      maxAltitude: this.maxAltitude,
-      position: this.jet.position.toArray(),
-      rotation: this.jet.quaternion.toArray(),
-      speed: this.controller.speed,
-      bestSpeed: this.bestSpeed,
-      map: this.currentMapIndex,
-      gatesPassed: this.gatesPassed,
-      gatesMissed: this.gatesMissed,
-      gate: this.gate
-        ? {
-            position: this.gate.position.toArray(),
-            rotation: this.gate.quaternion.toArray(),
-          }
-        : null,
-    };
+    return this.journey.getState();
   }
   setState(state: Record<string, unknown>): void {
-    const data = z
-      .object({
-        version: z.literal(1),
-        mode: z.enum(["classic", "course"]).default("classic"),
-        elapsed: z.number().min(0).max(604800).default(0),
-        courseFinished: z.boolean().default(false),
-        maxAltitude: z.number().min(0).max(10000000),
-        position: z.array(z.number().min(-1e7).max(1e7)).length(3),
-        rotation: z
-          .array(z.number().min(-1).max(1))
-          .length(4)
-          .refine((a) => Math.abs(a.reduce((v, n) => v + n * n, 0) - 1) < 0.01),
-        speed: z.number().min(0).max(450),
-        bestSpeed: z.number().min(0).max(450),
-        map: z.number().int().min(0).max(2),
-        gatesPassed: z.number().int().min(0).max(1000000).default(0),
-        gatesMissed: z.number().int().min(0).max(1000000).default(0),
-        gate: z
-          .object({
-            position: z.array(z.number().min(-1e7).max(1e7)).length(3),
-            rotation: z
-              .array(z.number().min(-1).max(1))
-              .length(4)
-              .refine(
-                (a) => Math.abs(a.reduce((v, n) => v + n * n, 0) - 1) < 0.01,
-              ),
-          })
-          .nullable()
-          .default(null),
-      })
-      .parse(state);
-    if (!this.jet) return; // Validation also works before initialization.
-    this.jet.position.fromArray(data.position);
-    this.jet.quaternion.fromArray(data.rotation).normalize();
-    this.mode = data.mode;
-    this.elapsed = data.elapsed;
-    this.courseFinished = data.courseFinished;
-    this.maxAltitude = data.maxAltitude;
-    this.crashed = false;
-    this.controller.speed = data.speed;
-    this.bestSpeed = data.bestSpeed;
-    this.setupMap(data.map);
-    this.gatesPassed = data.gatesPassed;
-    this.gatesMissed = data.gatesMissed;
-    if (this.gate && data.gate) {
-      this.gate.position.fromArray(data.gate.position);
-      this.gate.quaternion.fromArray(data.gate.rotation).normalize();
-    } else this.placeGate(true);
-    this.gateMessageTime = 0;
+    this.journey.setState(state);
+    if (this.initialized) {
+      this.syncWorld();
+      this.currentShip = null;
+      this.syncShip();
+      this.followCamera(1);
+      this.hud?.update(this.journey, this.camera, 0);
+    }
   }
   getResult(): { title: string; detail: string } {
     return {
-      title: this.crashed
-        ? "Flight ended"
-        : this.courseFinished
-          ? "Course complete"
-          : "Flight complete",
-      detail: `${this.gatesPassed} gates cleared · ${this.gatesMissed} missed · ${Math.floor(this.elapsed)}s · Peak speed ${Math.floor(this.bestSpeed)} m/s`,
+      title: "Journey paused",
+      detail: `Level ${this.journey.level} · ${this.journey.visited.size} sectors explored · ${this.journey.races} races · ${this.journey.contractIndex} contracts · ${this.journey.scanned.size} sectors surveyed`,
     };
   }
-  private disposeObject(object: THREE.Object3D): void {
+  private disposeObject(object: THREE.Object3D) {
+    const geometries = new Set<THREE.BufferGeometry>();
+    const materials = new Set<THREE.Material>();
+    const textures = new Set<THREE.Texture>();
     object.traverse((child) => {
-      if (!(child instanceof THREE.Mesh) && !(child instanceof THREE.Points))
-        return;
-      child.geometry?.dispose();
-      for (const material of Array.isArray(child.material)
-        ? child.material
-        : [child.material]) {
-        for (const value of Object.values(material))
-          if (value instanceof THREE.Texture) value.dispose();
-        material.dispose();
+      if (child instanceof THREE.Sprite) materials.add(child.material);
+      else if (
+        child instanceof THREE.Mesh ||
+        child instanceof THREE.Points ||
+        child instanceof THREE.LineSegments
+      ) {
+        geometries.add(child.geometry);
+        for (const material of Array.isArray(child.material)
+          ? child.material
+          : [child.material])
+          materials.add(material);
+        if (child instanceof THREE.InstancedMesh) child.dispose();
       }
     });
+    for (const material of materials) {
+      for (const value of Object.values(material))
+        if (value instanceof THREE.Texture) textures.add(value);
+      material.dispose();
+    }
+    for (const geometry of geometries) geometry.dispose();
+    for (const texture of textures) texture.dispose();
   }
   destroy(): void {
     this.disposed = true;
-    this.isInitialized = false;
-    this.hud?.remove();
+    this.initialized = false;
+    this.resize?.disconnect();
+    this.resize = null;
+    this.hud?.destroy();
     this.hud = null;
+    this.audio.destroy();
+    this.canvas = null;
     if (this.scene) {
       this.disposeObject(this.scene);
       this.scene.clear();
     }
-    this.jet = null;
-    if (this.renderer) this.renderer.dispose();
+    this.rockGeometry.dispose();
+    this.rockMaterial.dispose();
+    this.ships.clear();
+    this.sectors.clear();
+    this.gates = [];
+    this.renderer?.dispose();
   }
 }

@@ -79,22 +79,18 @@
     "title": "Merge 2048"
   },
   "stellar-flight": {
-    "rulesVersion": 2,
+    "rulesVersion": 4,
     "scoreUnit": "points",
     "difficulty": false,
     "modes": [
       {
-        "id": "course",
-        "label": "12-gate course"
-      },
-      {
-        "id": "classic",
-        "label": "Free flight \u00b7 peak speed"
+        "id": "endless",
+        "label": "Endless space racer"
       }
     ],
     "config": {
       "model_path": "/models/Jet.glb",
-      "initial_speed": 50
+      "initial_speed": 120
     },
     "title": "Stellar Flight"
   }
