@@ -46,36 +46,44 @@ it.each([true, false])(
     engine.destroy();
   },
 );
-it("the engine renders at 120 Hz while retaining fixed 60 Hz gameplay", async () => {
-  let callback: FrameRequestCallback = () => {};
-  vi.spyOn(performance, "now").mockReturnValue(0);
-  vi.stubGlobal("requestAnimationFrame", (fn: FrameRequestCallback) => {
-    callback = fn;
-    return 1;
-  });
-  vi.stubGlobal("cancelAnimationFrame", () => {});
-  const game: Game2DInstance = {
-    type: "2d",
-    init: () => {},
-    update: vi.fn(() => true),
-    render: vi.fn(),
-  };
-  const engine = new GameEngine();
-  await engine.init(
-    {
-      width: 0,
-      height: 0,
-      getContext: () => ({ setTransform: vi.fn() }),
-    } as unknown as HTMLCanvasElement,
-    game,
-    { slug: "test", title: "Test" },
-  );
-  engine.start();
-  for (let i = 1; i <= 12; i++) callback((i * 1000) / 120 + 0.001);
-  expect(game.update).toHaveBeenCalledTimes(6);
-  expect(game.render).toHaveBeenCalledTimes(13);
-  engine.destroy();
-});
+it.each([60, 75, 120, 144, 165, 240])(
+  "caps a %i Hz display at 60 renders with fixed 60 Hz gameplay",
+  async (refresh) => {
+    let callback: FrameRequestCallback = () => {};
+    vi.spyOn(performance, "now").mockReturnValue(0);
+    vi.stubGlobal("requestAnimationFrame", (fn: FrameRequestCallback) => {
+      callback = fn;
+      return 1;
+    });
+    vi.stubGlobal("cancelAnimationFrame", () => {});
+    const game: Game2DInstance = {
+      type: "2d",
+      init: () => {},
+      update: vi.fn(() => true),
+      render: vi.fn(),
+    };
+    const engine = new GameEngine();
+    await engine.init(
+      {
+        width: 0,
+        height: 0,
+        getContext: () => ({ setTransform: vi.fn() }),
+      } as unknown as HTMLCanvasElement,
+      game,
+      { slug: "test", title: "Test" },
+    );
+    engine.start();
+    for (let i = 1; i <= refresh; i++) callback((i * 1000) / refresh + 0.001);
+    expect(game.update).toHaveBeenCalledTimes(60);
+    expect(game.render).toHaveBeenCalledTimes(61); // Includes the initial still frame.
+    engine.destroy();
+    expect(recentMeasurements()[0]).toMatchObject({
+      targetFps: 60,
+      frames: 60,
+      averageFps: 60,
+    });
+  },
+);
 it("exports real average FPS, tail frame time and render resolution", () => {
   localStorage.clear();
   recordMeasurement("flight", 100, [10, 10, 20, NaN, 0], {

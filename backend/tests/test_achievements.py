@@ -3,6 +3,7 @@
 import asyncio
 
 import httpx2 as httpx
+from sqlalchemy import event
 
 
 def test_score_conditions_are_required(player):
@@ -155,3 +156,40 @@ def test_measurements_are_bounded_and_unknown_fields_are_rejected(player):
             ).status_code
             == 422
         )
+
+
+def test_achievement_summary_and_paging_use_bounded_queries(player, profile, app):
+    player.post("/api/stats/snake/score", json={"score": 100})
+    assert (
+        player.post(
+            "/api/achievements/unlock",
+            json={"game_slug": "snake", "achievement_slug": "score-100"},
+        ).status_code
+        == 200
+    )
+    other = player.post("/api/profiles", json={"username": "Other"}).json()
+    queries = []
+
+    def record(_connection, _cursor, statement, _parameters, _context, _many):
+        if statement.lstrip().upper().startswith("SELECT"):
+            queries.append(statement)
+
+    event.listen(app.state.engine.sync_engine, "before_cursor_execute", record)
+    try:
+        headers = {"X-Profile-ID": str(profile["id"])}
+        summary = player.get("/api/achievements/summary", headers=headers)
+        assert summary.status_code == 200, summary.text
+        assert summary.json() == {"total": 31, "unlocked_count": 1}
+        assert len(queries) == 2  # Profile lookup + aggregate; no achievement objects.
+        queries.clear()
+        page = player.get("/api/achievements?skip=200&limit=1", headers=headers)
+        assert page.json() == {"achievements": [], **summary.json()}
+        assert len(queries) == 3  # Profile lookup + aggregate + bounded page.
+        queries.clear()
+        other_summary = player.get(
+            "/api/achievements/summary", headers={"X-Profile-ID": str(other["id"])}
+        ).json()
+        assert other_summary == {"total": 31, "unlocked_count": 0}
+        assert len(queries) == 2
+    finally:
+        event.remove(app.state.engine.sync_engine, "before_cursor_execute", record)

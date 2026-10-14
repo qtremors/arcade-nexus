@@ -1,7 +1,8 @@
 """FastAPI application factory for the local browser console."""
 
+import asyncio
 import logging
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -19,6 +20,7 @@ from app.database import engine, init_db, make_engine
 from app.middleware import RequestGuard
 from app.routers import achievements, data, games, library, profiles, progress, saves, stats
 from app.seed import sync_games
+from app.services.backups import RotatingBackups
 
 logger = logging.getLogger(__name__)
 
@@ -31,15 +33,32 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         else make_engine(configuration.DATABASE_URL, debug=configuration.DEBUG)
     )
     session_factory = async_sessionmaker(db_engine, expire_on_commit=False, autoflush=False)
+    backups = RotatingBackups(
+        db_engine.url.database,
+        session_factory,
+        enabled=configuration.AUTO_BACKUP_ENABLED,
+        retention=configuration.BACKUP_RETENTION,
+        hours=configuration.BACKUP_INTERVAL_HOURS,
+    )
 
     @asynccontextmanager
     async def lifespan(application: FastAPI):
+        backup_task = None
         try:
             await init_db(db_engine)
             await sync_games(skip_init=True, session_factory=session_factory)
+            try:
+                await backups.create()
+            except Exception:
+                logger.exception("Startup backup failed")
+            backup_task = asyncio.create_task(backups.run())
             logger.info("%s v%s started", configuration.APP_NAME, configuration.APP_VERSION)
             yield
         finally:
+            if backup_task:
+                backup_task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await backup_task
             await db_engine.dispose()
             logger.info("Database connections closed")
 
@@ -53,6 +72,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.state.settings = configuration
     application.state.engine = db_engine
     application.state.session_factory = session_factory
+    application.state.backups = backups
     application.add_middleware(RequestGuard, settings=configuration)
     application.add_middleware(
         CORSMiddleware,

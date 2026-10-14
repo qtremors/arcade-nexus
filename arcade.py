@@ -48,6 +48,13 @@ def main():
             not args.dev and not (ROOT / "frontend/dist/index.html").is_file()
         ):
             raise RuntimeError("First run: python arcade.py --setup. Later launches work offline.")
+        if args.dev:
+            node = executable("node")
+            vite = ROOT / "frontend/node_modules/vite/bin/vite.js"
+            if not vite.is_file():
+                raise RuntimeError(
+                    "Development dependencies missing. Run python arcade.py --setup."
+                )
         ports = [8000, 5173] if args.dev else [8000]
         for port in ports:
             with socket.socket() as probe:
@@ -70,7 +77,7 @@ def main():
         if args.dev:
             children.append(
                 subprocess.Popen(
-                    [executable("npm"), "run", "dev", "--", "--port", "5173", "--strictPort"],
+                    [node, str(vite), "--port", "5173", "--strictPort"],
                     cwd=ROOT / "frontend",
                     env=env,
                 )

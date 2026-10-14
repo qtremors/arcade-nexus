@@ -135,6 +135,21 @@ export interface ModeRecord {
   high_score: number;
   best_time_ms?: number | null;
 }
+export interface HistoryFilters {
+  mode?: string;
+  difficulty?: string;
+  since?: string;
+  before?: string;
+  sort?:
+    "game_title" | "end_time" | "difficulty" | "duration_seconds" | "score";
+  direction?: "asc" | "desc";
+}
+export interface HistoryGame {
+  id: number;
+  slug: string;
+  title: string;
+  modes: string[];
+}
 export const progressApi = {
   complete: async (
     slug: string,
@@ -156,18 +171,34 @@ export const progressApi = {
         playerConfig(profileId),
       )
     ).data,
-  records: async (household = false) =>
+  records: async (household = false, signal?: AbortSignal) =>
     (
       await api.get<ModeRecord[]>("/progress/records", {
         ...playerConfig(),
         params: { household },
+        signal,
       })
     ).data,
-  history: async (skip = 0, limit = 25, gameId?: number) =>
+  history: async (
+    skip = 0,
+    limit = 25,
+    gameId?: number,
+    filters: HistoryFilters = {},
+  ) =>
     (
       await api.get<{ sessions: GameSession[]; total: number }>(
         "/progress/history",
-        { ...playerConfig(), params: { skip, limit, game_id: gameId } },
+        {
+          ...playerConfig(),
+          params: { skip, limit, game_id: gameId, ...filters },
+        },
+      )
+    ).data,
+  historyOptions: async () =>
+    (
+      await api.get<{ games: HistoryGame[] }>(
+        "/progress/history/options",
+        playerConfig(),
       )
     ).data,
   recovery: async (profileId?: number) =>
@@ -192,8 +223,54 @@ export const progressApi = {
       })
     ).data,
 };
+export interface BackupPreview {
+  profiles: number;
+  profile_ids: number[];
+  names: string[];
+  games: number;
+  saves: number;
+  sessions: number;
+  records: number;
+  recoveries: number;
+}
+export interface SnapshotInfo {
+  name: string;
+  created_at: string;
+  reason: "daily" | "manual";
+  bytes: number;
+}
+export interface BackupStatus {
+  enabled: boolean;
+  retention: number;
+  interval_hours: number;
+  backups: SnapshotInfo[];
+  error: string | null;
+}
 export const dataApi = {
   export: async (): Promise<unknown> => (await api.get("/data/export")).data,
+  preview: async (data: unknown) =>
+    (await api.post<BackupPreview>("/data/preview", data, { timeout: 60000 }))
+      .data,
+  backups: async () => (await api.get<BackupStatus>("/data/backups")).data,
+  createSnapshot: async () =>
+    (await api.post<SnapshotInfo>("/data/backups", {}, { timeout: 60000 }))
+      .data,
+  previewSnapshot: async (name: string) =>
+    (
+      await api.post<BackupPreview>(
+        `/data/backups/${encodeURIComponent(name)}/preview`,
+        {},
+        { timeout: 60000 },
+      )
+    ).data,
+  restoreSnapshot: async (name: string) =>
+    (
+      await api.post<{ imported: number }>(
+        `/data/backups/${encodeURIComponent(name)}/restore`,
+        {},
+        { timeout: 60000 },
+      )
+    ).data,
   restore: async (data: unknown) =>
     (
       await api.post<{
@@ -427,6 +504,13 @@ export const statsApi = {
 };
 
 export const achievementsApi = {
+  summary: async () => {
+    const { data } = await api.get<{ total: number; unlocked_count: number }>(
+      "/achievements/summary",
+      playerConfig(),
+    );
+    return data;
+  },
   getAll: async () => {
     const { data } = await api.get<{
       achievements: Achievement[];

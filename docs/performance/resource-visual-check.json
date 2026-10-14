@@ -1,0 +1,202 @@
+{
+  "date": "2026-10-14",
+  "baselineCommit": "09eaf2f",
+  "renderer": "Chromium ANGLE/SwiftShader",
+  "method": "Direct canvas PNG readback immediately after rendering seeded initial saves, fonts explicitly loaded, decorative Math.random seeded to 123; separate baseline worktree. No gameplay loop or concurrent benchmark. Selected frames only.",
+  "games": [
+    {
+      "slug": "snake",
+      "buffer": [
+        1620,
+        1080
+      ],
+      "identical": false,
+      "meanChannelDifference": [
+        0.015076017375400092,
+        0.01650777320530407,
+        0.014925697302240512
+      ]
+    },
+    {
+      "slug": "raptor-run",
+      "buffer": [
+        1620,
+        1080
+      ],
+      "identical": true,
+      "meanChannelDifference": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "slug": "breakout",
+      "buffer": [
+        1620,
+        1080
+      ],
+      "identical": true,
+      "meanChannelDifference": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "slug": "merge-2048",
+      "buffer": [
+        1620,
+        1080
+      ],
+      "identical": true,
+      "meanChannelDifference": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "slug": "tetris",
+      "buffer": [
+        1620,
+        1080
+      ],
+      "identical": true,
+      "meanChannelDifference": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "slug": "asteroids",
+      "buffer": [
+        1620,
+        1080
+      ],
+      "identical": true,
+      "meanChannelDifference": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "slug": "prism-rush",
+      "buffer": [
+        1620,
+        1080
+      ],
+      "identical": true,
+      "meanChannelDifference": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "slug": "stellar-flight",
+      "buffer": [
+        1620,
+        1080
+      ],
+      "identical": true,
+      "meanChannelDifference": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  ],
+  "flightViews": [
+    {
+      "yawDegrees": 0,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "identical": true,
+      "beforeTriangles": 36426,
+      "afterTriangles": 13786
+    },
+    {
+      "yawDegrees": 45,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "identical": true,
+      "beforeTriangles": 37584,
+      "afterTriangles": 15344
+    },
+    {
+      "yawDegrees": 90,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "identical": true,
+      "beforeTriangles": 29584,
+      "afterTriangles": 7024
+    },
+    {
+      "yawDegrees": 135,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "identical": true,
+      "beforeTriangles": 26462,
+      "afterTriangles": 4142
+    },
+    {
+      "yawDegrees": 180,
+      "position": [
+        6000,
+        2400,
+        -4800
+      ],
+      "identical": true,
+      "beforeTriangles": 27624,
+      "afterTriangles": 5544
+    },
+    {
+      "yawDegrees": 225,
+      "position": [
+        6000,
+        2400,
+        -4800
+      ],
+      "identical": true,
+      "beforeTriangles": 26462,
+      "afterTriangles": 2782
+    },
+    {
+      "yawDegrees": 270,
+      "position": [
+        6000,
+        2400,
+        -4800
+      ],
+      "identical": true,
+      "beforeTriangles": 33616,
+      "afterTriangles": 8896
+    },
+    {
+      "yawDegrees": 315,
+      "position": [
+        6000,
+        2400,
+        -4800
+      ],
+      "identical": true,
+      "beforeTriangles": 37334,
+      "afterTriangles": 13254
+    }
+  ]
+}

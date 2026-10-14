@@ -1,10 +1,13 @@
 """One transaction per result, replayable receipts, recovery and household records."""
 
 from datetime import timedelta
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
-from sqlalchemy import delete, func, select, update
+from pydantic import AwareDatetime
+from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.dialects.sqlite import insert
+from sqlalchemy.orm import selectinload
 
 from app.datetime_utils import utc_now
 from app.dependencies import CurrentUser, DbSession
@@ -23,6 +26,7 @@ from app.routers.stats import same_completion
 from app.schemas.save import SaveUpdate
 from app.schemas.stats import CompletionRecord
 from app.services.common import ensure_stats, get_game
+from app.services.history import HistorySort, history_query, session_response
 
 router = APIRouter()
 
@@ -149,7 +153,12 @@ async def complete(slug: str, data: CompletionRecord, current_user: CurrentUser,
         "total_playtime": stats.total_playtime_seconds,
     }
     session.completion = {"payload": payload, "result": result}
-    if data.metrics.completed or data.metrics.crashed:
+    terminal = (
+        data.metrics.ended
+        if data.metrics.ended is not None
+        else data.metrics.completed or data.metrics.crashed
+    )
+    if terminal:
         await db.execute(
             delete(RecoverySave).where(
                 RecoverySave.user_id == current_user.id,
@@ -222,20 +231,49 @@ async def history(
     skip: int = Query(0, ge=0),
     limit: int = Query(25, ge=1, le=100),
     game_id: int | None = Query(None, ge=1),
+    mode: str | None = Query(None, pattern=r"^[a-z0-9-]{1,40}$"),
+    difficulty: Literal["easy", "normal", "hard"] | None = None,
+    since: AwareDatetime | None = None,
+    before: AwareDatetime | None = None,
+    sort: HistorySort = "end_time",
+    direction: Literal["asc", "desc"] = "desc",
 ):
-    from app.routers.stats import get_session_history
-
-    total = await db.scalar(
-        select(func.count())
-        .select_from(GameSession)
-        .where(
-            GameSession.user_id == current_user.id,
-            GameSession.end_time.is_not(None),
-            *([GameSession.game_id == game_id] if game_id is not None else []),
-        )
+    if since and before and since >= before:
+        raise HTTPException(422, "The end of the date range must be after its start")
+    query = history_query(
+        current_user.id,
+        game_id=game_id,
+        mode=mode,
+        difficulty=difficulty,
+        since=since,
+        before=before,
+        sort=sort,
+        direction=direction,
     )
-    rows = await get_session_history(current_user, db, game_id=game_id, skip=skip, limit=limit)
+    total = await db.scalar(select(func.count()).select_from(query.order_by(None).subquery()))
+    sessions = (
+        await db.scalars(query.offset(skip).limit(limit).options(selectinload(GameSession.game)))
+    ).all()
+    rows = [session_response(session) for session in sessions]
     return {"sessions": rows, "total": total, "skip": skip, "limit": limit}
+
+
+@router.get("/history/options")
+async def history_options(current_user: CurrentUser, db: DbSession):
+    rows = (
+        await db.execute(
+            select(Game.id, Game.slug, Game.title, GameSession.mode)
+            .join(GameSession, GameSession.game_id == Game.id)
+            .where(GameSession.user_id == current_user.id, GameSession.end_time.is_not(None))
+            .distinct()
+            .order_by(Game.title, GameSession.mode)
+        )
+    ).all()
+    games = {}
+    for game_id, slug, title, mode in rows:
+        game = games.setdefault(game_id, {"id": game_id, "slug": slug, "title": title, "modes": []})
+        game["modes"].append(mode)
+    return {"games": list(games.values())}
 
 
 @router.get("/recovery")
@@ -255,7 +293,20 @@ async def recoveries(current_user: CurrentUser, db: DbSession):
 
 @router.put("/recovery/{slug}")
 async def save_recovery(slug: str, data: SaveUpdate, current_user: CurrentUser, db: DbSession):
+    await db.execute(text("BEGIN IMMEDIATE"))
     game = await get_game(slug, db)
+    identity = data.data.get("session_id")
+    if isinstance(identity, str):
+        finished = await db.scalar(
+            select(GameSession).where(
+                GameSession.session_id == identity,
+                GameSession.user_id == current_user.id,
+                GameSession.game_id == game.id,
+                GameSession.end_time.is_not(None),
+            )
+        )
+        if finished and finished.metrics.get("ended") is True:
+            raise HTTPException(409, "This run has already ended")
     statement = insert(RecoverySave).values(
         user_id=current_user.id, game_id=game.id, data=data.data, updated_at=utc_now()
     )

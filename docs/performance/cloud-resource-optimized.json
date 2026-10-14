@@ -1,0 +1,243 @@
+{
+  "date": "2026-10-14T03:04:56.764Z",
+  "browser": "151.0.7922.173",
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "logicalCpus": 3,
+  "viewport": [
+    1280,
+    800
+  ],
+  "canvasCss": [
+    960,
+    640
+  ],
+  "dpr": 1,
+  "warmupSeconds": 3,
+  "sampleSeconds": 15,
+  "build": "Vite development server; engine + game, no React shell",
+  "softwareRequested": true,
+  "headless": true,
+  "notes": "Scripted normal-mode play; auto-reset on game over. Engine + game, not full console or worst-case stress. Native hardware acceptance requires a headed browser and declared display/GPU.",
+  "results": [
+    {
+      "slug": "snake",
+      "mode": "classic",
+      "frames": 900,
+      "wallMs": 15001,
+      "averageFps": 60,
+      "medianFrameMs": 16.7,
+      "p95FrameMs": 16.7,
+      "slowFramesOver33ms": 0,
+      "resets": 0,
+      "renderer": null,
+      "buffer": [
+        1620,
+        1080
+      ],
+      "score": 0,
+      "error": null,
+      "renderSubmitMs": {
+        "average": 0.14,
+        "p95": 0.2
+      },
+      "pageErrors": []
+    },
+    {
+      "slug": "raptor-run",
+      "mode": "classic",
+      "frames": 900,
+      "wallMs": 15001,
+      "averageFps": 60,
+      "medianFrameMs": 16.7,
+      "p95FrameMs": 16.8,
+      "slowFramesOver33ms": 0,
+      "resets": 0,
+      "renderer": null,
+      "buffer": [
+        1620,
+        1080
+      ],
+      "score": 1137,
+      "error": null,
+      "renderSubmitMs": {
+        "average": 0.31,
+        "p95": 0.5
+      },
+      "pageErrors": []
+    },
+    {
+      "slug": "breakout",
+      "mode": "classic",
+      "frames": 901,
+      "wallMs": 15001,
+      "averageFps": 60,
+      "medianFrameMs": 16.7,
+      "p95FrameMs": 16.7,
+      "slowFramesOver33ms": 0,
+      "resets": 0,
+      "renderer": null,
+      "buffer": [
+        1620,
+        1080
+      ],
+      "score": 180,
+      "error": null,
+      "renderSubmitMs": {
+        "average": 0.19,
+        "p95": 0.2
+      },
+      "pageErrors": []
+    },
+    {
+      "slug": "merge-2048",
+      "mode": "classic",
+      "frames": 900,
+      "wallMs": 15001,
+      "averageFps": 60,
+      "medianFrameMs": 16.7,
+      "p95FrameMs": 16.8,
+      "slowFramesOver33ms": 0,
+      "resets": 0,
+      "renderer": null,
+      "buffer": [
+        1620,
+        1080
+      ],
+      "score": 820,
+      "error": null,
+      "renderSubmitMs": {
+        "average": 0.21,
+        "p95": 0.4
+      },
+      "pageErrors": []
+    },
+    {
+      "slug": "tetris",
+      "mode": "marathon",
+      "frames": 900,
+      "wallMs": 15001,
+      "averageFps": 60,
+      "medianFrameMs": 16.7,
+      "p95FrameMs": 16.7,
+      "slowFramesOver33ms": 0,
+      "resets": 0,
+      "renderer": null,
+      "buffer": [
+        1620,
+        1080
+      ],
+      "score": 438,
+      "error": null,
+      "renderSubmitMs": {
+        "average": 0.2,
+        "p95": 0.3
+      },
+      "pageErrors": []
+    },
+    {
+      "slug": "asteroids",
+      "mode": "classic",
+      "frames": 899,
+      "wallMs": 15001,
+      "averageFps": 59.9,
+      "medianFrameMs": 16.7,
+      "p95FrameMs": 16.7,
+      "slowFramesOver33ms": 1,
+      "resets": 0,
+      "renderer": null,
+      "buffer": [
+        1620,
+        1080
+      ],
+      "score": 1580,
+      "error": null,
+      "renderSubmitMs": {
+        "average": 0.23,
+        "p95": 0.3
+      },
+      "pageErrors": []
+    },
+    {
+      "slug": "prism-rush",
+      "mode": "classic",
+      "frames": 228,
+      "wallMs": 15002,
+      "averageFps": 15.3,
+      "medianFrameMs": 66.7,
+      "p95FrameMs": 100,
+      "slowFramesOver33ms": 186,
+      "resets": 0,
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "buffer": [
+        1620,
+        1080
+      ],
+      "score": 1196,
+      "error": null,
+      "renderInfo": {
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "quality": "1080p · full scene detail",
+        "width": 1620,
+        "height": 1080
+      },
+      "renderSubmitMs": {
+        "average": 0.61,
+        "p95": 1.1
+      },
+      "drawCalls": {
+        "average": 9,
+        "max": 9
+      },
+      "triangles": {
+        "average": 887.16,
+        "max": 914
+      },
+      "gpuResources": {
+        "geometries": 9,
+        "textures": 1
+      },
+      "pageErrors": []
+    },
+    {
+      "slug": "stellar-flight",
+      "mode": "endless",
+      "frames": 180,
+      "wallMs": 15002,
+      "averageFps": 12,
+      "medianFrameMs": 83.4,
+      "p95FrameMs": 166.8,
+      "slowFramesOver33ms": 125,
+      "resets": 0,
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "buffer": [
+        1620,
+        1080
+      ],
+      "score": 10869,
+      "error": null,
+      "renderInfo": {
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "quality": "1080p · full scene detail",
+        "width": 1620,
+        "height": 1080
+      },
+      "renderSubmitMs": {
+        "average": 3.06,
+        "p95": 6.7
+      },
+      "drawCalls": {
+        "average": 30.56,
+        "max": 36
+      },
+      "triangles": {
+        "average": 11624.22,
+        "max": 16858
+      },
+      "gpuResources": {
+        "geometries": 36,
+        "textures": 2
+      },
+      "pageErrors": []
+    }
+  ]
+}

@@ -1,3 +1,23 @@
+/** Shared visibility rules for keyboard traps and spatial controller navigation. */
+export function isFocusableControl(target: HTMLElement): boolean {
+  if (
+    target.matches(':disabled,input[type="hidden"]') ||
+    (target.hasAttribute("tabindex") && target.tabIndex < 0) ||
+    target.closest('[hidden],[inert],[aria-hidden="true"]') ||
+    target.getClientRects().length === 0 ||
+    ["hidden", "collapse"].includes(getComputedStyle(target).visibility)
+  )
+    return false;
+  let closed = target.parentElement?.closest("details:not([open])");
+  while (closed) {
+    const summary = Array.from(closed.children).find(
+      (child) => child.tagName === "SUMMARY",
+    );
+    if (!summary?.contains(target)) return false;
+    closed = closed.parentElement?.closest("details:not([open])");
+  }
+  return true;
+}
 /** Spatial focus follows the visible layout and scrolls the selected control into view. */
 export function moveMenuFocus(
   direction: "Up" | "Down" | "Left" | "Right",
@@ -6,13 +26,10 @@ export function moveMenuFocus(
   const controls = Array.from(
     (root ?? document).querySelectorAll<HTMLElement>(
       root
-        ? "button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled)"
-        : "header a, header button, main button:not(:disabled), main a[href], main input:not(:disabled), main select:not(:disabled)",
+        ? "button, a[href], input, select, summary"
+        : "header a, header button, main button, main a[href], main input, main select, main summary",
     ),
-  ).filter(
-    (element) =>
-      !element.closest("[inert]") && element.getBoundingClientRect().width > 0,
-  );
+  ).filter(isFocusableControl);
   const current = document.activeElement as HTMLElement | null;
   let target = controls[0];
   if (current && controls.includes(current)) {

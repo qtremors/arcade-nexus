@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     ALLOW_GAME_CREATION: bool = False
     FRONTEND_DIR: Path | None = None
     MAX_REQUEST_BYTES: int = Field(1024 * 1024, ge=1024)
+    AUTO_BACKUP_ENABLED: bool = True
+    BACKUP_RETENTION: int = Field(7, ge=1, le=30)
+    BACKUP_INTERVAL_HOURS: int = Field(24, ge=1, le=168)
 
     @field_validator("CORS_ORIGINS")
     @classmethod

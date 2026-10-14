@@ -13,6 +13,7 @@ export class FlightHUD {
   private raceNotice = 0;
   private races = 0;
   private canvas: HTMLCanvasElement;
+  private elements = new Map<string, HTMLElement>();
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
     this.root.className = "flight-hud space-hud flagship-hud";
@@ -34,24 +35,41 @@ export class FlightHUD {
     this.target.setAttribute("aria-hidden", "true");
     canvas.parentElement?.append(this.root, this.target);
   }
+  private element(selector: string): HTMLElement {
+    let element = this.elements.get(selector);
+    if (!element) {
+      element = this.root.querySelector<HTMLElement>(selector)!;
+      this.elements.set(selector, element);
+    }
+    return element;
+  }
   private text(selector: string, value: string) {
-    const element = this.root.querySelector(selector)!;
+    const element = this.element(selector);
     if (element.textContent !== value) element.textContent = value;
   }
   private meter(selector: string, value: number) {
-    (this.root.querySelector(selector) as HTMLProgressElement).value = value;
+    const element = this.element(selector) as HTMLProgressElement;
+    if (element.value !== value) element.value = value;
   }
   update(journey: SpaceJourney, camera: THREE.PerspectiveCamera, dt: number) {
+    // Read layout before text, meter and position writes can invalidate it.
+    const left = this.canvas.offsetLeft,
+      top = this.canvas.offsetTop,
+      width = this.canvas.clientWidth,
+      height = this.canvas.clientHeight;
     this.raceNotice = Math.max(0, this.raceNotice - dt);
     if (journey.races !== this.races) {
       this.races = journey.races;
       this.raceNotice = 6;
     }
-    const result = this.root.querySelector(".space-race-result") as HTMLElement;
+    const result = this.element(".space-race-result");
     result.hidden = this.raceNotice <= 0 || !journey.lastRace;
     if (journey.lastRace) {
       result.dataset.medal = journey.lastRace.medal;
-      result.textContent = `${journey.lastRace.medal.toUpperCase()} FLIGHT · ${journey.lastRace.time.toFixed(1)}s · ${journey.lastRace.passed}/5 rings · +${journey.lastRace.points.toLocaleString()} points`;
+      this.text(
+        ".space-race-result",
+        `${journey.lastRace.medal.toUpperCase()} FLIGHT · ${journey.lastRace.time.toFixed(1)}s · ${journey.lastRace.passed}/5 rings · +${journey.lastRace.points.toLocaleString()} points`,
+      );
     }
     this.inverse.copy(journey.rotation).invert();
     this.point.fromArray(journey.target).sub(journey.position);
@@ -137,9 +155,10 @@ export class FlightHUD {
           : "Survey reward +350 XP · Full boost + shield refill",
     );
     this.text(".space-status", journey.messageTime > 0 ? journey.message : "");
-    this.root
-      .querySelector(".space-event")!
-      .classList.toggle("is-visible", journey.messageTime > 0);
+    this.element(".space-event").classList.toggle(
+      "is-visible",
+      journey.messageTime > 0,
+    );
     this.root.classList.toggle("flight-warning", journey.invulnerable > 0);
     this.root.classList.toggle("is-boosting", journey.boosting);
     this.root.dataset.navigation = journey.navigation;
@@ -167,11 +186,13 @@ export class FlightHUD {
           : -0.72
         : 0
       : Math.max(-0.72, Math.min(0.72, this.point.y));
-    this.target.style.left = `${this.canvas.offsetLeft + ((x + 1) * this.canvas.clientWidth) / 2}px`;
-    this.target.style.top = `${this.canvas.offsetTop + ((1 - y) * this.canvas.clientHeight) / 2}px`;
+    this.target.style.left = `${left + ((x + 1) * width) / 2}px`;
+    this.target.style.top = `${top + ((1 - y) * height) / 2}px`;
     this.target.dataset.offscreen = String(offscreen);
     this.target.dataset.navigation = journey.navigation;
-    this.target.textContent = `${offscreen ? (vertical ? (this.local.y > 0 ? "↑" : "↓") : x < 0 ? "←" : "→") : "◇"} ${journey.navigation === "race" ? "RING" : "SURVEY"} · ${Math.round(distance)} m`;
+    const targetText = `${offscreen ? (vertical ? (this.local.y > 0 ? "↑" : "↓") : x < 0 ? "←" : "→") : "◇"} ${journey.navigation === "race" ? "RING" : "SURVEY"} · ${Math.round(distance)} m`;
+    if (this.target.textContent !== targetText)
+      this.target.textContent = targetText;
     this.target.hidden = false;
     const context = this.radar.getContext("2d");
     if (context) {
@@ -225,6 +246,7 @@ export class FlightHUD {
     }
   }
   destroy() {
+    this.elements.clear();
     this.root.remove();
     this.target.remove();
   }

@@ -1,0 +1,115 @@
+{
+  "date": "2026-10-14T03:30:19.589Z",
+  "browser": "151.0.7922.173",
+  "method": "60 manually submitted frames with 0.001 m lateral movement per frame; compare the previous unconditional-upload policy with dirty-buffer updates using actual Three.js onUpload callbacks. No FPS or power claim. Sector reuse and real Web Audio pause/resume/mute checked in Chromium.",
+  "buffer": [
+    1920,
+    1080
+  ],
+  "antialias": true,
+  "before": {
+    "frames": 60,
+    "matrixUploads": 60,
+    "colorUploads": 60,
+    "visibleCounts": [
+      42,
+      42
+    ]
+  },
+  "after": {
+    "frames": 60,
+    "matrixUploads": 0,
+    "colorUploads": 0,
+    "visibleCounts": [
+      42,
+      42
+    ]
+  },
+  "identicalPixels": true,
+  "sectors": {
+    "resident": 27,
+    "reused": 18,
+    "new": 9
+  },
+  "audio": {
+    "playing": "running",
+    "paused": "suspended",
+    "resumed": "running",
+    "muted": "suspended"
+  },
+  "pageErrors": [],
+  "visualComparisons": [
+    {
+      "yawDegrees": 0,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "identicalToPreviousPass": true
+    },
+    {
+      "yawDegrees": 45,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "identicalToPreviousPass": true
+    },
+    {
+      "yawDegrees": 90,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "identicalToPreviousPass": true
+    },
+    {
+      "yawDegrees": 135,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "identicalToPreviousPass": true
+    },
+    {
+      "yawDegrees": 180,
+      "position": [
+        6000,
+        2400,
+        -4800
+      ],
+      "identicalToPreviousPass": true
+    },
+    {
+      "yawDegrees": 225,
+      "position": [
+        6000,
+        2400,
+        -4800
+      ],
+      "identicalToPreviousPass": true
+    },
+    {
+      "yawDegrees": 270,
+      "position": [
+        6000,
+        2400,
+        -4800
+      ],
+      "identicalToPreviousPass": true
+    },
+    {
+      "yawDegrees": 315,
+      "position": [
+        6000,
+        2400,
+        -4800
+      ],
+      "identicalToPreviousPass": true
+    }
+  ]
+}

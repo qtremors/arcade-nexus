@@ -30,7 +30,15 @@ def test_legacy_completion_without_a_start_is_still_accepted(player):
     response = player.post("/api/stats/snake/session", json={"playtime_seconds": 12, "score": 30})
     assert response.status_code == 200
     assert response.json()["total_playtime"] == 12
-    assert player.get("/api/stats/snake").json()["sessions_count"] == 0
+    assert player.get("/api/stats/snake").json()["sessions_count"] == 1
+    totals = player.get("/api/stats").json()
+    assert totals["total_sessions"] == 1 and totals["total_games_played"] == 1
+    replay = player.post(
+        "/api/stats/snake/session",
+        json={"session_id": response.json()["session_id"], "playtime_seconds": 12, "score": 30},
+    )
+    assert replay.status_code == 200
+    assert player.get("/api/stats/snake").json()["sessions_count"] == 1
     assert player.get("/api/stats/sessions").json()[0]["duration_seconds"] == 12
 
 

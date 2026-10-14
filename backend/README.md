@@ -100,7 +100,7 @@ await fetch(api + '/progress/snake/complete', {
 
 Repeating a start UUID does not increment the session counter twice. Repeating an identical completion does not add playtime twice. Changing an already completed payload returns 409. A session cannot be completed for another profile or game.
 
-Legacy requests without an ID finish the most recent unfinished session for that profile/game. A standalone legacy completion is also accepted, retaining the old behavior that completion does not increment the start counter. These requests cannot provide reliable deduplication or distinguish simultaneous sessions in different tabs. The current frontend uses session IDs and retains failed completion submissions for retry.
+Legacy requests without an ID finish the most recent unfinished session for that profile/game. A standalone legacy completion creates and counts one session; finishing a reserved start does not count it again. Requests without an ID cannot provide reliable deduplication or distinguish simultaneous sessions in different tabs. The current frontend uses session IDs and retains failed completion submissions for retry.
 
 Playtime measures client-reported active seconds and is bounded to one week per completion. Score is bounded to a nonnegative signed 32-bit integer, and difficulty is easy, normal, or hard. Started sessions retain their real start timestamp; standalone legacy records infer one from duration. Sessions still need frontend checkpoints and crash recovery.
 

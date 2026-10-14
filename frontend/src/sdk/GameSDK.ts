@@ -42,6 +42,8 @@ export interface InputState {
 }
 
 export interface GameMetrics {
+  /** The simulation reached a terminal result, independent of winning. */
+  ended?: boolean;
   jumps?: number;
   max_altitude?: number;
   max_speed?: number;

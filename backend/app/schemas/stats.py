@@ -18,6 +18,7 @@ class SessionStart(RequestSchema):
 
 
 class SessionMetrics(RequestSchema):
+    ended: bool | None = None
     jumps: Annotated[int, Field(ge=0, le=1_000_000, strict=True)] | None = None
     max_altitude: Annotated[float, Field(ge=0, le=10_000_000, allow_inf_nan=False)] | None = None
     crashed: bool | None = None

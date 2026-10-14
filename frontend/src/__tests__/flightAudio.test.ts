@@ -25,7 +25,12 @@ class FakeAudioContext {
     disconnect: vi.fn(),
   };
   close = vi.fn(async () => {});
-  resume = vi.fn(async () => {});
+  resume = vi.fn(async () => {
+    this.state = "running";
+  });
+  suspend = vi.fn(async () => {
+    this.state = "suspended";
+  });
   constructor() {
     contexts.push(this);
   }
@@ -40,9 +45,77 @@ class FakeAudioContext {
   }
 }
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   contexts.length = 0;
   useSettingsStore.getState().reset();
+});
+it("keeps steady engine parameters out of the automation queue and suspends inaudible audio", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("AudioContext", FakeAudioContext);
+  useSettingsStore.setState({ muted: false, volume: 0.5 });
+  const audio = new FlightAudio();
+  for (let i = 0; i < 600; i++) audio.update(120, false);
+  const context = contexts[0];
+  expect(context.oscillator.frequency.setTargetAtTime).toHaveBeenCalledTimes(1);
+  expect(context.gain.gain.setTargetAtTime).toHaveBeenCalledTimes(1);
+  audio.pause();
+  await vi.advanceTimersByTimeAsync(250);
+  expect(context.suspend).not.toHaveBeenCalled();
+  audio.resume();
+  audio.update(120, false);
+  await vi.advanceTimersByTimeAsync(500);
+  expect(context.suspend).not.toHaveBeenCalled();
+  useSettingsStore.setState({ volume: 0 });
+  audio.update(300, true);
+  await vi.advanceTimersByTimeAsync(500);
+  expect(context.state).toBe("suspended");
+  expect(context.suspend).toHaveBeenCalledTimes(1);
+  expect(context.oscillator.frequency.setTargetAtTime).toHaveBeenCalledTimes(1);
+  useSettingsStore.setState({ volume: 0.5 });
+  audio.update(300, true);
+  await Promise.resolve();
+  expect(context.resume).toHaveBeenCalledTimes(1);
+  expect(context.oscillator.frequency.setTargetAtTime.mock.lastCall?.[0]).toBe(
+    72,
+  );
+  audio.pause();
+  audio.destroy();
+  expect(vi.getTimerCount()).toBe(0);
+});
+it("resumes correctly when suspension is still pending and never revives a destroyed context", async () => {
+  vi.useFakeTimers();
+  vi.stubGlobal("AudioContext", FakeAudioContext);
+  useSettingsStore.setState({ muted: false, volume: 0.5 });
+  const audio = new FlightAudio();
+  audio.update(120, false);
+  const context = contexts[0];
+  let finish!: () => void;
+  context.suspend.mockImplementation(
+    () =>
+      new Promise<void>((resolve) => {
+        finish = () => {
+          context.state = "suspended";
+          resolve();
+        };
+      }),
+  );
+  audio.pause();
+  await vi.advanceTimersByTimeAsync(500);
+  audio.resume();
+  audio.update(120, false);
+  expect(context.resume).not.toHaveBeenCalled();
+  finish();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(context.resume).toHaveBeenCalledTimes(1);
+  expect(context.state).toBe("running");
+  audio.pause();
+  await vi.advanceTimersByTimeAsync(500);
+  audio.destroy();
+  finish();
+  await vi.advanceTimersByTimeAsync(0);
+  expect(context.resume).toHaveBeenCalledTimes(1);
+  expect(vi.getTimerCount()).toBe(0);
 });
 it("engine audio stays silent before play, honors mute, pauses, resumes, and releases resources", () => {
   vi.stubGlobal("AudioContext", FakeAudioContext);

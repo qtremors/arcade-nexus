@@ -5,6 +5,7 @@ import {
   createSector,
   nearbySectors,
   intersectsBody,
+  SectorStream,
 } from "../games/stellar-flight/universe";
 import { createShip } from "../games/stellar-flight/ships";
 import { readSave } from "../services/saves";
@@ -234,6 +235,19 @@ it("sector generation is stable across revisits, negative coordinates and save s
       radius: 20,
     }),
   ).toBe(true);
+});
+it("reuses only overlapping sectors and discards the previous seed's world", () => {
+  const stream = new SectorStream();
+  const first = stream.nearby([0, 0, 0], 123);
+  const shifted = stream.nearby([2400, 0, 0], 123);
+  expect(shifted).toEqual(nearbySectors([2400, 0, 0], 123));
+  expect(shifted.filter((sector) => first.includes(sector))).toHaveLength(18);
+  const restored = stream.nearby([0, 0, 0], 123);
+  expect(restored).toEqual(first);
+  const differentSeed = stream.nearby([0, 0, 0], 999);
+  expect(differentSeed).toEqual(nearbySectors([0, 0, 0], 999));
+  expect(differentSeed.some((sector) => restored.includes(sector))).toBe(false);
+  expect(stream.nearby([1e10, -1e10, 0], 999)).toHaveLength(27);
 });
 it("the new ships have distinct actual hull geometry and two exhausts each", () => {
   const signatures = new Set<string>();

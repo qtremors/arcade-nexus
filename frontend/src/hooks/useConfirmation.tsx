@@ -7,9 +7,14 @@ export function useConfirmation() {
   const [request, setConfirmationRequest] =
     useState<ConfirmationRequest | null>(null);
   const resolver = useRef<((answer: boolean) => void) | null>(null);
+  const mounted = useRef(false);
   const ask = useCallback(
     (question: ConfirmationRequest) =>
       new Promise<boolean>((resolve) => {
+        if (!mounted.current) {
+          resolve(false);
+          return;
+        }
         resolver.current?.(false);
         resolver.current = resolve;
         setConfirmationRequest(question);
@@ -22,13 +27,14 @@ export function useConfirmation() {
     setConfirmationRequest(null);
     resolve?.(answer);
   }, []);
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
       resolver.current?.(false);
       resolver.current = null;
-    },
-    [],
-  );
+    };
+  }, []);
   return {
     ask,
     confirmation: request ? (

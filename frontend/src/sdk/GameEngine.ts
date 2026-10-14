@@ -11,8 +11,12 @@ export class GameEngine {
   private destroyed = false;
   private isRunning = false;
   private isPaused = false;
+  private ended = false;
   private frame: number | null = null;
   private lastTime = 0;
+  private lastRenderTime = 0;
+  private nextRenderTime = 0;
+  private readonly step = 1000 / 60;
   private accumulator = 0;
   private samples: number[] = [];
   private launchMs = 0;
@@ -68,7 +72,11 @@ export class GameEngine {
     if (this.destroyed || this.isRunning || !this.game) return;
     this.isRunning = true;
     this.isPaused = false;
+    this.ended = false;
     this.lastTime = performance.now();
+    this.lastRenderTime = this.lastTime;
+    this.nextRenderTime = this.lastTime + this.step;
+    this.accumulator = 0;
     this.input.start();
     this.frame = requestAnimationFrame(this.loop);
   }
@@ -81,6 +89,8 @@ export class GameEngine {
   pause(): void {
     if (!this.isRunning || this.isPaused) return;
     this.isPaused = true;
+    if (this.frame !== null) cancelAnimationFrame(this.frame);
+    this.frame = null;
     this.input.stop();
     this.game?.onPause?.();
     this.pauseCallback?.();
@@ -89,9 +99,12 @@ export class GameEngine {
     if (!this.isRunning || !this.isPaused) return;
     this.isPaused = false;
     this.lastTime = performance.now();
+    this.lastRenderTime = this.lastTime;
+    this.nextRenderTime = this.lastTime + this.step;
     this.accumulator = 0;
     this.input.start();
     this.game?.onResume?.();
+    this.schedule();
   }
   togglePause(): void {
     if (this.isPaused) this.resume();
@@ -101,27 +114,23 @@ export class GameEngine {
     if (this.destroyed) return;
     this.destroyed = true;
     this.stop();
-    recordMeasurement(
-      this.slug,
-      this.launchMs,
-      this.samples,
-      this.game?.getRenderInfo?.() ?? {
+    recordMeasurement(this.slug, this.launchMs, this.samples, {
+      targetFps: 60,
+      ...(this.game?.getRenderInfo?.() ?? {
         renderer: graphicsCapabilities().software
           ? "Canvas 2D · CPU raster"
           : "Canvas 2D · browser acceleration",
         quality: "1080p · full detail",
         width: this.ctx?.canvas?.width,
         height: this.ctx?.canvas?.height,
-      },
-    );
+      }),
+    });
     this.game?.destroy?.();
     this.game = null;
     this.ctx = null;
   }
   getMetrics(): GameMetrics {
-    return "getMetrics" in (this.game ?? {})
-      ? ((this.game as GameInstance).getMetrics?.() ?? {})
-      : {};
+    return { ...this.game?.getMetrics?.(), ended: this.ended };
   }
   getScore(): number {
     const value = this.game?.getScore?.() ?? 0;
@@ -177,39 +186,63 @@ export class GameEngine {
     }
   }
   private loop = (now: number): void => {
-    if (!this.isRunning || this.destroyed) return;
+    this.frame = null;
+    if (!this.isRunning || this.isPaused || this.destroyed) return;
     try {
-      if (!this.isPaused) {
-        this.samples.push(Math.max(0, now - this.lastTime));
-        if (this.samples.length > 3600) this.samples.shift();
-        const input = this.input.getState();
-        if (input.pause && !this.pauseHeld) {
-          this.pauseHeld = true;
-          this.pause();
-        } else {
-          this.pauseHeld = input.pause;
-          this.accumulator += Math.max(0, Math.min(now - this.lastTime, 100));
-          const step = 1000 / 60;
-          while (this.accumulator >= step) {
-            this.accumulator -= step;
-            const stepInput = this.input.getState();
-            this.input.consumePresses();
-            if (!this.game?.update(step, stepInput)) {
-              this.render();
-              const score = this.getScore();
-              this.stop();
-              this.overCallback?.(score);
-              return;
-            }
-          }
-          this.render();
-        }
-      }
+      this.accumulator += Math.max(0, Math.min(now - this.lastTime, 100));
       this.lastTime = now;
-      this.frame = requestAnimationFrame(this.loop);
+      // Keep the render clock separate from simulation catch-up. The small tolerance
+      // handles RAF timestamp rounding at 60 Hz without extra draws at 120/144 Hz.
+      if (now < this.nextRenderTime - 0.5) {
+        this.schedule();
+        return;
+      }
+      this.nextRenderTime +=
+        Math.max(1, Math.floor((now - this.nextRenderTime) / this.step) + 1) *
+        this.step;
+      const input = this.input.getState();
+      if (input.pause && !this.pauseHeld) {
+        this.pauseHeld = true;
+        this.pause();
+        return;
+      }
+      this.pauseHeld = input.pause;
+      let stepInput = input;
+      while (this.accumulator + 0.000001 >= this.step) {
+        this.accumulator = Math.max(0, this.accumulator - this.step);
+        this.input.consumePresses();
+        if (!this.game?.update(this.step, stepInput)) {
+          this.sampleFrame(now);
+          this.render();
+          const score = this.getScore();
+          this.ended = true;
+          this.stop();
+          this.overCallback?.(score);
+          return;
+        }
+        if (this.accumulator + 0.000001 >= this.step)
+          stepInput = this.input.getState();
+      }
+      this.sampleFrame(now);
+      this.render();
+      this.schedule();
     } catch (err) {
       this.stop();
       this.errorCallback?.(err instanceof Error ? err : new Error(String(err)));
     }
   };
+  private schedule(): void {
+    if (
+      this.isRunning &&
+      !this.isPaused &&
+      !this.destroyed &&
+      this.frame === null
+    )
+      this.frame = requestAnimationFrame(this.loop);
+  }
+  private sampleFrame(now: number): void {
+    this.samples.push(Math.max(0, now - this.lastRenderTime));
+    this.lastRenderTime = now;
+    if (this.samples.length > 3600) this.samples.shift();
+  }
 }

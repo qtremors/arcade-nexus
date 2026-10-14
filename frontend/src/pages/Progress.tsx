@@ -7,28 +7,41 @@ import { PageHeading } from "../components/ConsoleUI";
 import { SessionHistoryModal } from "../components/SessionHistoryModal";
 import { getDescriptor, gameSlugs } from "../games/descriptors";
 export function Progress() {
-  const [household, setHousehold] = useState(false),
-    [records, setRecords] = useState<ModeRecord[]>([]),
-    [history, setHistory] = useState(false),
-    [error, setError] = useState(""),
-    [retry, setRetry] = useState(0);
+  const [view, setView] = useState({ household: false, revision: 0 });
+  const { household, revision } = view;
+  const [history, setHistory] = useState(false);
+  const [result, setResult] = useState<{
+    revision: number;
+    records: ModeRecord[];
+    error: string;
+  } | null>(null);
+  const loading = !result || result.revision !== revision;
+  const records = loading ? [] : result.records;
+  const error = loading ? "" : result.error;
   useEffect(() => {
     let active = true;
+    const controller = new AbortController();
     void progressApi
-      .records(household)
+      .records(household, controller.signal)
       .then((data) => {
         if (active) {
-          setRecords(data);
-          setError("");
+          setResult({ revision, records: data, error: "" });
         }
       })
       .catch((e) => {
-        if (active) setError(e.message);
+        if (active) setResult({ revision, records: [], error: e.message });
       });
     return () => {
       active = false;
+      controller.abort();
     };
-  }, [household, retry]);
+  }, [household, revision]);
+  const chooseHousehold = (next: boolean) =>
+    setView((current) =>
+      current.household === next
+        ? current
+        : { household: next, revision: current.revision + 1 },
+    );
   return (
     <div className="console-page">
       <PageHeading kicker="SOMETHING TO BEAT" title="Your progress">
@@ -38,14 +51,14 @@ export function Progress() {
         <button
           className="secondary-action"
           aria-pressed={!household}
-          onClick={() => setHousehold(false)}
+          onClick={() => chooseHousehold(false)}
         >
           Your records
         </button>
         <button
           className="secondary-action"
           aria-pressed={household}
-          onClick={() => setHousehold(true)}
+          onClick={() => chooseHousehold(true)}
         >
           Household records
         </button>
@@ -56,10 +69,21 @@ export function Progress() {
           Achievements
         </Link>
       </div>
-      {error ? (
+      {loading ? (
+        <p role="status">Loading records…</p>
+      ) : error ? (
         <p role="alert">
           {error}{" "}
-          <button onClick={() => setRetry((n) => n + 1)}>Retry records</button>
+          <button
+            onClick={() =>
+              setView((current) => ({
+                ...current,
+                revision: current.revision + 1,
+              }))
+            }
+          >
+            Retry records
+          </button>
         </p>
       ) : !records.length ? (
         <p>No records yet. Finish a run to set your first best.</p>
@@ -124,7 +148,6 @@ export function Progress() {
         isOpen={history}
         onClose={() => setHistory(false)}
         title="Session history"
-        sessions={[]}
       />
     </div>
   );

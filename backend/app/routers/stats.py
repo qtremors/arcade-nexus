@@ -25,6 +25,7 @@ from app.schemas.stats import (
     StatsResponse,
 )
 from app.services.common import ensure_stats, get_game
+from app.services.history import history_query, session_response
 
 router = APIRouter()
 
@@ -67,36 +68,11 @@ async def get_session_history(
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=200),
 ):
-    query = select(GameSession).where(
-        GameSession.user_id == current_user.id, GameSession.end_time.is_not(None)
-    )
-    if game_id is not None:
-        query = query.where(GameSession.game_id == game_id)
+    query = history_query(current_user.id, game_id=game_id)
     sessions = (
-        await db.scalars(
-            query.order_by(GameSession.end_time.desc(), GameSession.id.desc())
-            .offset(skip)
-            .limit(limit)
-            .options(selectinload(GameSession.game))
-        )
+        await db.scalars(query.offset(skip).limit(limit).options(selectinload(GameSession.game)))
     ).all()
-    return [
-        SessionResponse(
-            metrics=session.metrics,
-            id=session.id,
-            session_id=session.session_id,
-            game_slug=session.game.slug,
-            game_title=session.game.title,
-            start_time=session.start_time,
-            end_time=session.end_time,
-            duration_seconds=session.duration_seconds,
-            score=session.score,
-            difficulty=session.difficulty,
-            mode=session.mode,
-            rules_version=session.rules_version,
-        )
-        for session in sessions
-    ]
+    return [session_response(session) for session in sessions]
 
 
 @router.get("/{game_slug}", response_model=GameStatsResponse)
@@ -209,7 +185,8 @@ async def record_session(
         )
 
     now = utc_now()
-    if session is None:
+    created = session is None
+    if created:
         if not game.is_active:
             raise HTTPException(404, "Game not found")
         session = GameSession(
@@ -229,6 +206,7 @@ async def record_session(
         .where(PlayStats.id == stats.id)
         .values(
             total_playtime_seconds=PlayStats.total_playtime_seconds + session_data.playtime_seconds,
+            sessions_count=PlayStats.sessions_count + int(created),
             last_session=now,
         )
     )

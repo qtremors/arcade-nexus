@@ -1,5 +1,6 @@
 import type { InputState } from "./GameSDK";
 import { useSettingsStore } from "../stores/settingsStore";
+import { defaultBindings } from "../services/controls";
 export function isEditing(target: EventTarget | null): boolean {
   return (
     target instanceof HTMLElement &&
@@ -75,16 +76,16 @@ export class InputManager {
         : (Math.sign(value) * (Math.abs(value) - deadZone)) / (1 - deadZone);
     const x = axis(gamepad?.axes[0] ?? 0),
       y = axis(gamepad?.axes[1] ?? 0);
-    const key = (action: string, defaults: string[]) =>
+    const key = (action: string) =>
       bindings[action]
         ? keys[bindings[action]]
-        : defaults.some((code) => keys[code]);
+        : defaultBindings[action].some((code) => keys[code]);
     return {
-      up: !!(key("up", ["ArrowUp", "KeyW"]) || button(12) || y < -0.5),
-      down: !!(key("down", ["ArrowDown", "KeyS"]) || button(13) || y > 0.5),
-      left: !!(key("left", ["ArrowLeft", "KeyA"]) || button(14) || x < -0.5),
-      right: !!(key("right", ["ArrowRight", "KeyD"]) || button(15) || x > 0.5),
-      action: !!(key("action", ["Space", "Enter"]) || button(0)),
+      up: !!(key("up") || button(12) || y < -0.5),
+      down: !!(key("down") || button(13) || y > 0.5),
+      left: !!(key("left") || button(14) || x < -0.5),
+      right: !!(key("right") || button(15) || x > 0.5),
+      action: !!(key("action") || button(0)),
       axes: { x, y },
       pressed: [...this.presses],
       throttle:

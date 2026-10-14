@@ -4,6 +4,7 @@ import {
   enqueueCompletion,
   flushCompletions,
   sendCompletion,
+  pendingResults,
 } from "../services/sessionQueue";
 import type { Completion } from "../services/sessionQueue";
 const item = (): Completion => ({
@@ -90,4 +91,68 @@ it("retains a permanent failure without automatic retry and allows an explicit r
   expect(
     localStorage.getItem(`nexus-result-v1:${result.sessionId}`),
   ).toBeNull();
+});
+
+it("removes durable results acknowledged by another tab instead of resending cached copies", async () => {
+  const result = item();
+  enqueueCompletion(result);
+  localStorage.removeItem(`nexus-result-v1:${result.sessionId}`);
+  expect(pendingResults()).not.toContainEqual(
+    expect.objectContaining({ sessionId: result.sessionId }),
+  );
+  await flushCompletions();
+  expect(progressApi.complete).not.toHaveBeenCalled();
+});
+it("keeps updated retry details in memory when storage writes fail", async () => {
+  const result = item();
+  enqueueCompletion(result);
+  const write = vi
+    .spyOn(Storage.prototype, "setItem")
+    .mockImplementation(() => {
+      throw new DOMException("Full", "QuotaExceededError");
+    });
+  vi.mocked(progressApi.complete).mockRejectedValueOnce(
+    new ApiError("invalid result", 422),
+  );
+  await expect(sendCompletion(result)).rejects.toThrow("invalid result");
+  expect(
+    pendingResults().find((value) => value.sessionId === result.sessionId),
+  ).toMatchObject({ attempts: 1, blocked: true, error: "invalid result" });
+  write.mockRestore();
+  await flushCompletions(true);
+  expect(pendingResults()).toHaveLength(0);
+});
+it("does not resurrect another tab's completed result after an in-flight request fails", async () => {
+  const result = item();
+  enqueueCompletion(result);
+  let fail!: (error: Error) => void;
+  vi.mocked(progressApi.complete).mockReturnValueOnce(
+    new Promise((_resolve, reject) => {
+      fail = reject;
+    }),
+  );
+  const sending = sendCompletion(result);
+  localStorage.removeItem(`nexus-result-v1:${result.sessionId}`);
+  fail(new Error("connection lost"));
+  await expect(sending).rejects.toThrow("connection lost");
+  expect(pendingResults()).toHaveLength(0);
+  expect(
+    localStorage.getItem(`nexus-result-v1:${result.sessionId}`),
+  ).toBeNull();
+});
+it("retains cached results if storage becomes unreadable and keeps corrupt entries exportable", () => {
+  const result = item();
+  enqueueCompletion(result);
+  const read = vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+    throw new DOMException("Unavailable");
+  });
+  expect(pendingResults()).toContainEqual(
+    expect.objectContaining({ sessionId: result.sessionId }),
+  );
+  read.mockRestore();
+  localStorage.setItem(`nexus-result-v1:${result.sessionId}`, "broken json");
+  expect(pendingResults()).toHaveLength(0);
+  expect(localStorage.getItem(`nexus-result-v1:${result.sessionId}`)).toBe(
+    "broken json",
+  );
 });

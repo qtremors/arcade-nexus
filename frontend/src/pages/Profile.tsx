@@ -3,8 +3,7 @@ import { useEffect, useState } from "react";
 import { useConfirmation } from "../hooks/useConfirmation";
 import { useProfileStore } from "../stores/profileStore";
 import { useLibraryStore } from "../stores/libraryStore";
-import { achievementsApi, statsApi } from "../api/client";
-import type { GameSession } from "../api/client";
+import { achievementsApi } from "../api/client";
 import { formatPlaytime } from "../utils/formatting";
 import { SessionHistoryModal } from "../components/SessionHistoryModal";
 import { useToast } from "../hooks/useToast";
@@ -24,8 +23,7 @@ export function Profile() {
   const { entries, fetchLibrary } = useLibraryStore();
   const [name, setName] = useState(activeProfile?.username ?? ""),
     [avatar, setAvatar] = useState(activeProfile?.avatar ?? "🎮");
-  const [newName, setNewName] = useState(""),
-    [sessions, setSessions] = useState<GameSession[]>([]);
+  const [newName, setNewName] = useState("");
   const [awards, setAwards] = useState({ total: 0, unlocked: 0 }),
     [history, setHistory] = useState(false),
     [busy, setBusy] = useState(false);
@@ -46,12 +44,10 @@ export function Profile() {
     void Promise.all([
       fetchOverallStats(true),
       fetchLibrary(),
-      statsApi.getHistory(),
-      achievementsApi.getAll(),
+      achievementsApi.summary(),
     ])
-      .then(([, , records, achievements]) => {
+      .then(([, , achievements]) => {
         if (active) {
-          setSessions(records);
           setAwards({
             total: achievements.total,
             unlocked: achievements.unlocked_count,
@@ -211,7 +207,6 @@ export function Profile() {
           isOpen
           onClose={() => setHistory(false)}
           title="Recent sessions"
-          sessions={sessions}
         />
       )}
     </div>

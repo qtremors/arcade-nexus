@@ -39,6 +39,22 @@ export function readSave(value: unknown, slug: string): SaveEnvelope {
   )
     result = { ...result, rules_version: descriptor.rulesVersion };
   // Preserve historical records; resumed runs use the current validated rules.
+  if (slug === "raptor-run" && result.rules_version < descriptor.rulesVersion) {
+    // The original catalog stored these unused physics values. Older games
+    // ignored them; applying them now would reject otherwise valid saves.
+    result = {
+      ...result,
+      config: {
+        ...result.config,
+        ...(result.config.gravity === 1500
+          ? { gravity: descriptor.config.gravity }
+          : {}),
+        ...(result.config.jump_force === 600
+          ? { jump_force: descriptor.config.jump_force }
+          : {}),
+      },
+    };
+  }
   if (
     ["snake", "raptor-run", "merge-2048", "tetris", "prism-rush"].includes(
       slug,

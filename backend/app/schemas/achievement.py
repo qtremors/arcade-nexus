@@ -28,9 +28,14 @@ class AchievementUnlock(RequestSchema):
     game_slug: Slug
 
 
-class AchievementListResponse(ResponseSchema):
+class AchievementSummary(ResponseSchema):
+    """Counts without achievement descriptions or unlock rows."""
+
+    total: int
+    unlocked_count: int
+
+
+class AchievementListResponse(AchievementSummary):
     """Schema for list of achievements."""
 
     achievements: list[AchievementResponse]
-    total: int
-    unlocked_count: int

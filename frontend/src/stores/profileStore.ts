@@ -21,7 +21,13 @@ interface ProfileState {
   deleteProfile: (id: number) => Promise<void>;
   fetchOverallStats: (force?: boolean) => Promise<void>;
 }
-let profilesRequest: Promise<void> | null = null;
+let profilesRequest: {
+  revision: number;
+  token: symbol;
+  promise: Promise<void>;
+} | null = null;
+let profilesRevision = 0;
+let selectionRevision = 0;
 let profileVersion = 0;
 let statsRequest: {
   id: number;
@@ -57,11 +63,14 @@ export const useProfileStore = create<ProfileState>()((set, get) => ({
     if (!get().isInitialized) await get().fetchProfiles();
   },
   fetchProfiles: () => {
-    if (profilesRequest) return profilesRequest;
+    const revision = profilesRevision;
+    if (profilesRequest?.revision === revision) return profilesRequest.promise;
+    const token = Symbol();
     set({ isLoading: true, error: null });
-    profilesRequest = (async () => {
+    const promise = (async () => {
       try {
         const response = await profilesApi.list();
+        if (revision !== profilesRevision) return;
         const previous = get().activeProfile;
         const preferred = previous?.id ?? remembered() ?? response.active_id;
         const active =
@@ -80,21 +89,33 @@ export const useProfileStore = create<ProfileState>()((set, get) => ({
             : {}),
         });
       } catch (err) {
-        set({ error: (err as Error).message, isLoading: false });
+        if (revision === profilesRevision)
+          set({ error: (err as Error).message });
       } finally {
-        profilesRequest = null;
+        if (profilesRequest?.token === token) {
+          profilesRequest = null;
+          set({ isLoading: false });
+        }
       }
     })();
-    return profilesRequest;
+    profilesRequest = { revision, token, promise };
+    return promise;
   },
   createProfile: async (username, avatar) => {
     const profile = await profilesApi.create(username, avatar);
+    profilesRevision++;
+    set((state) => ({
+      profiles: state.profiles.some((p) => p.id === profile.id)
+        ? state.profiles.map((p) => (p.id === profile.id ? profile : p))
+        : [...state.profiles, profile],
+    }));
     // New profiles become the player in this tab, even when other profiles exist.
     await get().switchProfile(profile.id);
     return profile;
   },
   updateProfile: async (id, updates) => {
     const updated = await profilesApi.update(id, updates);
+    profilesRevision++;
     set((state) => ({
       profiles: state.profiles.map((p) => (p.id === id ? updated : p)),
       activeProfile:
@@ -102,15 +123,18 @@ export const useProfileStore = create<ProfileState>()((set, get) => ({
     }));
   },
   switchProfile: async (id) => {
+    const selection = ++selectionRevision;
     set({ isLoading: true, error: null });
     try {
       const active = await profilesApi.activate(id);
+      if (selection !== selectionRevision) return;
       remember(id);
       profileVersion++;
+      profilesRevision++;
       set((state) => ({
         activeProfile: active,
         profiles: state.profiles.map((p) => ({
-          ...p,
+          ...(p.id === id ? active : p),
           is_default: p.id === id,
         })),
         overallStats: null,
@@ -120,12 +144,15 @@ export const useProfileStore = create<ProfileState>()((set, get) => ({
       }));
       await get().fetchProfiles();
     } catch (err) {
-      set({ isLoading: false, error: (err as Error).message });
+      if (selection === selectionRevision)
+        set({ isLoading: false, error: (err as Error).message });
       throw err;
     }
   },
   deleteProfile: async (id) => {
     await profilesApi.delete(id);
+    profilesRevision++;
+    set((state) => ({ profiles: state.profiles.filter((p) => p.id !== id) }));
     if (get().activeProfile?.id === id) {
       remember(null);
       profileVersion++;

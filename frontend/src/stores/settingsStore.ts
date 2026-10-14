@@ -1,5 +1,23 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { useSyncExternalStore } from "react";
+import { createJSONStorage, persist } from "zustand/middleware";
+import { bindingProblem, normalizeBindings } from "../services/controls";
+let storageUnavailable = false;
+const storageListeners = new Set<() => void>();
+function storageStatus(unavailable: boolean) {
+  if (unavailable === storageUnavailable) return;
+  storageUnavailable = unavailable;
+  storageListeners.forEach((listener) => listener());
+}
+export function usePreferenceStorageUnavailable() {
+  return useSyncExternalStore(
+    (listener) => {
+      storageListeners.add(listener);
+      return () => storageListeners.delete(listener);
+    },
+    () => storageUnavailable,
+  );
+}
 interface Preferences {
   volume: number;
   muted: boolean;
@@ -7,7 +25,7 @@ interface Preferences {
   deadZone: number;
   bindings: Record<string, string>;
   setDeadZone: (value: number) => void;
-  setBinding: (action: string, code: string) => void;
+  setBinding: (action: string, code: string) => string | null;
   setVolume: (volume: number) => void;
   setMuted: (muted: boolean) => void;
   setReducedMotion: (value: boolean) => void;
@@ -25,8 +43,16 @@ export const useSettingsStore = create<Preferences>()(
       bindings: {},
       setDeadZone: (value) =>
         set({ deadZone: Math.max(0.05, Math.min(0.5, value)) }),
-      setBinding: (action, code) =>
-        set((s) => ({ bindings: { ...s.bindings, [action]: code } })),
+      setBinding: (action, code) => {
+        let problem: string | null = null;
+        set((state) => {
+          problem = bindingProblem(action, code, state.bindings);
+          return problem
+            ? state
+            : { bindings: { ...state.bindings, [action]: code } };
+        });
+        return problem;
+      },
       setVolume: (volume) => set({ volume: Math.max(0, Math.min(1, volume)) }),
       setMuted: (muted) => set({ muted }),
       setReducedMotion: (reducedMotion) => set({ reducedMotion }),
@@ -43,6 +69,35 @@ export const useSettingsStore = create<Preferences>()(
     }),
     {
       name: "nexus-preferences",
+      storage: createJSONStorage(() => ({
+        getItem: (name) => {
+          try {
+            return localStorage.getItem(name);
+          } catch {
+            storageStatus(true);
+            return null;
+          }
+        },
+        setItem: (name, value) => {
+          try {
+            localStorage.setItem(name, value);
+            storageStatus(false);
+          } catch {
+            storageStatus(true);
+          }
+        },
+        removeItem: (name) => {
+          try {
+            localStorage.removeItem(name);
+            storageStatus(false);
+          } catch {
+            storageStatus(true);
+          }
+        },
+      })),
+      onRehydrateStorage: () => (_state, error) => {
+        if (error) storageStatus(true);
+      },
       partialize: ({ volume, muted, reducedMotion, deadZone, bindings }) => ({
         volume,
         muted,
@@ -68,21 +123,7 @@ export const useSettingsStore = create<Preferences>()(
             Number.isFinite(value.deadZone)
               ? Math.max(0.05, Math.min(0.5, value.deadZone))
               : 0.18,
-          bindings:
-            value?.bindings && typeof value.bindings === "object"
-              ? Object.fromEntries(
-                  Object.entries(value.bindings).filter(
-                    ([action, code]) =>
-                      ["up", "down", "left", "right", "action"].includes(
-                        action,
-                      ) &&
-                      typeof code === "string" &&
-                      /^(Key[A-Z]|Arrow(Up|Down|Left|Right)|Space|Enter)$/.test(
-                        code,
-                      ),
-                  ),
-                )
-              : {},
+          bindings: normalizeBindings(value?.bindings),
         };
       },
     },

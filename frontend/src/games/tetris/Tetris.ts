@@ -49,6 +49,18 @@ const colors = [
   "#87aaff",
   "#ffbe83",
 ];
+// Rotation/landing checks share immutable matrices instead of allocating a rotated
+// board for every collision probe and every rendered ghost cell.
+const rotations = shapes.map((shape) => {
+  const variants = [shape];
+  for (let i = 1; i < 4; i++) {
+    const previous = variants[i - 1];
+    variants.push(
+      previous[0].map((_, x) => previous.map((row) => row[x]).reverse()),
+    );
+  }
+  return variants;
+});
 const kind = z.number().int().min(0).max(6);
 const count = z.number().int().nonnegative();
 const schema = z.object({
@@ -105,10 +117,7 @@ export class TetrisGame implements Game2DInstance {
     this.spawn();
   }
   private matrix(rotation = this.rotation) {
-    let matrix = shapes[this.piece];
-    for (let r = 0; r < rotation; r++)
-      matrix = matrix[0].map((_, x) => matrix.map((row) => row[x]).reverse());
-    return matrix;
+    return rotations[this.piece][rotation];
   }
   private fits(x: number, y: number, rotation = this.rotation): boolean {
     return this.matrix(rotation).every((row, dy) =>

@@ -12,7 +12,9 @@ vi.mock("../pages/Dashboard", () => ({
 vi.mock("../components/Layout", async () => ({
   Layout: (await import("react-router-dom")).Outlet,
 }));
-vi.mock("../services/sessionQueue", () => ({ flushCompletions: vi.fn() }));
+vi.mock("../services/sessionQueue", () => ({
+  startCompletionSync: vi.fn(() => () => {}),
+}));
 beforeEach(() => {
   useProfileStore.setState(useProfileStore.getInitialState());
   sessionStorage.clear();

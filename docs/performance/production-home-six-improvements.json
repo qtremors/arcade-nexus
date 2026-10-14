@@ -1,0 +1,19 @@
+{
+  "date": "2026-10-14T08:12:06.413Z",
+  "scope": "Production Home JS response bodies in an isolated browser/profile, including the lazy Home route; before the software-only canvas compositor follow-up, which does not change the eager module sizes. No timing or native GPU claim.",
+  "scripts": {
+    "react-DUXHritp.js": 640,
+    "react-DB-4Zxce.js": 8529,
+    "client-CKq_AJ2J.js": 53872,
+    "index-DmU0J7fy.js": 386974,
+    "Dashboard-Btio6Egs.js": 6130,
+    "play-BNj0uXsk.js": 293,
+    "descriptors-CVZbxIea.js": 4374,
+    "experience-635XjgQJ.js": 4069,
+    "ConsoleUI-BOHrFQe-.js": 920,
+    "recovery-DcyaA5l3.js": 2581,
+    "formatting-lyqCYyns.js": 148
+  },
+  "totalBytes": 468530,
+  "backupOrSettingsLoaded": false
+}

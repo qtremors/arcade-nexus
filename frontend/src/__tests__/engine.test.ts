@@ -50,6 +50,7 @@ it("game over stops the RAF and notifies exactly once", async () => {
   tick(20);
   tick(40);
   expect(over).toHaveBeenCalledExactlyOnceWith(20);
+  expect(engine.getMetrics().ended).toBe(true);
   expect(frames.size).toBe(0);
   engine.destroy();
 });
@@ -65,6 +66,7 @@ it("an exception in the simulation stops the loop and reaches the UI", async () 
   engine.start();
   tick(20);
   expect(error).toHaveBeenCalledOnce();
+  expect(engine.getMetrics().ended).toBe(false);
   expect(engine.running).toBe(false);
   expect(frames.size).toBe(0);
   engine.destroy();
@@ -76,12 +78,29 @@ it("pausing releases keyboard input and skips elapsed paused time", async () => 
   engine.start();
   tick(20);
   engine.pause();
+  expect(engine.getMetrics().ended).toBe(false);
+  expect(frames.size).toBe(0);
   tick(1000);
   expect(instance.update).toHaveBeenCalledTimes(1);
   vi.spyOn(performance, "now").mockReturnValue(1000);
   engine.resume();
+  engine.resume();
+  expect(frames.size).toBe(1);
   tick(1020);
   expect(instance.update).toHaveBeenCalledTimes(2);
+  engine.destroy();
+});
+it("a 30 Hz display retains 60 simulation steps and bounds catch-up after a stall", async () => {
+  const instance = game(),
+    engine = new GameEngine();
+  await engine.init(canvas(), instance, config);
+  engine.start();
+  for (let i = 1; i <= 30; i++) tick((i * 1000) / 30);
+  expect(instance.update).toHaveBeenCalledTimes(60);
+  expect(instance.render).toHaveBeenCalledTimes(31);
+  tick(10000);
+  expect(instance.update).toHaveBeenCalledTimes(66);
+  expect(instance.render).toHaveBeenCalledTimes(32);
   engine.destroy();
 });
 it("destroying during an async init cannot restart a disposed game", async () => {
@@ -205,7 +224,9 @@ it("recoverable game over resumes the same engine after undo", async () => {
   engine.start();
   tick(20);
   expect(engine.recoverable).toBe(true);
+  expect(engine.getMetrics().ended).toBe(true);
   engine.recover();
+  expect(engine.getMetrics().ended).toBe(false);
   tick(40);
   expect(engine.running).toBe(true);
   engine.destroy();

@@ -107,7 +107,9 @@ export function SystemMenu({ isOpen, onClose }: SystemMenuProps) {
             >
               <Icon size={19} />
               <span>{label}</span>
-              <span className="system-link-arrow">↗</span>
+              <span className="system-link-arrow" aria-hidden="true">
+                ↗
+              </span>
             </button>
           ))}
         </div>

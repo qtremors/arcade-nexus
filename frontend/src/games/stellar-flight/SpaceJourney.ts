@@ -8,7 +8,7 @@ import { crossGate } from "./course";
 import { SHIPS, type ShipId } from "./ships";
 import { contracts, contractFor, type JourneyCounters } from "./contracts";
 import {
-  nearbySectors,
+  SectorStream,
   sectorCoordinates,
   sectorKey,
   intersectsBody,
@@ -241,6 +241,7 @@ export class SpaceJourney {
   private routeHeld = false;
   private shipHeld = false;
   private sector = "";
+  private sectorStream = new SectorStream();
   private previous = new THREE.Vector3();
   private forward = new THREE.Vector3();
   private normal = new THREE.Vector3();
@@ -340,7 +341,7 @@ export class SpaceJourney {
     );
     if (key === this.sector) return;
     this.sector = key;
-    this.sectors = nearbySectors(
+    this.sectors = this.sectorStream.nearby(
       this.position.toArray() as Coordinates,
       this.seed,
     );
@@ -356,6 +357,7 @@ export class SpaceJourney {
     this.gates = [];
     const point = this.position.clone();
     const rotation = this.rotation.clone();
+    const routeSectors = new SectorStream();
     const spacing = Math.max(550, this.controller.speed * 3);
     for (let i = 0; i < 5; i++) {
       if (i > 0) {
@@ -379,7 +381,7 @@ export class SpaceJourney {
       ).applyQuaternion(rotation);
       point.add(step);
       // Rings sit outside solid bodies; their connecting flight path still requires piloting.
-      for (const sector of nearbySectors(
+      for (const sector of routeSectors.nearby(
         point.toArray() as Coordinates,
         this.seed,
       )) {

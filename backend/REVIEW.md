@@ -1,5 +1,7 @@
 # Backend review and patch record
 
+Historical review record. For current contracts and validation, see [DEVELOPMENT.md](../DEVELOPMENT.md) and [the deep review](../docs/DEEP_REVIEW.md).
+
 Branch: ag-dev. Starting commit: 95312de. Scope: every original source, model, schema, router, configuration, dependency, and test file under backend. The frontend was read only to preserve its request/response expectations.
 
 This pass keeps FastAPI and the browser architecture. It does not rewrite the project in Rust or package an executable.

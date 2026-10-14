@@ -30,10 +30,10 @@ export class PrismRushGame implements Game3DInstance {
           alpha: false,
           antialias: true,
           desynchronized: true,
-          powerPreference: "high-performance",
+          powerPreference: "low-power",
         }) ?? undefined,
       antialias: true,
-      powerPreference: "high-performance",
+      powerPreference: "low-power",
     });
     const resize = () => {
       const w = canvas.clientWidth || 960,

@@ -1,0 +1,3427 @@
+{
+  "format": 1,
+  "recordedAt": "2026-10-14T15:34:33.525481+00:00",
+  "branch": "ag-dev",
+  "baseCommit": "09eaf2f26ba81f086079414406531cf7c6d2651c",
+  "workingTree": "Contains the previously reviewed uncommitted changes; architecture pass changes documentation/metrics only.",
+  "productionSourceDigestSha256": "dcdad41ef5c6b913e289ed0d25be684bc619d9232fe9f8873c7948dd303cbcee",
+  "method": {
+    "frontend": "Maintained frontend production TS/TSX; relative imports resolved, external packages/CSS/JSON excluded from source-module cycle detection. Type-only and dynamic imports classified separately. Function branches are a syntactic estimate, excluding nested functions; not a canonical complexity score.",
+    "backend": "Maintained backend/app Python source; local AST imports resolve modules and from-imported submodules. Imports inside functions are deferred, TYPE_CHECKING imports are type-only. Syntactic branch estimate excludes nested function bodies. Framework/module registration can intentionally use deferred imports.",
+    "lines": "Physical lines, including blanks/comments; measured with splitlines (TS parser positions for function ranges).",
+    "fanInOut": "Distinct maintained production source modules joined by static value imports/re-exports; excludes type-only imports, dynamic imports, JSON/CSS and external packages. A zero static fan-in can mean a lazy-loaded game.",
+    "branches": "Syntactic branch estimates include boolean/conditional/loop/case/catch branches, excluding nested function bodies. Outer hook/component lines include nested callbacks but their branch estimates do not, so these are not canonical complexity scores.",
+    "openapi": "Generated locally with an in-memory-configured application factory; no lifecycle/server/database writes. Empty schemas are counted separately from successful responses with no JSON body.",
+    "cycleLimit": "Local syntactic module-import graph, not a whole-program call graph. Python package self-imports are ignored. Implicit package initialization, reflective imports, framework wiring, third-party dependencies and stylesheet dependencies are outside cycle detection."
+  },
+  "counts": {
+    "frontendProductionModules": 90,
+    "backendProductionModules": 42,
+    "maintainedCodeAndStyleFiles": 194,
+    "frontendProductionFilesAtLeast500Lines": 8,
+    "backendProductionFilesAtLeast500Lines": 0
+  },
+  "cycles": {
+    "frontendStaticRuntime": [],
+    "frontendIncludingDynamic": [],
+    "frontendIncludingTypeOnly": [],
+    "backendStaticRuntime": [],
+    "backendIncludingDeferred": []
+  },
+  "sessionHook": {
+    "path": "frontend/src/hooks/useGameSession.ts",
+    "lines": 647,
+    "hooks": {
+      "useState": 12,
+      "useRef": 13,
+      "useNavigate": 1,
+      "useToast": 1,
+      "useConfirmation": 1,
+      "useReducer": 1,
+      "useModalFocus": 1,
+      "useCallback": 6,
+      "useEffect": 7,
+      "useEffectEvent": 2,
+      "useGamepad": 1
+    },
+    "returnedMemberCount": 39,
+    "returnedMembers": [
+      "canvas",
+      "engine",
+      "state",
+      "setState",
+      "difficulty",
+      "setDifficulty",
+      "mode",
+      "setMode",
+      "descriptor",
+      "recovery",
+      "continueGame",
+      "undoEnd",
+      "receipt",
+      "score",
+      "highScore",
+      "bestTime",
+      "newHigh",
+      "error",
+      "busy",
+      "saves",
+      "modal",
+      "experience",
+      "controlMode",
+      "setControlMode",
+      "confirmation",
+      "ask",
+      "showToast",
+      "start",
+      "resume",
+      "restart",
+      "quit",
+      "openSaves",
+      "saveSlot",
+      "loadSlot",
+      "menuOrigin",
+      "act",
+      "profileId",
+      "setSaves",
+      "supportsDifficulty"
+    ],
+    "localStaticFanOut": 16
+  },
+  "apiContracts": {
+    "operationCount": 45,
+    "declaredResponseSchemas": 25,
+    "operations": [
+      {
+        "method": "GET",
+        "path": "/api/profiles",
+        "responseSchema": {
+          "$ref": "#/components/schemas/ProfileListResponse"
+        },
+        "declared": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/profiles",
+        "responseSchema": {
+          "$ref": "#/components/schemas/ProfileResponse"
+        },
+        "declared": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/profiles/active",
+        "responseSchema": {
+          "anyOf": [
+            {
+              "$ref": "#/components/schemas/ProfileResponse"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Response Get Active Api Profiles Active Get"
+        },
+        "declared": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/profiles/{profile_id}",
+        "responseSchema": {
+          "$ref": "#/components/schemas/ProfileResponse"
+        },
+        "declared": true
+      },
+      {
+        "method": "PUT",
+        "path": "/api/profiles/{profile_id}",
+        "responseSchema": {
+          "$ref": "#/components/schemas/ProfileResponse"
+        },
+        "declared": true
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/profiles/{profile_id}",
+        "responseSchema": null,
+        "declared": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/profiles/{profile_id}/activate",
+        "responseSchema": {
+          "$ref": "#/components/schemas/ProfileResponse"
+        },
+        "declared": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/games",
+        "responseSchema": {
+          "$ref": "#/components/schemas/GameListResponse"
+        },
+        "declared": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/games",
+        "responseSchema": {
+          "$ref": "#/components/schemas/GameResponse"
+        },
+        "declared": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/games/categories",
+        "responseSchema": {
+          "items": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object"
+          },
+          "type": "array",
+          "title": "Response List Categories Api Games Categories Get"
+        },
+        "declared": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/games/{slug}",
+        "responseSchema": {
+          "$ref": "#/components/schemas/GameResponse"
+        },
+        "declared": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/library",
+        "responseSchema": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/LibraryEntryResponse"
+          },
+          "title": "Response Get Library Api Library Get"
+        },
+        "declared": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/library/{game_id}",
+        "responseSchema": {
+          "$ref": "#/components/schemas/LibraryAddResponse"
+        },
+        "declared": true
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/library/{game_id}",
+        "responseSchema": null,
+        "declared": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/saves/{game_slug}",
+        "responseSchema": {
+          "$ref": "#/components/schemas/SaveListResponse"
+        },
+        "declared": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/saves/{game_slug}",
+        "responseSchema": {
+          "$ref": "#/components/schemas/SaveResponse"
+        },
+        "declared": true
+      },
+      {
+        "method": "PUT",
+        "path": "/api/saves/{game_slug}/{slot}",
+        "responseSchema": {
+          "$ref": "#/components/schemas/SaveResponse"
+        },
+        "declared": true
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/saves/{game_slug}/{slot}",
+        "responseSchema": null,
+        "declared": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/stats",
+        "responseSchema": {
+          "$ref": "#/components/schemas/StatsResponse"
+        },
+        "declared": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/stats/sessions",
+        "responseSchema": {
+          "type": "array",
+          "items": {
+            "$ref": "#/components/schemas/SessionResponse"
+          },
+          "title": "Response Get Session History Api Stats Sessions Get"
+        },
+        "declared": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/stats/{game_slug}",
+        "responseSchema": {
+          "$ref": "#/components/schemas/GameStatsResponse"
+        },
+        "declared": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/stats/{game_slug}/start",
+        "responseSchema": {
+          "$ref": "#/components/schemas/SessionStartResponse"
+        },
+        "declared": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/stats/{game_slug}/session",
+        "responseSchema": {
+          "$ref": "#/components/schemas/SessionRecordResponse"
+        },
+        "declared": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/stats/{game_slug}/score",
+        "responseSchema": {
+          "$ref": "#/components/schemas/ScoreResponse"
+        },
+        "declared": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/achievements",
+        "responseSchema": {
+          "$ref": "#/components/schemas/AchievementListResponse"
+        },
+        "declared": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/achievements/summary",
+        "responseSchema": {
+          "$ref": "#/components/schemas/AchievementSummary"
+        },
+        "declared": true
+      },
+      {
+        "method": "GET",
+        "path": "/api/achievements/{game_slug}",
+        "responseSchema": {
+          "$ref": "#/components/schemas/AchievementListResponse"
+        },
+        "declared": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/achievements/unlock",
+        "responseSchema": {},
+        "declared": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/progress/{slug}/complete",
+        "responseSchema": {},
+        "declared": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/progress/records",
+        "responseSchema": {},
+        "declared": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/progress/history",
+        "responseSchema": {},
+        "declared": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/progress/history/options",
+        "responseSchema": {},
+        "declared": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/progress/recovery",
+        "responseSchema": {},
+        "declared": false
+      },
+      {
+        "method": "PUT",
+        "path": "/api/progress/recovery/{slug}",
+        "responseSchema": {},
+        "declared": false
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/progress/recovery/{slug}",
+        "responseSchema": {},
+        "declared": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/data/preview",
+        "responseSchema": {},
+        "declared": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/data/backups",
+        "responseSchema": {},
+        "declared": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/data/backups",
+        "responseSchema": {},
+        "declared": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/data/backups/{name}",
+        "responseSchema": {},
+        "declared": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/data/backups/{name}/preview",
+        "responseSchema": {},
+        "declared": false
+      },
+      {
+        "method": "POST",
+        "path": "/api/data/backups/{name}/restore",
+        "responseSchema": {},
+        "declared": false
+      },
+      {
+        "method": "GET",
+        "path": "/api/data/export",
+        "responseSchema": {
+          "$ref": "#/components/schemas/Backup"
+        },
+        "declared": true
+      },
+      {
+        "method": "POST",
+        "path": "/api/data/import",
+        "responseSchema": {},
+        "declared": false
+      },
+      {
+        "method": "GET",
+        "path": "/",
+        "responseSchema": {},
+        "declared": false
+      },
+      {
+        "method": "GET",
+        "path": "/health",
+        "responseSchema": {},
+        "declared": false
+      }
+    ],
+    "metricFields": [
+      "ended",
+      "jumps",
+      "max_altitude",
+      "crashed",
+      "max_speed",
+      "gates",
+      "misses",
+      "sectors",
+      "lives",
+      "highest_tile",
+      "completed",
+      "elapsed_ms",
+      "medal"
+    ],
+    "confirmedTypeMismatch": {
+      "backend": "SessionResponse.difficulty is a required nullable string",
+      "frontend": "GameSession.difficulty is an optional non-nullable string",
+      "backendPath": "backend/app/schemas/stats.py:99",
+      "frontendPath": "frontend/src/api/client.ts:113"
+    }
+  },
+  "stylesheetOwnership": [
+    {
+      "path": "frontend/src/index.css",
+      "definitions": [
+        {
+          "selector": ":root",
+          "line": 10,
+          "context": "top-level",
+          "properties": [
+            "font-family",
+            "line-height",
+            "font-weight",
+            "color-scheme",
+            "color",
+            "background-color",
+            "font-synthesis",
+            "text-rendering",
+            "-webkit-font-smoothing",
+            "-moz-osx-font-smoothing",
+            "--bg-primary",
+            "--bg-secondary",
+            "--bg-panel",
+            "--bg-card",
+            "--bg-hover",
+            "--accent-cyan",
+            "--accent-blue",
+            "--accent-purple",
+            "--accent-primary",
+            "--accent-secondary",
+            "--accent-glow",
+            "--error",
+            "--text-primary",
+            "--text-secondary",
+            "--text-muted",
+            "--border-color",
+            "--radius-xl",
+            "--radius-lg",
+            "--ease-out-expo"
+          ]
+        },
+        {
+          "selector": ".game-overlay",
+          "line": 238,
+          "context": "top-level",
+          "properties": [
+            "position",
+            "inset",
+            "background",
+            "backdrop-filter",
+            "display",
+            "flex-direction",
+            "align-items",
+            "justify-content",
+            "padding",
+            "overflow-y",
+            "text-align",
+            "gap"
+          ]
+        },
+        {
+          "selector": ".game-menu-panel",
+          "line": 259,
+          "context": "top-level",
+          "properties": [
+            "flex-shrink",
+            "width",
+            "padding",
+            "border",
+            "border-top",
+            "border-radius",
+            "background",
+            "box-shadow"
+          ]
+        },
+        {
+          "selector": ".game-menu-panel",
+          "line": 445,
+          "context": "@media (max-width: 600px)",
+          "properties": [
+            "padding"
+          ]
+        },
+        {
+          "selector": ".game-overlay",
+          "line": 489,
+          "context": "@media (max-width: 700px)",
+          "properties": [
+            "justify-content"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/console.css",
+      "definitions": [
+        {
+          "selector": ":root",
+          "line": 2,
+          "context": "top-level",
+          "properties": [
+            "--bg-primary",
+            "--bg-secondary",
+            "--bg-panel",
+            "--bg-card",
+            "--border-color",
+            "--text-secondary",
+            "--text-muted",
+            "--accent-cyan"
+          ]
+        },
+        {
+          "selector": ".game-menu-panel",
+          "line": 825,
+          "context": "top-level",
+          "properties": [
+            "font-family",
+            "background",
+            "border",
+            "border-top",
+            "border-radius",
+            "box-shadow"
+          ]
+        },
+        {
+          "selector": ".game-overlay",
+          "line": 1396,
+          "context": "top-level",
+          "properties": [
+            "background",
+            "backdrop-filter"
+          ]
+        },
+        {
+          "selector": ".game-menu-panel",
+          "line": 1557,
+          "context": "@media (max-height: 750px)",
+          "properties": [
+            "padding"
+          ]
+        },
+        {
+          "selector": ".game-menu-panel",
+          "line": 1910,
+          "context": "top-level",
+          "properties": [
+            "max-height",
+            "overflow"
+          ]
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/flight.css",
+      "definitions": [
+        {
+          "selector": ".game-stage[data-game=\"stellar-flight\"] .game-overlay",
+          "line": 19,
+          "context": "top-level",
+          "properties": [
+            "background",
+            "backdrop-filter"
+          ]
+        }
+      ]
+    }
+  ],
+  "largestNamedFunctions": [
+    {
+      "path": "frontend/src/hooks/useGameSession.ts",
+      "name": "useGameSession",
+      "line": 42,
+      "endLine": 647,
+      "lines": 606,
+      "branches": 4,
+      "parameters": 1
+    },
+    {
+      "path": "frontend/src/components/GameCanvas.tsx",
+      "name": "GameCanvas",
+      "line": 9,
+      "endLine": 437,
+      "lines": 429,
+      "branches": 50,
+      "parameters": 1
+    },
+    {
+      "path": "frontend/src/components/SessionHistoryModal.tsx",
+      "name": "SessionHistoryModal",
+      "line": 15,
+      "endLine": 382,
+      "lines": 368,
+      "branches": 22,
+      "parameters": 1
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/SpaceJourney.ts",
+      "name": "update",
+      "line": 448,
+      "endLine": 751,
+      "lines": 304,
+      "branches": 69,
+      "parameters": 2,
+      "owner": "SpaceJourney"
+    },
+    {
+      "path": "frontend/src/pages/Settings.tsx",
+      "name": "Settings",
+      "line": 20,
+      "endLine": 309,
+      "lines": 290,
+      "branches": 8,
+      "parameters": 0
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/ships.ts",
+      "name": "createShip",
+      "line": 64,
+      "endLine": 279,
+      "lines": 216,
+      "branches": 6,
+      "parameters": 1
+    },
+    {
+      "path": "frontend/src/pages/Profile.tsx",
+      "name": "Profile",
+      "line": 11,
+      "endLine": 214,
+      "lines": 204,
+      "branches": 10,
+      "parameters": 0
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/FlightHUD.ts",
+      "name": "update",
+      "line": 54,
+      "endLine": 247,
+      "lines": 194,
+      "branches": 39,
+      "parameters": 3,
+      "owner": "FlightHUD"
+    },
+    {
+      "path": "frontend/src/pages/Library.tsx",
+      "name": "Library",
+      "line": 10,
+      "endLine": 195,
+      "lines": 186,
+      "branches": 6,
+      "parameters": 0
+    },
+    {
+      "path": "frontend/src/components/Layout.tsx",
+      "name": "Layout",
+      "line": 25,
+      "endLine": 209,
+      "lines": 185,
+      "branches": 9,
+      "parameters": 1
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/StellarFlight.ts",
+      "name": "init",
+      "line": 55,
+      "endLine": 239,
+      "lines": 185,
+      "branches": 20,
+      "parameters": 2,
+      "owner": "StellarFlightGame"
+    },
+    {
+      "path": "frontend/src/games/raptor-run/RaptorRun.ts",
+      "name": "render",
+      "line": 321,
+      "endLine": 504,
+      "lines": 184,
+      "branches": 22,
+      "parameters": 1,
+      "owner": "RaptorRunGame"
+    },
+    {
+      "path": "frontend/src/games/snake/Snake.ts",
+      "name": "update",
+      "line": 213,
+      "endLine": 387,
+      "lines": 175,
+      "branches": 50,
+      "parameters": 2,
+      "owner": "SnakeGame"
+    },
+    {
+      "path": "frontend/src/pages/Store.tsx",
+      "name": "Store",
+      "line": 9,
+      "endLine": 182,
+      "lines": 174,
+      "branches": 6,
+      "parameters": 0
+    },
+    {
+      "path": "frontend/src/pages/Dashboard.tsx",
+      "name": "Dashboard",
+      "line": 12,
+      "endLine": 179,
+      "lines": 168,
+      "branches": 7,
+      "parameters": 0
+    },
+    {
+      "path": "frontend/src/games/prism-rush/PrismRush.ts",
+      "name": "init",
+      "line": 24,
+      "endLine": 181,
+      "lines": 158,
+      "branches": 6,
+      "parameters": 2,
+      "owner": "PrismRushGame"
+    },
+    {
+      "path": "frontend/src/pages/Progress.tsx",
+      "name": "Progress",
+      "line": 9,
+      "endLine": 154,
+      "lines": 146,
+      "branches": 7,
+      "parameters": 0
+    },
+    {
+      "path": "frontend/src/games/merge-2048/Merge2048.ts",
+      "name": "render",
+      "line": 190,
+      "endLine": 328,
+      "lines": 139,
+      "branches": 9,
+      "parameters": 1,
+      "owner": "Merge2048Game"
+    },
+    {
+      "path": "frontend/src/pages/Achievements.tsx",
+      "name": "Achievements",
+      "line": 7,
+      "endLine": 144,
+      "lines": 138,
+      "branches": 5,
+      "parameters": 0
+    },
+    {
+      "path": "frontend/src/games/raptor-run/RaptorRun.ts",
+      "name": "update",
+      "line": 133,
+      "endLine": 268,
+      "lines": 136,
+      "branches": 32,
+      "parameters": 2,
+      "owner": "RaptorRunGame"
+    },
+    {
+      "path": "backend/app/routers/progress.py",
+      "name": "complete",
+      "owner": null,
+      "line": 35,
+      "endLine": 170,
+      "lines": 136,
+      "branches": 31,
+      "parameters": 4
+    },
+    {
+      "path": "backend/app/main.py",
+      "name": "create_app",
+      "owner": null,
+      "line": 28,
+      "endLine": 162,
+      "lines": 135,
+      "branches": 5,
+      "parameters": 1
+    },
+    {
+      "path": "backend/app/seed.py",
+      "name": "sync_games",
+      "owner": null,
+      "line": 195,
+      "endLine": 317,
+      "lines": 123,
+      "branches": 18,
+      "parameters": 2
+    },
+    {
+      "path": "frontend/src/pages/GamePlayer.tsx",
+      "name": "GamePlayer",
+      "line": 12,
+      "endLine": 131,
+      "lines": 120,
+      "branches": 9,
+      "parameters": 0
+    },
+    {
+      "path": "frontend/src/components/AutomaticBackups.tsx",
+      "name": "AutomaticBackups",
+      "line": 8,
+      "endLine": 124,
+      "lines": 117,
+      "branches": 8,
+      "parameters": 0
+    },
+    {
+      "path": "frontend/src/games/breakout/Breakout.ts",
+      "name": "render",
+      "line": 273,
+      "endLine": 386,
+      "lines": 114,
+      "branches": 10,
+      "parameters": 1,
+      "owner": "BreakoutGame"
+    },
+    {
+      "path": "backend/app/routers/data.py",
+      "name": "export_data",
+      "owner": null,
+      "line": 204,
+      "endLine": 317,
+      "lines": 114,
+      "branches": 18,
+      "parameters": 1
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/StellarFlight.ts",
+      "name": "createSky",
+      "line": 240,
+      "endLine": 352,
+      "lines": 113,
+      "branches": 5,
+      "parameters": 0,
+      "owner": "StellarFlightGame"
+    },
+    {
+      "path": "frontend/src/games/snake/Snake.ts",
+      "name": "renderSnake",
+      "line": 524,
+      "endLine": 632,
+      "lines": 109,
+      "branches": 15,
+      "parameters": 0,
+      "owner": "SnakeGame"
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/StellarFlight.ts",
+      "name": "syncWorld",
+      "line": 422,
+      "endLine": 530,
+      "lines": 109,
+      "branches": 15,
+      "parameters": 0,
+      "owner": "StellarFlightGame"
+    }
+  ],
+  "productionModules": [
+    {
+      "path": "frontend/src/App.tsx",
+      "language": "TypeScript",
+      "lines": 158,
+      "staticFanIn": 1,
+      "staticFanOut": 10,
+      "dynamicFanOut": 8,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/api/client.ts",
+      "language": "TypeScript",
+      "lines": 549,
+      "staticFanIn": 17,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "ApiError",
+          "line": 24,
+          "lines": 7,
+          "properties": 1,
+          "methods": 1
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/components/AutomaticBackups.tsx",
+      "language": "TypeScript",
+      "lines": 124,
+      "staticFanIn": 0,
+      "staticFanOut": 4,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/components/Background.tsx",
+      "language": "TypeScript",
+      "lines": 8,
+      "staticFanIn": 1,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/components/Confirmation.tsx",
+      "language": "TypeScript",
+      "lines": 64,
+      "staticFanIn": 1,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/components/ConsoleUI.tsx",
+      "language": "TypeScript",
+      "lines": 57,
+      "staticFanIn": 7,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/components/ControllerKeyboard.tsx",
+      "language": "TypeScript",
+      "lines": 107,
+      "staticFanIn": 1,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/components/ErrorBoundary.tsx",
+      "language": "TypeScript",
+      "lines": 112,
+      "staticFanIn": 2,
+      "staticFanOut": 0,
+      "dynamicFanOut": 1,
+      "classes": [
+        {
+          "name": "ErrorBoundary",
+          "line": 18,
+          "lines": 95,
+          "properties": 3,
+          "methods": 4
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/components/FlightBriefing.tsx",
+      "language": "TypeScript",
+      "lines": 62,
+      "staticFanIn": 1,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/components/GameCanvas.tsx",
+      "language": "TypeScript",
+      "lines": 437,
+      "staticFanIn": 1,
+      "staticFanOut": 5,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/components/Layout.tsx",
+      "language": "TypeScript",
+      "lines": 209,
+      "staticFanIn": 1,
+      "staticFanOut": 8,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/components/LoadingSpinner.tsx",
+      "language": "TypeScript",
+      "lines": 32,
+      "staticFanIn": 0,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/components/SessionHistoryModal.tsx",
+      "language": "TypeScript",
+      "lines": 382,
+      "staticFanIn": 2,
+      "staticFanOut": 5,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/components/Toast.tsx",
+      "language": "TypeScript",
+      "lines": 109,
+      "staticFanIn": 1,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/components/arcus/BootSequence.tsx",
+      "language": "TypeScript",
+      "lines": 38,
+      "staticFanIn": 1,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/components/arcus/GameCard.tsx",
+      "language": "TypeScript",
+      "lines": 56,
+      "staticFanIn": 2,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/components/arcus/GameCarousel.tsx",
+      "language": "TypeScript",
+      "lines": 121,
+      "staticFanIn": 1,
+      "staticFanOut": 5,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/components/arcus/ProfileSelector.tsx",
+      "language": "TypeScript",
+      "lines": 68,
+      "staticFanIn": 1,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/components/arcus/ProfileSetup.tsx",
+      "language": "TypeScript",
+      "lines": 99,
+      "staticFanIn": 1,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/components/arcus/SystemMenu.tsx",
+      "language": "TypeScript",
+      "lines": 128,
+      "staticFanIn": 1,
+      "staticFanOut": 4,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/games/asteroids/Asteroids.ts",
+      "language": "TypeScript",
+      "lines": 315,
+      "staticFanIn": 0,
+      "staticFanOut": 3,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "AsteroidsGame",
+          "line": 41,
+          "lines": 275,
+          "properties": 15,
+          "methods": 9
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/games/breakout/Breakout.ts",
+      "language": "TypeScript",
+      "lines": 558,
+      "staticFanIn": 0,
+      "staticFanOut": 5,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "BreakoutGame",
+          "line": 8,
+          "lines": 551,
+          "properties": 24,
+          "methods": 17
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/games/breakout/sectors.ts",
+      "language": "TypeScript",
+      "lines": 68,
+      "staticFanIn": 1,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/games/descriptors.ts",
+      "language": "TypeScript",
+      "lines": 53,
+      "staticFanIn": 5,
+      "staticFanOut": 1,
+      "dynamicFanOut": 8,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/games/experience.ts",
+      "language": "TypeScript",
+      "lines": 146,
+      "staticFanIn": 4,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/games/feedback.ts",
+      "language": "TypeScript",
+      "lines": 90,
+      "staticFanIn": 8,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "GameFeedback",
+          "line": 5,
+          "lines": 86,
+          "properties": 2,
+          "methods": 5
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/games/index.ts",
+      "language": "TypeScript",
+      "lines": 2,
+      "staticFanIn": 1,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/games/merge-2048/Merge2048.ts",
+      "language": "TypeScript",
+      "lines": 504,
+      "staticFanIn": 0,
+      "staticFanOut": 4,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "Merge2048Game",
+          "line": 56,
+          "lines": 449,
+          "properties": 23,
+          "methods": 18
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/games/merge-2048/puzzles.ts",
+      "language": "TypeScript",
+      "lines": 39,
+      "staticFanIn": 1,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/games/prism-rush/PrismRun.ts",
+      "language": "TypeScript",
+      "lines": 143,
+      "staticFanIn": 1,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "PrismRun",
+          "line": 36,
+          "lines": 108,
+          "properties": 16,
+          "methods": 5
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/games/prism-rush/PrismRush.ts",
+      "language": "TypeScript",
+      "lines": 277,
+      "staticFanIn": 0,
+      "staticFanOut": 4,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "PrismRushGame",
+          "line": 8,
+          "lines": 270,
+          "properties": 15,
+          "methods": 10
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/games/raptor-run/RaptorRun.ts",
+      "language": "TypeScript",
+      "lines": 773,
+      "staticFanIn": 1,
+      "staticFanOut": 4,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "RaptorRunGame",
+          "line": 30,
+          "lines": 744,
+          "properties": 37,
+          "methods": 17
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/games/raptor-run/index.ts",
+      "language": "TypeScript",
+      "lines": 1,
+      "staticFanIn": 0,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/games/raptor-run/phrases.ts",
+      "language": "TypeScript",
+      "lines": 31,
+      "staticFanIn": 1,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/games/records.ts",
+      "language": "TypeScript",
+      "lines": 14,
+      "staticFanIn": 2,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/games/snake/Snake.ts",
+      "language": "TypeScript",
+      "lines": 808,
+      "staticFanIn": 1,
+      "staticFanOut": 5,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "SnakeGame",
+          "line": 37,
+          "lines": 772,
+          "properties": 34,
+          "methods": 19
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/games/snake/index.ts",
+      "language": "TypeScript",
+      "lines": 1,
+      "staticFanIn": 0,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/games/snake/mazes.ts",
+      "language": "TypeScript",
+      "lines": 32,
+      "staticFanIn": 1,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/AsteroidField.ts",
+      "language": "TypeScript",
+      "lines": 75,
+      "staticFanIn": 1,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "AsteroidField",
+          "line": 10,
+          "lines": 66,
+          "properties": 6,
+          "methods": 3
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/FlightAudio.ts",
+      "language": "TypeScript",
+      "lines": 138,
+      "staticFanIn": 1,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "FlightAudio",
+          "line": 3,
+          "lines": 136,
+          "properties": 10,
+          "methods": 8
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/FlightController.ts",
+      "language": "TypeScript",
+      "lines": 79,
+      "staticFanIn": 1,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "FlightController",
+          "line": 3,
+          "lines": 77,
+          "properties": 11,
+          "methods": 4
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/FlightHUD.ts",
+      "language": "TypeScript",
+      "lines": 253,
+      "staticFanIn": 1,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "FlightHUD",
+          "line": 6,
+          "lines": 248,
+          "properties": 10,
+          "methods": 6
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/SpaceJourney.ts",
+      "language": "TypeScript",
+      "lines": 889,
+      "staticFanIn": 2,
+      "staticFanOut": 7,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "SpaceJourney",
+          "line": 165,
+          "lines": 725,
+          "properties": 64,
+          "methods": 22
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/StellarFlight.ts",
+      "language": "TypeScript",
+      "lines": 728,
+      "staticFanIn": 0,
+      "staticFanOut": 9,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "StellarFlightGame",
+          "line": 15,
+          "lines": 714,
+          "properties": 35,
+          "methods": 20
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/contracts.ts",
+      "language": "TypeScript",
+      "lines": 64,
+      "staticFanIn": 1,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/course.ts",
+      "language": "TypeScript",
+      "lines": 41,
+      "staticFanIn": 1,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/routes.ts",
+      "language": "TypeScript",
+      "lines": 23,
+      "staticFanIn": 1,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/ships.ts",
+      "language": "TypeScript",
+      "lines": 279,
+      "staticFanIn": 3,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/universe.ts",
+      "language": "TypeScript",
+      "lines": 148,
+      "staticFanIn": 2,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "SectorStream",
+          "line": 95,
+          "lines": 27,
+          "properties": 2,
+          "methods": 1
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/games/tetris/Tetris.ts",
+      "language": "TypeScript",
+      "lines": 420,
+      "staticFanIn": 0,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "TetrisGame",
+          "line": 88,
+          "lines": 333,
+          "properties": 24,
+          "methods": 13
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/hooks/useConfirmation.tsx",
+      "language": "TypeScript",
+      "lines": 44,
+      "staticFanIn": 5,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/hooks/useGameSession.ts",
+      "language": "TypeScript",
+      "lines": 647,
+      "staticFanIn": 1,
+      "staticFanOut": 16,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/hooks/useGamepad.ts",
+      "language": "TypeScript",
+      "lines": 12,
+      "staticFanIn": 7,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/hooks/useLocalConnection.ts",
+      "language": "TypeScript",
+      "lines": 8,
+      "staticFanIn": 2,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/hooks/useModalFocus.ts",
+      "language": "TypeScript",
+      "lines": 67,
+      "staticFanIn": 3,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/hooks/useToast.ts",
+      "language": "TypeScript",
+      "lines": 10,
+      "staticFanIn": 8,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/main.tsx",
+      "language": "TypeScript",
+      "lines": 14,
+      "staticFanIn": 0,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/pages/Achievements.tsx",
+      "language": "TypeScript",
+      "lines": 144,
+      "staticFanIn": 1,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/pages/Dashboard.tsx",
+      "language": "TypeScript",
+      "lines": 179,
+      "staticFanIn": 1,
+      "staticFanOut": 6,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/pages/GamePlayer.tsx",
+      "language": "TypeScript",
+      "lines": 131,
+      "staticFanIn": 1,
+      "staticFanOut": 3,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/pages/Library.tsx",
+      "language": "TypeScript",
+      "lines": 195,
+      "staticFanIn": 1,
+      "staticFanOut": 5,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/pages/Profile.tsx",
+      "language": "TypeScript",
+      "lines": 214,
+      "staticFanIn": 1,
+      "staticFanOut": 8,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/pages/Progress.tsx",
+      "language": "TypeScript",
+      "lines": 154,
+      "staticFanIn": 0,
+      "staticFanOut": 5,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/pages/Settings.tsx",
+      "language": "TypeScript",
+      "lines": 309,
+      "staticFanIn": 1,
+      "staticFanOut": 10,
+      "dynamicFanOut": 2,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/pages/Store.tsx",
+      "language": "TypeScript",
+      "lines": 182,
+      "staticFanIn": 1,
+      "staticFanOut": 4,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/pages/index.ts",
+      "language": "TypeScript",
+      "lines": 11,
+      "staticFanIn": 0,
+      "staticFanOut": 7,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/sdk/AudioManager.ts",
+      "language": "TypeScript",
+      "lines": 196,
+      "staticFanIn": 6,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "AudioManager",
+          "line": 6,
+          "lines": 191,
+          "properties": 6,
+          "methods": 15
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/sdk/CanvasLayer.ts",
+      "language": "TypeScript",
+      "lines": 55,
+      "staticFanIn": 2,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "CanvasLayer",
+          "line": 4,
+          "lines": 52,
+          "properties": 3,
+          "methods": 2
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/sdk/GameEngine.ts",
+      "language": "TypeScript",
+      "lines": 248,
+      "staticFanIn": 1,
+      "staticFanOut": 4,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "GameEngine",
+          "line": 6,
+          "lines": 243,
+          "properties": 22,
+          "methods": 23
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/sdk/GameSDK.ts",
+      "language": "TypeScript",
+      "lines": 143,
+      "staticFanIn": 2,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/sdk/GamepadManager.ts",
+      "language": "TypeScript",
+      "lines": 121,
+      "staticFanIn": 1,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "GamepadManager",
+          "line": 39,
+          "lines": 83,
+          "properties": 9,
+          "methods": 4
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/sdk/GraphicsQuality.ts",
+      "language": "TypeScript",
+      "lines": 39,
+      "staticFanIn": 4,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/sdk/InputManager.ts",
+      "language": "TypeScript",
+      "lines": 109,
+      "staticFanIn": 6,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "InputManager",
+          "line": 11,
+          "lines": 99,
+          "properties": 6,
+          "methods": 5
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/sdk/Random.ts",
+      "language": "TypeScript",
+      "lines": 20,
+      "staticFanIn": 10,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "Random",
+          "line": 2,
+          "lines": 10,
+          "properties": 1,
+          "methods": 2
+        }
+      ]
+    },
+    {
+      "path": "frontend/src/sdk/index.ts",
+      "language": "TypeScript",
+      "lines": 14,
+      "staticFanIn": 1,
+      "staticFanOut": 3,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/sdk/menuNavigation.ts",
+      "language": "TypeScript",
+      "lines": 73,
+      "staticFanIn": 4,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/services/background.ts",
+      "language": "TypeScript",
+      "lines": 60,
+      "staticFanIn": 5,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/services/backup.ts",
+      "language": "TypeScript",
+      "lines": 169,
+      "staticFanIn": 0,
+      "staticFanOut": 6,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/services/connection.ts",
+      "language": "TypeScript",
+      "lines": 60,
+      "staticFanIn": 1,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/services/controls.ts",
+      "language": "TypeScript",
+      "lines": 62,
+      "staticFanIn": 2,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/services/download.ts",
+      "language": "TypeScript",
+      "lines": 10,
+      "staticFanIn": 2,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/services/lifecycle.ts",
+      "language": "TypeScript",
+      "lines": 27,
+      "staticFanIn": 1,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/services/performance.ts",
+      "language": "TypeScript",
+      "lines": 78,
+      "staticFanIn": 2,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/services/recovery.ts",
+      "language": "TypeScript",
+      "lines": 139,
+      "staticFanIn": 3,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/services/saves.ts",
+      "language": "TypeScript",
+      "lines": 68,
+      "staticFanIn": 3,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/services/sessionQueue.ts",
+      "language": "TypeScript",
+      "lines": 222,
+      "staticFanIn": 4,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/stores/libraryStore.ts",
+      "language": "TypeScript",
+      "lines": 44,
+      "staticFanIn": 1,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/stores/profileStore.ts",
+      "language": "TypeScript",
+      "lines": 188,
+      "staticFanIn": 10,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/stores/settingsStore.ts",
+      "language": "TypeScript",
+      "lines": 131,
+      "staticFanIn": 15,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "frontend/src/utils/formatting.ts",
+      "language": "TypeScript",
+      "lines": 13,
+      "staticFanIn": 3,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "backend/app/__init__.py",
+      "language": "Python",
+      "lines": 3,
+      "staticFanIn": 0,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "backend/app/config.py",
+      "language": "Python",
+      "lines": 65,
+      "staticFanIn": 3,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "Settings",
+          "line": 14,
+          "lines": 47,
+          "methods": 2
+        }
+      ]
+    },
+    {
+      "path": "backend/app/database.py",
+      "language": "Python",
+      "lines": 194,
+      "staticFanIn": 13,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "Base",
+          "line": 28,
+          "lines": 2,
+          "methods": 0
+        }
+      ]
+    },
+    {
+      "path": "backend/app/datetime_utils.py",
+      "language": "Python",
+      "lines": 30,
+      "staticFanIn": 13,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "UTCDateTime",
+          "line": 16,
+          "lines": 15,
+          "methods": 2
+        }
+      ]
+    },
+    {
+      "path": "backend/app/dependencies.py",
+      "language": "Python",
+      "lines": 13,
+      "staticFanIn": 8,
+      "staticFanOut": 3,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "backend/app/game_rules.py",
+      "language": "Python",
+      "lines": 13,
+      "staticFanIn": 1,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "backend/app/main.py",
+      "language": "Python",
+      "lines": 165,
+      "staticFanIn": 0,
+      "staticFanOut": 14,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "ConsoleFiles",
+          "line": 147,
+          "lines": 13,
+          "methods": 1
+        }
+      ]
+    },
+    {
+      "path": "backend/app/middleware.py",
+      "language": "Python",
+      "lines": 77,
+      "staticFanIn": 1,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "RequestGuard",
+          "line": 9,
+          "lines": 69,
+          "methods": 2
+        }
+      ]
+    },
+    {
+      "path": "backend/app/migrate.py",
+      "language": "Python",
+      "lines": 16,
+      "staticFanIn": 0,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "backend/app/models/__init__.py",
+      "language": "Python",
+      "lines": 26,
+      "staticFanIn": 3,
+      "staticFanOut": 8,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "backend/app/models/achievement.py",
+      "language": "Python",
+      "lines": 66,
+      "staticFanIn": 3,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "Achievement",
+          "line": 14,
+          "lines": 26,
+          "methods": 1
+        },
+        {
+          "name": "AchievementUnlocked",
+          "line": 42,
+          "lines": 25,
+          "methods": 1
+        }
+      ]
+    },
+    {
+      "path": "backend/app/models/game.py",
+      "language": "Python",
+      "lines": 51,
+      "staticFanIn": 7,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "Category",
+          "line": 15,
+          "lines": 8,
+          "methods": 0
+        },
+        {
+          "name": "Game",
+          "line": 25,
+          "lines": 27,
+          "methods": 1
+        }
+      ]
+    },
+    {
+      "path": "backend/app/models/library.py",
+      "language": "Python",
+      "lines": 35,
+      "staticFanIn": 3,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "UserLibrary",
+          "line": 14,
+          "lines": 22,
+          "methods": 1
+        }
+      ]
+    },
+    {
+      "path": "backend/app/models/progress.py",
+      "language": "Python",
+      "lines": 33,
+      "staticFanIn": 1,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "GameRecord",
+          "line": 12,
+          "lines": 12,
+          "methods": 0
+        },
+        {
+          "name": "RecoverySave",
+          "line": 26,
+          "lines": 8,
+          "methods": 0
+        }
+      ]
+    },
+    {
+      "path": "backend/app/models/save.py",
+      "language": "Python",
+      "lines": 42,
+      "staticFanIn": 2,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "GameSave",
+          "line": 14,
+          "lines": 29,
+          "methods": 1
+        }
+      ]
+    },
+    {
+      "path": "backend/app/models/session.py",
+      "language": "Python",
+      "lines": 52,
+      "staticFanIn": 3,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "GameSession",
+          "line": 15,
+          "lines": 38,
+          "methods": 1
+        }
+      ]
+    },
+    {
+      "path": "backend/app/models/stats.py",
+      "language": "Python",
+      "lines": 43,
+      "staticFanIn": 4,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "PlayStats",
+          "line": 14,
+          "lines": 30,
+          "methods": 1
+        }
+      ]
+    },
+    {
+      "path": "backend/app/models/user.py",
+      "language": "Python",
+      "lines": 45,
+      "staticFanIn": 4,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "User",
+          "line": 14,
+          "lines": 32,
+          "methods": 1
+        }
+      ]
+    },
+    {
+      "path": "backend/app/routers/__init__.py",
+      "language": "Python",
+      "lines": 7,
+      "staticFanIn": 1,
+      "staticFanOut": 6,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "backend/app/routers/achievements.py",
+      "language": "Python",
+      "lines": 207,
+      "staticFanIn": 2,
+      "staticFanOut": 7,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "backend/app/routers/data.py",
+      "language": "Python",
+      "lines": 422,
+      "staticFanIn": 1,
+      "staticFanOut": 6,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "SavedSlot",
+          "line": 36,
+          "lines": 3,
+          "methods": 0
+        },
+        {
+          "name": "SavedSession",
+          "line": 41,
+          "lines": 3,
+          "methods": 0
+        },
+        {
+          "name": "SavedReservation",
+          "line": 46,
+          "lines": 3,
+          "methods": 0
+        },
+        {
+          "name": "SavedRecord",
+          "line": 51,
+          "lines": 5,
+          "methods": 0
+        },
+        {
+          "name": "SavedAward",
+          "line": 58,
+          "lines": 3,
+          "methods": 0
+        },
+        {
+          "name": "SavedGame",
+          "line": 63,
+          "lines": 13,
+          "methods": 0
+        },
+        {
+          "name": "SavedPlayer",
+          "line": 78,
+          "lines": 4,
+          "methods": 0
+        },
+        {
+          "name": "Backup",
+          "line": 84,
+          "lines": 3,
+          "methods": 0
+        }
+      ]
+    },
+    {
+      "path": "backend/app/routers/games.py",
+      "language": "Python",
+      "lines": 65,
+      "staticFanIn": 2,
+      "staticFanOut": 4,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "backend/app/routers/library.py",
+      "language": "Python",
+      "lines": 73,
+      "staticFanIn": 2,
+      "staticFanOut": 4,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "backend/app/routers/profiles.py",
+      "language": "Python",
+      "lines": 117,
+      "staticFanIn": 2,
+      "staticFanOut": 5,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "backend/app/routers/progress.py",
+      "language": "Python",
+      "lines": 335,
+      "staticFanIn": 1,
+      "staticFanOut": 9,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "backend/app/routers/saves.py",
+      "language": "Python",
+      "lines": 110,
+      "staticFanIn": 2,
+      "staticFanOut": 5,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "backend/app/routers/stats.py",
+      "language": "Python",
+      "lines": 242,
+      "staticFanIn": 3,
+      "staticFanOut": 8,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "backend/app/schemas/__init__.py",
+      "language": "Python",
+      "lines": 48,
+      "staticFanIn": 0,
+      "staticFanOut": 6,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "backend/app/schemas/achievement.py",
+      "language": "Python",
+      "lines": 41,
+      "staticFanIn": 2,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "AchievementResponse",
+          "line": 10,
+          "lines": 12,
+          "methods": 0
+        },
+        {
+          "name": "AchievementUnlock",
+          "line": 24,
+          "lines": 5,
+          "methods": 0
+        },
+        {
+          "name": "AchievementSummary",
+          "line": 31,
+          "lines": 5,
+          "methods": 0
+        },
+        {
+          "name": "AchievementListResponse",
+          "line": 38,
+          "lines": 4,
+          "methods": 0
+        }
+      ]
+    },
+    {
+      "path": "backend/app/schemas/base.py",
+      "language": "Python",
+      "lines": 28,
+      "staticFanIn": 7,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "RequestSchema",
+          "line": 13,
+          "lines": 2,
+          "methods": 0
+        },
+        {
+          "name": "ResponseSchema",
+          "line": 17,
+          "lines": 2,
+          "methods": 0
+        }
+      ]
+    },
+    {
+      "path": "backend/app/schemas/game.py",
+      "language": "Python",
+      "lines": 42,
+      "staticFanIn": 3,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "GameCreate",
+          "line": 12,
+          "lines": 13,
+          "methods": 1
+        },
+        {
+          "name": "GameResponse",
+          "line": 27,
+          "lines": 11,
+          "methods": 0
+        },
+        {
+          "name": "GameListResponse",
+          "line": 40,
+          "lines": 3,
+          "methods": 0
+        }
+      ]
+    },
+    {
+      "path": "backend/app/schemas/library.py",
+      "language": "Python",
+      "lines": 24,
+      "staticFanIn": 2,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "LibraryEntryResponse",
+          "line": 11,
+          "lines": 7,
+          "methods": 0
+        },
+        {
+          "name": "LibraryAddResponse",
+          "line": 20,
+          "lines": 5,
+          "methods": 0
+        }
+      ]
+    },
+    {
+      "path": "backend/app/schemas/save.py",
+      "language": "Python",
+      "lines": 43,
+      "staticFanIn": 4,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "SaveUpdate",
+          "line": 15,
+          "lines": 9,
+          "methods": 1
+        },
+        {
+          "name": "SaveCreate",
+          "line": 26,
+          "lines": 2,
+          "methods": 0
+        },
+        {
+          "name": "SaveResponse",
+          "line": 30,
+          "lines": 9,
+          "methods": 0
+        },
+        {
+          "name": "SaveListResponse",
+          "line": 41,
+          "lines": 3,
+          "methods": 0
+        }
+      ]
+    },
+    {
+      "path": "backend/app/schemas/stats.py",
+      "language": "Python",
+      "lines": 101,
+      "staticFanIn": 5,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "SessionStart",
+          "line": 16,
+          "lines": 2,
+          "methods": 0
+        },
+        {
+          "name": "SessionMetrics",
+          "line": 20,
+          "lines": 14,
+          "methods": 0
+        },
+        {
+          "name": "SessionRecord",
+          "line": 36,
+          "lines": 6,
+          "methods": 0
+        },
+        {
+          "name": "ScoreSubmit",
+          "line": 44,
+          "lines": 2,
+          "methods": 0
+        },
+        {
+          "name": "CompletionRecord",
+          "line": 48,
+          "lines": 4,
+          "methods": 0
+        },
+        {
+          "name": "GameStatsResponse",
+          "line": 54,
+          "lines": 7,
+          "methods": 0
+        },
+        {
+          "name": "StatsResponse",
+          "line": 63,
+          "lines": 5,
+          "methods": 0
+        },
+        {
+          "name": "SessionStartResponse",
+          "line": 70,
+          "lines": 5,
+          "methods": 0
+        },
+        {
+          "name": "SessionRecordResponse",
+          "line": 77,
+          "lines": 4,
+          "methods": 0
+        },
+        {
+          "name": "ScoreResponse",
+          "line": 83,
+          "lines": 4,
+          "methods": 0
+        },
+        {
+          "name": "SessionResponse",
+          "line": 89,
+          "lines": 13,
+          "methods": 0
+        }
+      ]
+    },
+    {
+      "path": "backend/app/schemas/user.py",
+      "language": "Python",
+      "lines": 47,
+      "staticFanIn": 3,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "ProfileCreate",
+          "line": 14,
+          "lines": 10,
+          "methods": 1
+        },
+        {
+          "name": "ProfileUpdate",
+          "line": 26,
+          "lines": 8,
+          "methods": 1
+        },
+        {
+          "name": "ProfileResponse",
+          "line": 36,
+          "lines": 7,
+          "methods": 0
+        },
+        {
+          "name": "ProfileListResponse",
+          "line": 45,
+          "lines": 3,
+          "methods": 0
+        }
+      ]
+    },
+    {
+      "path": "backend/app/seed.py",
+      "language": "Python",
+      "lines": 354,
+      "staticFanIn": 1,
+      "staticFanOut": 3,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "backend/app/services/__init__.py",
+      "language": "Python",
+      "lines": 1,
+      "staticFanIn": 0,
+      "staticFanOut": 0,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "backend/app/services/backups.py",
+      "language": "Python",
+      "lines": 140,
+      "staticFanIn": 1,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": [
+        {
+          "name": "RotatingBackups",
+          "line": 19,
+          "lines": 122,
+          "methods": 6
+        }
+      ]
+    },
+    {
+      "path": "backend/app/services/common.py",
+      "language": "Python",
+      "lines": 33,
+      "staticFanIn": 5,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "backend/app/services/history.py",
+      "language": "Python",
+      "lines": 66,
+      "staticFanIn": 2,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "backend/app/utils/__init__.py",
+      "language": "Python",
+      "lines": 5,
+      "staticFanIn": 0,
+      "staticFanOut": 1,
+      "dynamicFanOut": 0,
+      "classes": []
+    },
+    {
+      "path": "backend/app/utils/local_user.py",
+      "language": "Python",
+      "lines": 31,
+      "staticFanIn": 3,
+      "staticFanOut": 2,
+      "dynamicFanOut": 0,
+      "classes": []
+    }
+  ],
+  "codeAndStyleFileSizes": [
+    {
+      "path": "frontend/src/console.css",
+      "lines": 1925
+    },
+    {
+      "path": "frontend/e2e/console.spec.ts",
+      "lines": 1485
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/SpaceJourney.ts",
+      "lines": 889
+    },
+    {
+      "path": "frontend/src/games/snake/Snake.ts",
+      "lines": 808
+    },
+    {
+      "path": "frontend/src/games/raptor-run/RaptorRun.ts",
+      "lines": 773
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/StellarFlight.ts",
+      "lines": 728
+    },
+    {
+      "path": "frontend/src/hooks/useGameSession.ts",
+      "lines": 647
+    },
+    {
+      "path": "frontend/src/games/breakout/Breakout.ts",
+      "lines": 558
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/flight.css",
+      "lines": 558
+    },
+    {
+      "path": "frontend/src/api/client.ts",
+      "lines": 549
+    },
+    {
+      "path": "frontend/e2e/improvements.spec.ts",
+      "lines": 527
+    },
+    {
+      "path": "frontend/src/games/merge-2048/Merge2048.ts",
+      "lines": 504
+    },
+    {
+      "path": "frontend/src/index.css",
+      "lines": 492
+    },
+    {
+      "path": "frontend/src/__tests__/games.test.ts",
+      "lines": 459
+    },
+    {
+      "path": "frontend/scripts/benchmark-games.mjs",
+      "lines": 455
+    },
+    {
+      "path": "frontend/src/components/GameCanvas.tsx",
+      "lines": 437
+    },
+    {
+      "path": "backend/app/routers/data.py",
+      "lines": 422
+    },
+    {
+      "path": "frontend/src/games/tetris/Tetris.ts",
+      "lines": 420
+    },
+    {
+      "path": "frontend/src/__tests__/spaceJourney.test.ts",
+      "lines": 415
+    },
+    {
+      "path": "frontend/src/__tests__/improvements.test.ts",
+      "lines": 413
+    },
+    {
+      "path": "frontend/src/components/SessionHistoryModal.tsx",
+      "lines": 382
+    },
+    {
+      "path": "backend/app/seed.py",
+      "lines": 354
+    },
+    {
+      "path": "backend/app/routers/progress.py",
+      "lines": 335
+    },
+    {
+      "path": "frontend/src/games/asteroids/Asteroids.ts",
+      "lines": 315
+    },
+    {
+      "path": "frontend/src/pages/Settings.tsx",
+      "lines": 309
+    },
+    {
+      "path": "backend/tests/test_progress.py",
+      "lines": 299
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/ships.ts",
+      "lines": 279
+    },
+    {
+      "path": "frontend/src/games/prism-rush/PrismRush.ts",
+      "lines": 277
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/FlightHUD.ts",
+      "lines": 253
+    },
+    {
+      "path": "frontend/src/sdk/GameEngine.ts",
+      "lines": 248
+    },
+    {
+      "path": "backend/app/routers/stats.py",
+      "lines": 242
+    },
+    {
+      "path": "frontend/src/__tests__/engine.test.ts",
+      "lines": 233
+    },
+    {
+      "path": "backend/tests/test_database.py",
+      "lines": 229
+    },
+    {
+      "path": "frontend/src/__tests__/backup.test.ts",
+      "lines": 229
+    },
+    {
+      "path": "frontend/src/services/sessionQueue.ts",
+      "lines": 222
+    },
+    {
+      "path": "frontend/src/__tests__/newGames.test.ts",
+      "lines": 217
+    },
+    {
+      "path": "frontend/src/pages/Profile.tsx",
+      "lines": 214
+    },
+    {
+      "path": "frontend/src/components/Layout.tsx",
+      "lines": 209
+    },
+    {
+      "path": "backend/app/routers/achievements.py",
+      "lines": 207
+    },
+    {
+      "path": "backend/migrations/versions/0001_baseline_the_existing_v1_4_1_database.py",
+      "lines": 202
+    },
+    {
+      "path": "frontend/src/sdk/AudioManager.ts",
+      "lines": 196
+    },
+    {
+      "path": "backend/tests/test_achievements.py",
+      "lines": 195
+    },
+    {
+      "path": "frontend/src/pages/Library.tsx",
+      "lines": 195
+    },
+    {
+      "path": "backend/app/database.py",
+      "lines": 194
+    },
+    {
+      "path": "frontend/src/stores/profileStore.ts",
+      "lines": 188
+    },
+    {
+      "path": "frontend/src/pages/Store.tsx",
+      "lines": 182
+    },
+    {
+      "path": "frontend/src/pages/Dashboard.tsx",
+      "lines": 179
+    },
+    {
+      "path": "backend/tests/test_backup.py",
+      "lines": 170
+    },
+    {
+      "path": "backend/tests/test_stats.py",
+      "lines": 170
+    },
+    {
+      "path": "frontend/src/services/backup.ts",
+      "lines": 169
+    },
+    {
+      "path": "frontend/src/__tests__/flightAudio.test.ts",
+      "lines": 166
+    },
+    {
+      "path": "backend/app/main.py",
+      "lines": 165
+    },
+    {
+      "path": "frontend/src/__tests__/stores.test.ts",
+      "lines": 160
+    },
+    {
+      "path": "frontend/src/App.tsx",
+      "lines": 158
+    },
+    {
+      "path": "frontend/src/__tests__/sessionQueue.test.ts",
+      "lines": 158
+    },
+    {
+      "path": "frontend/src/pages/Progress.tsx",
+      "lines": 154
+    },
+    {
+      "path": "backend/tests/test_rotating_backups.py",
+      "lines": 152
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/universe.ts",
+      "lines": 148
+    },
+    {
+      "path": "frontend/src/__tests__/background.test.ts",
+      "lines": 146
+    },
+    {
+      "path": "frontend/src/games/experience.ts",
+      "lines": 146
+    },
+    {
+      "path": "frontend/src/pages/Achievements.tsx",
+      "lines": 144
+    },
+    {
+      "path": "frontend/src/games/prism-rush/PrismRun.ts",
+      "lines": 143
+    },
+    {
+      "path": "frontend/src/sdk/GameSDK.ts",
+      "lines": 143
+    },
+    {
+      "path": "backend/app/services/backups.py",
+      "lines": 140
+    },
+    {
+      "path": "frontend/src/services/recovery.ts",
+      "lines": 139
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/FlightAudio.ts",
+      "lines": 138
+    },
+    {
+      "path": "arcade.py",
+      "lines": 131
+    },
+    {
+      "path": "backend/tests/test_catalog.py",
+      "lines": 131
+    },
+    {
+      "path": "frontend/src/pages/GamePlayer.tsx",
+      "lines": 131
+    },
+    {
+      "path": "frontend/src/stores/settingsStore.ts",
+      "lines": 131
+    },
+    {
+      "path": "frontend/src/__tests__/renderResources.test.ts",
+      "lines": 130
+    },
+    {
+      "path": "frontend/src/components/arcus/SystemMenu.tsx",
+      "lines": 128
+    },
+    {
+      "path": "frontend/src/__tests__/recovery.test.ts",
+      "lines": 124
+    },
+    {
+      "path": "frontend/src/components/AutomaticBackups.tsx",
+      "lines": 124
+    },
+    {
+      "path": "frontend/src/__tests__/modalFocus.test.tsx",
+      "lines": 121
+    },
+    {
+      "path": "frontend/src/components/arcus/GameCarousel.tsx",
+      "lines": 121
+    },
+    {
+      "path": "frontend/src/sdk/GamepadManager.ts",
+      "lines": 121
+    },
+    {
+      "path": "scripts/laptop_check.py",
+      "lines": 119
+    },
+    {
+      "path": "backend/app/routers/profiles.py",
+      "lines": 117
+    },
+    {
+      "path": "frontend/src/__tests__/gamepadPower.test.ts",
+      "lines": 113
+    },
+    {
+      "path": "frontend/src/components/ErrorBoundary.tsx",
+      "lines": 112
+    },
+    {
+      "path": "backend/app/routers/saves.py",
+      "lines": 110
+    },
+    {
+      "path": "frontend/src/components/Toast.tsx",
+      "lines": 109
+    },
+    {
+      "path": "frontend/src/sdk/InputManager.ts",
+      "lines": 109
+    },
+    {
+      "path": "frontend/src/components/ControllerKeyboard.tsx",
+      "lines": 107
+    },
+    {
+      "path": "backend/tests/test_history.py",
+      "lines": 103
+    },
+    {
+      "path": "frontend/src/__tests__/graphicsQuality.test.ts",
+      "lines": 103
+    },
+    {
+      "path": "backend/app/schemas/stats.py",
+      "lines": 101
+    },
+    {
+      "path": "frontend/src/__tests__/audioManager.test.ts",
+      "lines": 101
+    },
+    {
+      "path": "frontend/src/components/arcus/ProfileSetup.tsx",
+      "lines": 99
+    },
+    {
+      "path": "frontend/src/__tests__/flightHUD.test.ts",
+      "lines": 95
+    },
+    {
+      "path": "backend/tests/test_saves.py",
+      "lines": 94
+    },
+    {
+      "path": "backend/tests/test_api.py",
+      "lines": 91
+    },
+    {
+      "path": "frontend/src/__tests__/gameSession.test.tsx",
+      "lines": 91
+    },
+    {
+      "path": "frontend/src/games/feedback.ts",
+      "lines": 90
+    },
+    {
+      "path": "frontend/src/__tests__/errorBoundary.test.tsx",
+      "lines": 87
+    },
+    {
+      "path": "backend/tests/test_profiles.py",
+      "lines": 80
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/FlightController.ts",
+      "lines": 79
+    },
+    {
+      "path": "frontend/src/services/performance.ts",
+      "lines": 78
+    },
+    {
+      "path": "backend/app/middleware.py",
+      "lines": 77
+    },
+    {
+      "path": "frontend/src/__tests__/progressPage.test.tsx",
+      "lines": 77
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/AsteroidField.ts",
+      "lines": 75
+    },
+    {
+      "path": "backend/app/routers/library.py",
+      "lines": 73
+    },
+    {
+      "path": "frontend/src/sdk/menuNavigation.ts",
+      "lines": 73
+    },
+    {
+      "path": "frontend/src/components/arcus/ProfileSelector.tsx",
+      "lines": 68
+    },
+    {
+      "path": "frontend/src/games/breakout/sectors.ts",
+      "lines": 68
+    },
+    {
+      "path": "frontend/src/services/saves.ts",
+      "lines": 68
+    },
+    {
+      "path": "frontend/src/hooks/useModalFocus.ts",
+      "lines": 67
+    },
+    {
+      "path": "backend/app/models/achievement.py",
+      "lines": 66
+    },
+    {
+      "path": "backend/app/services/history.py",
+      "lines": 66
+    },
+    {
+      "path": "backend/app/config.py",
+      "lines": 65
+    },
+    {
+      "path": "backend/app/routers/games.py",
+      "lines": 65
+    },
+    {
+      "path": "frontend/src/components/Confirmation.tsx",
+      "lines": 64
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/contracts.ts",
+      "lines": 64
+    },
+    {
+      "path": "frontend/src/components/FlightBriefing.tsx",
+      "lines": 62
+    },
+    {
+      "path": "frontend/src/services/controls.ts",
+      "lines": 62
+    },
+    {
+      "path": "backend/migrations/versions/0002_add_durable_session_identities_and_.py",
+      "lines": 61
+    },
+    {
+      "path": "frontend/src/services/background.ts",
+      "lines": 60
+    },
+    {
+      "path": "frontend/src/services/connection.ts",
+      "lines": 60
+    },
+    {
+      "path": "backend/migrations/versions/0004_progress.py",
+      "lines": 57
+    },
+    {
+      "path": "frontend/src/components/ConsoleUI.tsx",
+      "lines": 57
+    },
+    {
+      "path": "frontend/src/components/arcus/GameCard.tsx",
+      "lines": 56
+    },
+    {
+      "path": "frontend/src/sdk/CanvasLayer.ts",
+      "lines": 55
+    },
+    {
+      "path": "frontend/src/__tests__/App.test.tsx",
+      "lines": 54
+    },
+    {
+      "path": "frontend/src/games/descriptors.ts",
+      "lines": 53
+    },
+    {
+      "path": "backend/app/models/session.py",
+      "lines": 52
+    },
+    {
+      "path": "backend/app/models/game.py",
+      "lines": 51
+    },
+    {
+      "path": "backend/migrations/env.py",
+      "lines": 50
+    },
+    {
+      "path": "backend/tests/test_config.py",
+      "lines": 49
+    },
+    {
+      "path": "backend/app/schemas/__init__.py",
+      "lines": 48
+    },
+    {
+      "path": "frontend/src/games/merge-2048/puzzle.css",
+      "lines": 48
+    },
+    {
+      "path": "backend/app/schemas/user.py",
+      "lines": 47
+    },
+    {
+      "path": "frontend/src/__tests__/saveCompatibility.test.ts",
+      "lines": 47
+    },
+    {
+      "path": "backend/app/models/user.py",
+      "lines": 45
+    },
+    {
+      "path": "backend/tests/conftest.py",
+      "lines": 44
+    },
+    {
+      "path": "frontend/src/__tests__/performance.test.ts",
+      "lines": 44
+    },
+    {
+      "path": "frontend/src/hooks/useConfirmation.tsx",
+      "lines": 44
+    },
+    {
+      "path": "frontend/src/stores/libraryStore.ts",
+      "lines": 44
+    },
+    {
+      "path": "backend/app/models/stats.py",
+      "lines": 43
+    },
+    {
+      "path": "backend/app/schemas/save.py",
+      "lines": 43
+    },
+    {
+      "path": "backend/app/models/save.py",
+      "lines": 42
+    },
+    {
+      "path": "backend/app/schemas/game.py",
+      "lines": 42
+    },
+    {
+      "path": "backend/app/schemas/achievement.py",
+      "lines": 41
+    },
+    {
+      "path": "frontend/playwright.config.ts",
+      "lines": 41
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/course.ts",
+      "lines": 41
+    },
+    {
+      "path": "frontend/src/games/merge-2048/puzzles.ts",
+      "lines": 39
+    },
+    {
+      "path": "frontend/src/sdk/GraphicsQuality.ts",
+      "lines": 39
+    },
+    {
+      "path": "frontend/src/components/arcus/BootSequence.tsx",
+      "lines": 38
+    },
+    {
+      "path": "scripts/check.py",
+      "lines": 38
+    },
+    {
+      "path": "frontend/src/__tests__/menuNavigation.test.ts",
+      "lines": 37
+    },
+    {
+      "path": "backend/app/models/library.py",
+      "lines": 35
+    },
+    {
+      "path": "backend/app/models/progress.py",
+      "lines": 33
+    },
+    {
+      "path": "backend/app/services/common.py",
+      "lines": 33
+    },
+    {
+      "path": "frontend/scripts/measure-startup.mjs",
+      "lines": 32
+    },
+    {
+      "path": "frontend/src/components/LoadingSpinner.tsx",
+      "lines": 32
+    },
+    {
+      "path": "frontend/src/games/snake/mazes.ts",
+      "lines": 32
+    },
+    {
+      "path": "backend/app/utils/local_user.py",
+      "lines": 31
+    },
+    {
+      "path": "frontend/src/__tests__/controls.test.ts",
+      "lines": 31
+    },
+    {
+      "path": "frontend/src/games/raptor-run/phrases.ts",
+      "lines": 31
+    },
+    {
+      "path": "backend/app/datetime_utils.py",
+      "lines": 30
+    },
+    {
+      "path": "frontend/e2e/serve_backend.py",
+      "lines": 30
+    },
+    {
+      "path": "backend/app/schemas/base.py",
+      "lines": 28
+    },
+    {
+      "path": "backend/run.py",
+      "lines": 27
+    },
+    {
+      "path": "frontend/src/services/lifecycle.ts",
+      "lines": 27
+    },
+    {
+      "path": "frontend/vite.config.ts",
+      "lines": 27
+    },
+    {
+      "path": "backend/app/models/__init__.py",
+      "lines": 26
+    },
+    {
+      "path": "backend/app/schemas/library.py",
+      "lines": 24
+    },
+    {
+      "path": "backend/migrations/versions/0003_add_session_metrics.py",
+      "lines": 24
+    },
+    {
+      "path": "frontend/src/games/stellar-flight/routes.ts",
+      "lines": 23
+    },
+    {
+      "path": "frontend/src/sdk/Random.ts",
+      "lines": 20
+    },
+    {
+      "path": "backend/app/migrate.py",
+      "lines": 16
+    },
+    {
+      "path": "frontend/src/games/records.ts",
+      "lines": 14
+    },
+    {
+      "path": "frontend/src/main.tsx",
+      "lines": 14
+    },
+    {
+      "path": "frontend/src/sdk/index.ts",
+      "lines": 14
+    },
+    {
+      "path": "backend/app/dependencies.py",
+      "lines": 13
+    },
+    {
+      "path": "backend/app/game_rules.py",
+      "lines": 13
+    },
+    {
+      "path": "frontend/src/App.css",
+      "lines": 13
+    },
+    {
+      "path": "frontend/src/utils/formatting.ts",
+      "lines": 13
+    },
+    {
+      "path": "frontend/src/hooks/useGamepad.ts",
+      "lines": 12
+    },
+    {
+      "path": "frontend/src/__tests__/api.test.ts",
+      "lines": 11
+    },
+    {
+      "path": "frontend/src/pages/index.ts",
+      "lines": 11
+    },
+    {
+      "path": "frontend/src/__tests__/setup.ts",
+      "lines": 10
+    },
+    {
+      "path": "frontend/src/hooks/useToast.ts",
+      "lines": 10
+    },
+    {
+      "path": "frontend/src/services/download.ts",
+      "lines": 10
+    },
+    {
+      "path": "frontend/src/components/Background.tsx",
+      "lines": 8
+    },
+    {
+      "path": "frontend/src/hooks/useLocalConnection.ts",
+      "lines": 8
+    },
+    {
+      "path": "backend/app/routers/__init__.py",
+      "lines": 7
+    },
+    {
+      "path": "backend/app/utils/__init__.py",
+      "lines": 5
+    },
+    {
+      "path": "backend/app/__init__.py",
+      "lines": 3
+    },
+    {
+      "path": "frontend/src/games/prism-rush/prism.css",
+      "lines": 3
+    },
+    {
+      "path": "frontend/src/games/index.ts",
+      "lines": 2
+    },
+    {
+      "path": "backend/app/services/__init__.py",
+      "lines": 1
+    },
+    {
+      "path": "frontend/src/games/raptor-run/index.ts",
+      "lines": 1
+    },
+    {
+      "path": "frontend/src/games/snake/index.ts",
+      "lines": 1
+    }
+  ]
+}

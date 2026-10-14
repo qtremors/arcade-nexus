@@ -1,12 +1,16 @@
 """Portable, validated backups. Restore creates copies instead of overwriting players."""
 
+import asyncio
+import json
+from collections import defaultdict
 from datetime import datetime
 from typing import Literal
-from uuid import uuid4
+from uuid import UUID, uuid4
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import Field
 from sqlalchemy import select, text
+from starlette.responses import FileResponse
 
 from app.dependencies import DbSession
 from app.models import (
@@ -39,6 +43,11 @@ class SavedSession(CompletionRecord):
     end_time: datetime
 
 
+class SavedReservation(RequestSchema):
+    session_id: UUID
+    start_time: datetime
+
+
 class SavedRecord(RequestSchema):
     mode: str = Field(pattern=r"^[a-z0-9-]{1,40}$")
     difficulty: Literal["easy", "normal", "hard"]
@@ -60,6 +69,7 @@ class SavedGame(RequestSchema):
     last_session: datetime | None = None
     saves: list[SavedSlot] = Field(default_factory=list, max_length=5)
     sessions: list[SavedSession] = Field(default_factory=list, max_length=100000)
+    reservations: list[SavedReservation] = Field(default_factory=list, max_length=100000)
     records: list[SavedRecord] = Field(default_factory=list, max_length=1000)
     awards: list[SavedAward] = Field(default_factory=list, max_length=1000)
     recovery: SaveUpdate | None = None
@@ -76,34 +86,171 @@ class Backup(RequestSchema):
     profiles: list[SavedPlayer] = Field(max_length=1000)
 
 
+async def validate_backup(backup: Backup, db):
+    if len({p.original_id for p in backup.profiles}) != len(backup.profiles):
+        raise HTTPException(422, "Backup has duplicate player identities")
+    catalog = {g.slug: g for g in (await db.scalars(select(Game))).all()}
+    sessions = [
+        str(s.session_id)
+        for p in backup.profiles
+        for g in p.games
+        for s in [*g.sessions, *g.reservations]
+    ]
+    if len(set(sessions)) != len(sessions):
+        raise HTTPException(422, "Backup has duplicate session identities")
+    for player in backup.profiles:
+        if len({g.slug for g in player.games}) != len(player.games):
+            raise HTTPException(422, "Backup has duplicate game entries")
+        for game in player.games:
+            if game.slug not in catalog:
+                raise HTTPException(
+                    422, f"Install the game {game.slug} before restoring this backup"
+                )
+            if (
+                len({s.slot for s in game.saves}) != len(game.saves)
+                or len({(r.mode, r.difficulty, r.rules_version) for r in game.records})
+                != len(game.records)
+                or len({a.slug for a in game.awards}) != len(game.awards)
+            ):
+                raise HTTPException(422, "Backup has duplicate saves, records or awards")
+    return catalog
+
+
+@router.post("/preview")
+async def preview_data(backup: Backup, db: DbSession):
+    await validate_backup(backup, db)
+    games = [game for player in backup.profiles for game in player.games]
+    return {
+        "profiles": len(backup.profiles),
+        "profile_ids": [player.original_id for player in backup.profiles],
+        "names": [player.username for player in backup.profiles],
+        "games": len(games),
+        "saves": sum(len(game.saves) for game in games),
+        "sessions": sum(len(game.sessions) for game in games),
+        "records": sum(len(game.records) for game in games),
+        "recoveries": sum(game.recovery is not None for game in games),
+    }
+
+
+@router.get("/backups")
+async def list_backups(request: Request):
+    manager = request.app.state.backups
+    return {
+        "enabled": manager.enabled,
+        "retention": manager.retention,
+        "interval_hours": manager.interval / 3600,
+        "backups": manager.snapshots(),
+        "error": manager.error,
+    }
+
+
+@router.post("/backups")
+async def create_backup(request: Request):
+    manager = request.app.state.backups
+    if not manager.enabled:
+        raise HTTPException(409, "Automatic backups are disabled for this console")
+    try:
+        snapshot = await manager.create(force=True)
+    except Exception:
+        raise HTTPException(503, manager.error) from None
+    if snapshot is None:
+        raise HTTPException(409, "Create a player before taking a backup")
+    return snapshot
+
+
+def snapshot_path(request: Request, name: str):
+    path = request.app.state.backups.path(name)
+    if path is None:
+        raise HTTPException(404, "This backup is no longer available")
+    return path
+
+
+@router.get("/backups/{name}")
+async def download_backup(name: str, request: Request):
+    return FileResponse(
+        snapshot_path(request, name),
+        media_type="application/json",
+        filename=name,
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+async def saved_backup(name: str, request: Request):
+    path = snapshot_path(request, name)
+
+    def read():
+        wrapper = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(wrapper, dict) or wrapper.get("format") != "arcade-nexus-backup-1":
+            raise ValueError("Unsupported stored backup format")
+        return Backup.model_validate(wrapper["database"])
+
+    try:
+        return await asyncio.to_thread(read)
+    except (ValueError, KeyError, OSError):
+        raise HTTPException(422, "This stored backup could not be read") from None
+
+
+@router.post("/backups/{name}/preview")
+async def preview_snapshot(name: str, request: Request, db: DbSession):
+    return await preview_data(await saved_backup(name, request), db)
+
+
+@router.post("/backups/{name}/restore")
+async def restore_snapshot(name: str, request: Request, db: DbSession):
+    return await import_data(await saved_backup(name, request), db)
+
+
 @router.get("/export", response_model=Backup)
 async def export_data(db: DbSession):
     await db.execute(text("BEGIN"))
-    players = (await db.scalars(select(User).where(User.is_active.is_(True)))).all()
-    catalog = (await db.scalars(select(Game))).all()
+    players = (
+        await db.scalars(select(User).where(User.is_active.is_(True)).order_by(User.id))
+    ).all()
+    catalog = (await db.scalars(select(Game).order_by(Game.id))).all()
+
+    # Read one consistent snapshot with a bounded number of queries, including retired games.
+    async def grouped(model):
+        statement = (
+            select(model)
+            .join(User, User.id == model.user_id)
+            .where(User.is_active.is_(True))
+            .order_by(model.id)
+        )
+        result = defaultdict(list)
+        for row in (await db.scalars(statement)).all():
+            result[(row.user_id, row.game_id)].append(row)
+        return result
+
+    grouped_rows = {}
+    for model in (PlayStats, GameSave, GameSession, GameRecord, RecoverySave, UserLibrary):
+        grouped_rows[model] = await grouped(model)
+    awards_by_owner = defaultdict(list)
+    awards = await db.execute(
+        select(
+            AchievementUnlocked.user_id,
+            Achievement.game_id,
+            Achievement.slug,
+            AchievementUnlocked.unlocked_at,
+        )
+        .join(Achievement, AchievementUnlocked.achievement_id == Achievement.id)
+        .join(User, User.id == AchievementUnlocked.user_id)
+        .where(User.is_active.is_(True))
+        .order_by(AchievementUnlocked.id)
+    )
+    for user_id, game_id, slug, stamp in awards:
+        awards_by_owner[(user_id, game_id)].append((slug, stamp))
     output = []
     for player in players:
         games = []
         for game in catalog:
-
-            async def rows(model):
-                return (
-                    await db.scalars(select(model).filter_by(user_id=player.id, game_id=game.id))
-                ).all()
-
-            stats = next(iter(await rows(PlayStats)), None)
-            slots = await rows(GameSave)
-            sessions = await rows(GameSession)
-            records = await rows(GameRecord)
-            recovery = next(iter(await rows(RecoverySave)), None)
-            favorite = bool(await rows(UserLibrary))
-            awards = (
-                await db.execute(
-                    select(Achievement.slug, AchievementUnlocked.unlocked_at)
-                    .join(AchievementUnlocked, AchievementUnlocked.achievement_id == Achievement.id)
-                    .where(Achievement.game_id == game.id, AchievementUnlocked.user_id == player.id)
-                )
-            ).all()
+            owner = (player.id, game.id)
+            stats = next(iter(grouped_rows[PlayStats].get(owner, ())), None)
+            slots = grouped_rows[GameSave].get(owner, ())
+            sessions = grouped_rows[GameSession].get(owner, ())
+            records = grouped_rows[GameRecord].get(owner, ())
+            recovery = next(iter(grouped_rows[RecoverySave].get(owner, ())), None)
+            favorite = bool(grouped_rows[UserLibrary].get(owner))
+            awards = awards_by_owner.get(owner, ())
             if not any((stats, slots, sessions, records, recovery, favorite, awards)):
                 continue
             games.append(
@@ -140,6 +287,11 @@ async def export_data(db: DbSession):
                         for s in sessions
                         if s.end_time is not None
                     ],
+                    reservations=[
+                        dict(session_id=s.session_id, start_time=s.start_time)
+                        for s in sessions
+                        if s.end_time is None and s.session_id is not None
+                    ],
                     records=[
                         dict(
                             mode=r.mode,
@@ -168,18 +320,30 @@ async def export_data(db: DbSession):
 @router.post("/import")
 async def import_data(backup: Backup, db: DbSession):
     await db.execute(text("BEGIN IMMEDIATE"))
-    if len({p.original_id for p in backup.profiles}) != len(backup.profiles):
-        raise HTTPException(422, "Backup has duplicate player identities")
-    catalog = {g.slug: g for g in (await db.scalars(select(Game))).all()}
+    catalog = await validate_backup(backup, db)
     names = set((await db.scalars(select(User.username))).all())
     selected = await db.scalar(
         select(User.id).where(User.is_active.is_(True), User.is_default.is_(True))
     )
     mapping = {}
     session_mapping = {}
-    all_sessions = [str(s.session_id) for p in backup.profiles for g in p.games for s in g.sessions]
-    if len(set(all_sessions)) != len(all_sessions):
-        raise HTTPException(422, "Backup has duplicate session identities")
+
+    def copied_session(identity):
+        identity = str(identity)
+        if identity not in session_mapping:
+            session_mapping[identity] = str(uuid4())
+        return session_mapping[identity]
+
+    def copied_save(data, slug):
+        # Save payloads are opaque except for our versioned session envelope.
+        if data.get("format") not in (1, 2) or data.get("game") != slug:
+            return data
+        try:
+            identity = UUID(str(data.get("session_id")))
+        except (ValueError, TypeError, AttributeError):
+            return data
+        return {**data, "session_id": copied_session(identity)}
+
     for saved in backup.profiles:
         name = saved.username
         suffix = 1
@@ -197,21 +361,8 @@ async def import_data(backup: Backup, db: DbSession):
         await db.flush()
         selected = selected or player.id
         mapping[str(saved.original_id)] = player.id
-        if len({g.slug for g in saved.games}) != len(saved.games):
-            raise HTTPException(422, "Backup has duplicate game entries")
         for item in saved.games:
-            if (
-                len({s.slot for s in item.saves}) != len(item.saves)
-                or len({(r.mode, r.difficulty, r.rules_version) for r in item.records})
-                != len(item.records)
-                or len({a.slug for a in item.awards}) != len(item.awards)
-            ):
-                raise HTTPException(422, "Backup has duplicate saves, records or awards")
-            game = catalog.get(item.slug)
-            if game is None:
-                raise HTTPException(
-                    422, f"Install the game {item.slug} before restoring this backup"
-                )
+            game = catalog[item.slug]
             owner = dict(user_id=player.id, game_id=game.id)
             db.add(
                 PlayStats(
@@ -225,12 +376,13 @@ async def import_data(backup: Backup, db: DbSession):
             if item.favorite:
                 db.add(UserLibrary(**owner))
             for slot in item.saves:
-                db.add(GameSave(**owner, **slot.model_dump()))
+                fields = slot.model_dump()
+                fields["data"] = copied_save(slot.data, item.slug)
+                db.add(GameSave(**owner, **fields))
             for record in item.records:
                 db.add(GameRecord(**owner, **record.model_dump()))
             for session in item.sessions:
-                restored_session_id = str(uuid4())
-                session_mapping[str(session.session_id)] = restored_session_id
+                restored_session_id = copied_session(session.session_id)
                 fields = session.model_dump(exclude={"session_id", "playtime_seconds"})
                 fields["metrics"] = session.metrics.model_dump(exclude_none=True)
                 db.add(
@@ -239,6 +391,15 @@ async def import_data(backup: Backup, db: DbSession):
                         **fields,
                         session_id=restored_session_id,
                         duration_seconds=session.playtime_seconds,
+                    )
+                )
+            for reservation in item.reservations:
+                db.add(
+                    GameSession(
+                        **owner,
+                        session_id=copied_session(reservation.session_id),
+                        start_time=reservation.start_time,
+                        end_time=None,
                     )
                 )
             for award in item.awards:
@@ -256,6 +417,6 @@ async def import_data(backup: Backup, db: DbSession):
                         )
                     )
             if item.recovery:
-                db.add(RecoverySave(**owner, data=item.recovery.data))
+                db.add(RecoverySave(**owner, data=copied_save(item.recovery.data, item.slug)))
     await db.commit()
     return {"imported": len(mapping), "profile_map": mapping, "session_map": session_mapping}

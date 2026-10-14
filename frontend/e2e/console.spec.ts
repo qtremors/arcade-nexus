@@ -1,5 +1,6 @@
 import { test as base, expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 const test = base.extend<{ profileId: number }>({
   profileId: async ({ request }, provide, info) => {
     const response = await request.post("/api/profiles", {
@@ -1330,4 +1331,155 @@ test("all games retain Full HD detail and 3D antialiasing", async ({
     if (["prism-rush", "stellar-flight"].includes(slug))
       expect(detail.antialias, slug).toBe(true);
   }
+});
+
+test("Settings survives corrupted metrics and reconciles results completed in another tab", async ({
+  page,
+  request,
+  profileId,
+}) => {
+  await page.addInitScript(() =>
+    localStorage.setItem("nexus-performance", "null"),
+  );
+  await page.goto("/settings");
+  await expect(
+    page.getByRole("heading", { name: "Settings", exact: true }),
+  ).toBeVisible();
+  const sessionId = await page.evaluate(async (profileId) => {
+    const module = "/src/services/sessionQueue.ts";
+    const { enqueueCompletion } = await import(module);
+    const sessionId = crypto.randomUUID();
+    enqueueCompletion({
+      slug: "snake",
+      sessionId,
+      profileId,
+      seconds: 10,
+      score: 50,
+      difficulty: "normal",
+      metrics: {},
+      retryAt: Date.now() + 60000,
+    });
+    return sessionId;
+  }, profileId);
+  await expect(
+    page.getByText("1 results awaiting sync", { exact: true }),
+  ).toBeVisible();
+  const other = await page.context().newPage();
+  try {
+    await other.goto("/health");
+    const response = await other.request.post("/api/progress/snake/complete", {
+      headers: { "X-Profile-ID": String(profileId) },
+      data: {
+        session_id: sessionId,
+        playtime_seconds: 10,
+        score: 50,
+        difficulty: "normal",
+        metrics: {},
+      },
+    });
+    expect(response.ok()).toBeTruthy();
+    await other.evaluate(
+      (id) => localStorage.removeItem(`nexus-result-v1:${id}`),
+      sessionId,
+    );
+    await expect(
+      page.getByText("0 results awaiting sync", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Retry pending results" }),
+    ).toBeDisabled();
+    const history = await request.get("/api/progress/history", {
+      headers: { "X-Profile-ID": String(profileId) },
+    });
+    expect((await history.json()).total).toBe(1);
+  } finally {
+    await other.close();
+  }
+});
+
+test("backup export includes results held only in memory after storage quota failures", async ({
+  page,
+  profileId,
+}, info) => {
+  await page.goto("/settings");
+  await expect(
+    page.getByRole("heading", { name: "Settings", exact: true }),
+  ).toBeVisible();
+  const item = await page.evaluate(async (profileId) => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (key.startsWith("nexus-result-v1:"))
+        throw new DOMException("Full", "QuotaExceededError");
+      return original.call(this, key, value);
+    };
+    const module = "/src/services/sessionQueue.ts";
+    const { enqueueCompletion } = await import(module);
+    const item = {
+      slug: "snake",
+      sessionId: crypto.randomUUID(),
+      profileId,
+      seconds: 10,
+      score: 777,
+      difficulty: "normal",
+      metrics: {},
+      blocked: true,
+    };
+    if (enqueueCompletion(item))
+      throw new Error("Storage failure was not exercised");
+    return item;
+  }, profileId);
+  const downloadPromise = page.waitForEvent("download");
+  await page
+    .getByRole("button", { name: "Export backup", exact: true })
+    .click();
+  const download = await downloadPromise,
+    file = info.outputPath("volatile-backup.json");
+  await download.saveAs(file);
+  const backup = JSON.parse(await readFile(file, "utf8")) as {
+    browser: Record<string, string>;
+  };
+  expect(
+    JSON.parse(backup.browser[`nexus-result-v1:${item.sessionId}`]),
+  ).toMatchObject(item);
+  expect(
+    await page.evaluate(
+      (id) => localStorage.getItem(`nexus-result-v1:${id}`),
+      item.sessionId,
+    ),
+  ).toBeNull();
+});
+
+test("system-menu keyboard focus skips disabled and closed-details controls", async ({
+  page,
+}) => {
+  await page.goto("/home");
+  const toggle = page.getByRole("button", { name: "Open system menu" });
+  await toggle.click();
+  const dialog = page.getByRole("dialog", { name: "System menu" });
+  await dialog.evaluate((element) => {
+    const disabled = document.createElement("input");
+    disabled.disabled = true;
+    element.insertBefore(disabled, element.children[1]);
+    const details = document.createElement("details"),
+      summary = document.createElement("summary"),
+      hidden = document.createElement("button");
+    summary.textContent = "Additional controls";
+    hidden.textContent = "Unavailable while closed";
+    details.append(summary, hidden);
+    element.append(details);
+  });
+  const close = dialog.getByRole("button", { name: "Close system menu" });
+  await close.focus();
+  await page.keyboard.press("Tab");
+  await expect(
+    dialog.getByRole("button", { name: "Home", exact: true }),
+  ).toBeFocused();
+  await dialog.getByRole("button", { name: "Settings", exact: true }).focus();
+  await page.keyboard.press("Tab");
+  await expect(dialog.locator("summary")).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(close).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden();
+  await expect(toggle).toBeFocused();
 });

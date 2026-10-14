@@ -4,6 +4,7 @@ import { z } from "zod";
 import type { Game2DInstance, GameConfig, InputState } from "../../sdk/GameSDK";
 import { GameFeedback } from "../feedback";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { CanvasLayer } from "../../sdk/CanvasLayer";
 export class BreakoutGame implements Game2DInstance {
   readonly type = "2d" as const;
   private width = 960;
@@ -23,6 +24,7 @@ export class BreakoutGame implements Game2DInstance {
   private random = new Random();
   private mode = "classic";
   private feedback = new GameFeedback();
+  private background = new CanvasLayer();
   private extraBalls: { x: number; y: number; vx: number; vy: number }[] = [];
   private pickups: { x: number; y: number; kind: "wide" | "multi" }[] = [];
   private wideTime = 0;
@@ -269,25 +271,10 @@ export class BreakoutGame implements Game2DInstance {
     return ball.y <= this.height + 8;
   }
   render(ctx: CanvasRenderingContext2D): void {
-    const gradient = ctx.createLinearGradient(0, 0, 0, this.height);
-    gradient.addColorStop(0, "#17142e");
-    gradient.addColorStop(1, "#080d18");
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, this.width, this.height);
-    ctx.strokeStyle = "#243049";
-    ctx.lineWidth = 1;
-    for (let i = 0; i < 16; i++) {
-      ctx.beginPath();
-      ctx.moveTo(this.width / 2 + (i - 8) * 28, 280);
-      ctx.lineTo((i - 4) * 120, this.height);
-      ctx.stroke();
-    }
-    for (let y = 310; y < this.height; y += 45) {
-      ctx.beginPath();
-      ctx.moveTo(20, y);
-      ctx.lineTo(this.width - 20, y);
-      ctx.stroke();
-    }
+    const key = `${this.stage}:${this.bricks.map((active, i) => (active ? this.armor[i] : 0)).join("")}`;
+    this.background.draw(ctx, this.width, this.height, key, (layer) =>
+      this.paintPlayfield(layer),
+    );
     ctx.fillStyle = "#94a3b8";
     ctx.font = "600 16px Rajdhani, system-ui";
     ctx.textAlign = "left";
@@ -320,47 +307,6 @@ export class BreakoutGame implements Game2DInstance {
       this.width - 40,
       52,
     );
-    const width = (this.width - 80) / 10;
-    this.bricks.forEach((active, i) => {
-      if (!active) return;
-      ctx.fillStyle = `hsl(${180 + Math.floor(i / 10) * 22} 80% 60%)`;
-      ctx.shadowColor = ctx.fillStyle;
-      ctx.shadowBlur = 6 * ctx.getTransform().a;
-      ctx.fillRect(
-        40 + (i % 10) * width,
-        95 + Math.floor(i / 10) * 28,
-        width - 4,
-        22,
-      );
-      ctx.shadowBlur = 0;
-      if (this.armor[i] > 1) {
-        ctx.strokeStyle = "#fff";
-        ctx.lineWidth = 2;
-        ctx.strokeRect(
-          42 + (i % 10) * width,
-          97 + Math.floor(i / 10) * 28,
-          width - 8,
-          18,
-        );
-      }
-      if (this.stage === 3 && i % 7 === 0) {
-        ctx.fillStyle = "#fff";
-        ctx.font = "14px system-ui";
-        ctx.textAlign = "center";
-        ctx.fillText(
-          "✦",
-          40 + ((i % 10) + 0.5) * width,
-          112 + Math.floor(i / 10) * 28,
-        );
-      }
-      ctx.fillStyle = "#ffffff50";
-      ctx.fillRect(
-        40 + (i % 10) * width + 2,
-        97 + Math.floor(i / 10) * 28,
-        width - 8,
-        3,
-      );
-    });
     if (!useSettingsStore.getState().reducedMotion)
       this.trail.forEach((point, i) => {
         ctx.globalAlpha = (i / this.trail.length) * 0.4;
@@ -437,6 +383,71 @@ export class BreakoutGame implements Game2DInstance {
         this.height - 22,
       );
     }
+  }
+  private paintPlayfield(ctx: CanvasRenderingContext2D): void {
+    const gradient = ctx.createLinearGradient(0, 0, 0, this.height);
+    gradient.addColorStop(0, "#17142e");
+    gradient.addColorStop(1, "#080d18");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, this.width, this.height);
+    ctx.strokeStyle = "#243049";
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 16; i++) {
+      ctx.beginPath();
+      ctx.moveTo(this.width / 2 + (i - 8) * 28, 280);
+      ctx.lineTo((i - 4) * 120, this.height);
+      ctx.stroke();
+    }
+    for (let y = 310; y < this.height; y += 45) {
+      ctx.beginPath();
+      ctx.moveTo(20, y);
+      ctx.lineTo(this.width - 20, y);
+      ctx.stroke();
+    }
+    const width = (this.width - 80) / 10;
+    this.bricks.forEach((active, i) => {
+      if (!active) return;
+      ctx.fillStyle = `hsl(${180 + Math.floor(i / 10) * 22} 80% 60%)`;
+      ctx.shadowColor = ctx.fillStyle;
+      ctx.shadowBlur = 6 * ctx.getTransform().a;
+      ctx.fillRect(
+        40 + (i % 10) * width,
+        95 + Math.floor(i / 10) * 28,
+        width - 4,
+        22,
+      );
+      ctx.shadowBlur = 0;
+      if (this.armor[i] > 1) {
+        ctx.strokeStyle = "#fff";
+        ctx.lineWidth = 2;
+        ctx.strokeRect(
+          42 + (i % 10) * width,
+          97 + Math.floor(i / 10) * 28,
+          width - 8,
+          18,
+        );
+      }
+      if (this.stage === 3 && i % 7 === 0) {
+        ctx.fillStyle = "#fff";
+        ctx.font = "14px system-ui";
+        ctx.textAlign = "center";
+        ctx.fillText(
+          "✦",
+          40 + ((i % 10) + 0.5) * width,
+          112 + Math.floor(i / 10) * 28,
+        );
+      }
+      ctx.fillStyle = "#ffffff50";
+      ctx.fillRect(
+        40 + (i % 10) * width + 2,
+        97 + Math.floor(i / 10) * 28,
+        width - 8,
+        3,
+      );
+    });
+  }
+  destroy(): void {
+    this.background.destroy();
   }
   getScore(): number {
     return this.score;

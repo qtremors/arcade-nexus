@@ -14,6 +14,7 @@ import { z } from "zod";
 import type { Game2DInstance, GameConfig, InputState } from "../../sdk/GameSDK";
 import { GameFeedback } from "../feedback";
 import { useSettingsStore } from "../../stores/settingsStore";
+import { CanvasLayer } from "../../sdk/CanvasLayer";
 
 interface Point {
   x: number;
@@ -55,6 +56,7 @@ export class SnakeGame implements Game2DInstance {
   private turns: Direction[] = [];
   private inputDirection: Direction | null = null;
   private feedback = new GameFeedback();
+  private background = new CanvasLayer();
 
   // Food
   private food: Point = { x: 0, y: 0 };
@@ -387,23 +389,22 @@ export class SnakeGame implements Game2DInstance {
   render(): void {
     const { ctx, width, height } = this;
 
-    // Background gradient
-    const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
-    bgGrad.addColorStop(0, this.colors.bg1);
-    bgGrad.addColorStop(1, this.colors.bg2);
-    ctx.fillStyle = bgGrad;
-    ctx.fillRect(0, 0, width, height);
-
-    // Grid
-    this.renderGrid();
-    ctx.fillStyle = "#a78bfa";
-    for (const wall of this.walls)
-      ctx.fillRect(
-        this.gridOffsetX + wall.x * this.cellSize + 2,
-        this.gridOffsetY + wall.y * this.cellSize + 2,
-        this.cellSize - 4,
-        this.cellSize - 4,
-      );
+    this.background.draw(ctx, width, height, this.walls, (layer) => {
+      const gradient = layer.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, this.colors.bg1);
+      gradient.addColorStop(1, this.colors.bg2);
+      layer.fillStyle = gradient;
+      layer.fillRect(0, 0, width, height);
+      this.renderGrid(layer);
+      layer.fillStyle = "#a78bfa";
+      for (const wall of this.walls)
+        layer.fillRect(
+          this.gridOffsetX + wall.x * this.cellSize + 2,
+          this.gridOffsetY + wall.y * this.cellSize + 2,
+          this.cellSize - 4,
+          this.cellSize - 4,
+        );
+    });
     if (this.mode.startsWith("sprint")) {
       ctx.font = "18px system-ui";
       ctx.fillStyle = "#fff";
@@ -453,9 +454,7 @@ export class SnakeGame implements Game2DInstance {
     this.feedback.render(ctx);
   }
 
-  private renderGrid(): void {
-    const { ctx } = this;
-
+  private renderGrid(ctx: CanvasRenderingContext2D): void {
     ctx.strokeStyle = this.colors.grid;
     ctx.lineWidth = 1;
 
@@ -803,5 +802,7 @@ export class SnakeGame implements Game2DInstance {
   }
   onPause(): void {}
   onResume(): void {}
-  destroy(): void {}
+  destroy(): void {
+    this.background.destroy();
+  }
 }

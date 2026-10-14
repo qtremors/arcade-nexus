@@ -4,7 +4,56 @@ import type { SaveEnvelope } from "./saves";
 const prefix = "nexus-recovery-v2:";
 const key = (id: number, slug: string) => `${prefix}${id}:${slug}`;
 const memory = new Map<string, SaveEnvelope>();
-const writes = new Map<string, Promise<unknown>>();
+type Operation =
+  | { kind: "save"; value: SaveEnvelope }
+  | { kind: "delete"; sessionId?: string };
+const writes = new Map<string, Operation[]>();
+function enqueue(profileId: number, slug: string, operation: Operation) {
+  const id = key(profileId, slug);
+  const queue = writes.get(id);
+  if (queue) {
+    const last = queue.at(-1);
+    // A slow server needs the newest snapshot, not every intermediate board.
+    // Deletes remain barriers so an old session cannot erase a newer run.
+    if (
+      last?.kind === "save" &&
+      (operation.kind === "save" ||
+        !operation.sessionId ||
+        last.value.session_id === operation.sessionId)
+    )
+      queue[queue.length - 1] = operation;
+    else if (!(
+      last?.kind === "delete" &&
+      operation.kind === "delete" &&
+      last.sessionId === operation.sessionId
+    ))
+      queue.push(operation);
+    return;
+  }
+  const pending = [operation];
+  writes.set(id, pending);
+  void (async () => {
+    try {
+      while (pending.length) {
+        const next = pending.shift()!;
+        try {
+          if (next.kind === "save")
+            await progressApi.saveRecovery(slug, next.value, profileId);
+          else
+            await progressApi.deleteRecovery(slug, profileId, next.sessionId);
+        } catch {
+          /* Browser/memory recovery remains available during server downtime. */
+        }
+      }
+    } finally {
+      writes.delete(id);
+    }
+  })();
+}
+/** Include snapshots that could not reach browser storage in portable backups. */
+export function recoverySnapshots(): ReadonlyMap<string, SaveEnvelope> {
+  return new Map(memory);
+}
 export function storeRecovery(profileId: number, value: SaveEnvelope): boolean {
   memory.set(key(profileId, value.game), value);
   let durable = true;
@@ -13,16 +62,7 @@ export function storeRecovery(profileId: number, value: SaveEnvelope): boolean {
   } catch {
     durable = false;
   }
-  const id = key(profileId, value.game);
-  const previous = writes.get(id) ?? Promise.resolve();
-  const next = previous
-    .catch(() => {})
-    .then(() => progressApi.saveRecovery(value.game, value, profileId))
-    .catch(() => {});
-  writes.set(id, next);
-  void next.finally(() => {
-    if (writes.get(id) === next) writes.delete(id);
-  });
+  enqueue(profileId, value.game, { kind: "save", value });
   return durable;
 }
 export async function recoveries(profileId: number): Promise<SaveEnvelope[]> {
@@ -95,13 +135,5 @@ export function clearRecovery(
       /* optional */
     }
   }
-  const previous = writes.get(id) ?? Promise.resolve();
-  const next = previous
-    .catch(() => {})
-    .then(() => progressApi.deleteRecovery(slug, profileId, sessionId))
-    .catch(() => {});
-  writes.set(id, next);
-  void next.finally(() => {
-    if (writes.get(id) === next) writes.delete(id);
-  });
+  enqueue(profileId, slug, { kind: "delete", sessionId });
 }

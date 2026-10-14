@@ -1,24 +1,54 @@
-import { useState, useEffect } from "react";
+import { lazy, Suspense, useState, useEffect } from "react";
+import type { ComponentType } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { Dashboard } from "./pages/Dashboard";
-import { Store } from "./pages/Store";
-import { Library } from "./pages/Library";
-import { Profile } from "./pages/Profile";
-import { Achievements } from "./pages/Achievements";
-import { Progress } from "./pages/Progress";
-import { Settings } from "./pages/Settings";
-import { GamePlayer } from "./pages/GamePlayer";
 import { Layout } from "./components/Layout";
 import { BootSequence } from "./components/arcus/BootSequence";
 import { ProfileSetup } from "./components/arcus/ProfileSetup";
 import { ProfileSelector } from "./components/arcus/ProfileSelector";
 import { ToastProvider } from "./components/Toast";
-import { ErrorBoundary } from "./components/ErrorBoundary";
 import { useProfileStore } from "./stores/profileStore";
 import { useSettingsStore } from "./stores/settingsStore";
-import { flushCompletions } from "./services/sessionQueue";
+import { startCompletionSync } from "./services/sessionQueue";
+import { watchVisibleTask } from "./services/background";
 import "./App.css";
 import { ControllerKeyboard } from "./components/ControllerKeyboard";
+const Dashboard = lazy(() =>
+  import("./pages/Dashboard").then((m) => ({ default: m.Dashboard })),
+);
+const Store = lazy(() =>
+  import("./pages/Store").then((m) => ({ default: m.Store })),
+);
+const Library = lazy(() =>
+  import("./pages/Library").then((m) => ({ default: m.Library })),
+);
+const Profile = lazy(() =>
+  import("./pages/Profile").then((m) => ({ default: m.Profile })),
+);
+const Achievements = lazy(() =>
+  import("./pages/Achievements").then((m) => ({ default: m.Achievements })),
+);
+const Progress = lazy(() =>
+  import("./pages/Progress").then((m) => ({ default: m.Progress })),
+);
+const Settings = lazy(() =>
+  import("./pages/Settings").then((m) => ({ default: m.Settings })),
+);
+const GamePlayer = lazy(() =>
+  import("./pages/GamePlayer").then((m) => ({ default: m.GamePlayer })),
+);
+function screen(Page: ComponentType) {
+  return (
+    <Suspense
+      fallback={
+        <div className="startup-panel" role="status">
+          Loading page…
+        </div>
+      }
+    >
+      <Page />
+    </Suspense>
+  );
+}
 const hasBooted = () => {
   try {
     return sessionStorage.getItem("arcade_nexus_session_booted") === "true";
@@ -42,10 +72,10 @@ function App() {
   }, [initialize]);
   useEffect(() => {
     if (!error || isInitialized) return;
-    const timer = window.setInterval(() => {
-      void initialize();
-    }, 5000);
-    return () => clearInterval(timer);
+    return watchVisibleTask(
+      () => initialize(),
+      () => 5000,
+    );
   }, [error, isInitialized, initialize]);
   const reducedMotion = useSettingsStore((state) => state.reducedMotion);
   useEffect(() => {
@@ -54,9 +84,7 @@ function App() {
   const activeId = activeProfile?.id;
   useEffect(() => {
     if (!activeId) return;
-    void flushCompletions();
-    const timer = window.setInterval(() => void flushCompletions(), 30000);
-    return () => clearInterval(timer);
+    return startCompletionSync();
   }, [activeId]);
   let content;
   if (!isInitialized)
@@ -100,33 +128,31 @@ function App() {
     content = (
       <BrowserRouter key={activeProfile.id}>
         <Routes>
-          <Route path="/play/:slug" element={<GamePlayer />} />
+          <Route path="/play/:slug" element={screen(GamePlayer)} />
           <Route path="/" element={<Layout />}>
             <Route index element={<Navigate to="/home" replace />} />
-            <Route path="home" element={<Dashboard />} />
-            <Route path="games" element={<Store />} />
+            <Route path="home" element={screen(Dashboard)} />
+            <Route path="games" element={screen(Store)} />
             <Route path="store" element={<Navigate to="/games" replace />} />
-            <Route path="favorites" element={<Library />} />
+            <Route path="favorites" element={screen(Library)} />
             <Route
               path="library"
               element={<Navigate to="/favorites" replace />}
             />
-            <Route path="progress" element={<Progress />} />
-            <Route path="profile" element={<Profile />} />
-            <Route path="achievements" element={<Achievements />} />
-            <Route path="settings" element={<Settings />} />
+            <Route path="progress" element={screen(Progress)} />
+            <Route path="profile" element={screen(Profile)} />
+            <Route path="achievements" element={screen(Achievements)} />
+            <Route path="settings" element={screen(Settings)} />
             <Route path="*" element={<Navigate to="/home" replace />} />
           </Route>
         </Routes>
       </BrowserRouter>
     );
   return (
-    <ErrorBoundary>
-      <ToastProvider>
-        <div className="app-root">{content}</div>
-        <ControllerKeyboard />
-      </ToastProvider>
-    </ErrorBoundary>
+    <ToastProvider>
+      <div className="app-root">{content}</div>
+      <ControllerKeyboard />
+    </ToastProvider>
   );
 }
 export default App;

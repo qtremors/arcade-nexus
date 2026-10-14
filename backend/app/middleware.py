@@ -18,7 +18,7 @@ class RequestGuard:
         headers = dict(scope["headers"])
         maximum = (
             20 * 1024 * 1024
-            if scope["path"] == "/api/data/import"
+            if scope["path"] in {"/api/data/import", "/api/data/preview"}
             else self.settings.MAX_REQUEST_BYTES
         )
         origin = headers.get(b"origin")

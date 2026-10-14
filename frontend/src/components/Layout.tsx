@@ -11,7 +11,8 @@ import {
 } from "lucide-react";
 import { SystemMenu } from "./arcus/SystemMenu";
 import { Background } from "./Background";
-import { HEALTH_URL } from "../api/client";
+import { useLocalConnection } from "../hooks/useLocalConnection";
+import { watchVisibleTask } from "../services/background";
 import { isEditing } from "../sdk/InputManager";
 import { useGamepad } from "../hooks/useGamepad";
 import { useProfileStore } from "../stores/profileStore";
@@ -23,9 +24,7 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [backendStatus, setBackendStatus] = useState<
-    "checking" | "online" | "offline"
-  >("checking");
+  const { status: backendStatus } = useLocalConnection();
   const location = useLocation();
   const navigate = useNavigate();
   const player = useProfileStore((state) => state.activeProfile);
@@ -37,30 +36,10 @@ export function Layout({ children }: LayoutProps) {
   const [time, setTime] = useState(() => new Date());
 
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTime(new Date());
-    }, 60000);
-    return () => clearInterval(timer);
-  }, []);
-
-  // Check backend status
-  useEffect(() => {
-    const checkBackend = async () => {
-      try {
-        const res = await fetch(HEALTH_URL);
-        if (res.ok) {
-          setBackendStatus("online");
-        } else {
-          setBackendStatus("offline");
-        }
-      } catch {
-        setBackendStatus("offline");
-      }
-    };
-
-    checkBackend();
-    const interval = setInterval(checkBackend, 30000);
-    return () => clearInterval(interval);
+    return watchVisibleTask(
+      () => setTime(new Date()),
+      () => 60000,
+    );
   }, []);
 
   // Keyboard/Gamepad shortcuts

@@ -10,6 +10,7 @@ import { FlightHUD } from "./FlightHUD";
 import { FlightAudio } from "./FlightAudio";
 import { createShip, type ShipId } from "./ships";
 import { SECTOR_SIZE, type Sector } from "./universe";
+import { AsteroidField } from "./AsteroidField";
 
 export class StellarFlightGame implements Game3DInstance {
   readonly type = "3d" as const;
@@ -24,7 +25,7 @@ export class StellarFlightGame implements Game3DInstance {
   private gates: THREE.Mesh[] = [];
   private raceRocks: THREE.InstancedMesh | null = null;
   private lastSectors: Sector[] | null = null;
-  private worldRocks: THREE.InstancedMesh | null = null;
+  private worldRocks: AsteroidField | null = null;
   private worldOrigin = new THREE.Vector3();
   private lastRaceObstacles: SpaceJourney["raceObstacles"] | null = null;
   private raceOrigin = new THREE.Vector3();
@@ -82,10 +83,10 @@ export class StellarFlightGame implements Game3DInstance {
           alpha: false,
           antialias: true,
           desynchronized: true,
-          powerPreference: "high-performance",
+          powerPreference: "low-power",
         }) ?? undefined,
       antialias: true,
-      powerPreference: "high-performance",
+      powerPreference: "low-power",
     });
     this.resize = new ResizeObserver(() => this.resizeRenderer());
     this.resize.observe(canvas);
@@ -109,6 +110,7 @@ export class StellarFlightGame implements Game3DInstance {
       rockPositions.setXYZ(i, x * scale, y * scale, z * scale);
     }
     this.rockGeometry.computeVertexNormals();
+    this.rockGeometry.computeBoundingSphere();
     this.scene.add(this.jet);
     for (const id of ["dart", "twin", "crescent"] as const) {
       const ship = createShip(id);
@@ -438,35 +440,35 @@ export class StellarFlightGame implements Game3DInstance {
           this.scene.remove(this.worldRocks);
           this.worldRocks.dispose();
         }
-        this.worldRocks = new THREE.InstancedMesh(
+        this.worldRocks = new AsteroidField(
           this.rockGeometry,
           this.rockMaterial,
           count,
         );
         this.scene.add(this.worldRocks);
       }
-      this.worldRocks.count = count;
       this.worldOrigin.copy(this.journey.position);
       const colors = [
         new THREE.Color(0x889dab),
         new THREE.Color(0xa39488),
         new THREE.Color(0x77879b),
       ];
-      let instance = 0;
-      for (const sector of this.journey.sectors) {
-        sector.asteroids.forEach((body, index) => {
+      const rocks = this.journey.sectors.flatMap((sector) =>
+        sector.asteroids.map((body, index) => {
           this.dummy.position.set(...body.position).sub(this.worldOrigin);
           this.dummy.scale.setScalar(body.radius);
           this.dummy.rotation.set(index * 0.7, index * 1.3, index * 0.5);
           this.dummy.updateMatrix();
-          this.worldRocks!.setMatrixAt(instance, this.dummy.matrix);
-          this.worldRocks!.setColorAt(instance++, colors[index % 3]);
-        });
-      }
-      this.worldRocks.instanceMatrix.needsUpdate = true;
-      if (this.worldRocks.instanceColor)
-        this.worldRocks.instanceColor.needsUpdate = true;
-      this.worldRocks.computeBoundingSphere();
+          return {
+            matrix: this.dummy.matrix.clone(),
+            sphere: this.rockGeometry
+              .boundingSphere!.clone()
+              .applyMatrix4(this.dummy.matrix),
+            color: colors[index % 3],
+          };
+        }),
+      );
+      this.worldRocks.setRocks(rocks);
       for (const [key, group] of this.sectors) {
         if (needed.has(key) && group.userData.seed === this.journey.seed)
           continue;
@@ -590,6 +592,7 @@ export class StellarFlightGame implements Game3DInstance {
     this.syncWorld();
     this.syncShip();
     this.followCamera(dt);
+    this.worldRocks?.updateView(this.camera);
     this.audio.update(this.journey.controller.speed, this.journey.boosting);
     const model = this.ships.get(this.journey.ship);
     model?.traverse((object) => {

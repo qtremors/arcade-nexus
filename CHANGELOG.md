@@ -2,12 +2,20 @@
 
 > **Project:** Arcade Nexus  
 > **Version:** 1.4.1  
-> **Last Updated:** 2026-10-12
+> **Last Updated:** 2026-10-14
 
 ---
 
 ## Unreleased
 
+- Added a measured architecture/modularity review covering session ownership, router/service direction, API contract drift, save codecs, game aggregates, global styles and test/benchmark boundaries, with prioritized refactoring stages. This assessment changes documentation/metrics only.
+- Completed a maintained-file review with a file ledger. Fixed server-save UUID mapping and unfinished reservations in backups, malformed snapshot handling, clock rollback retention, legacy session totals and development-server shutdown. Added resilient preference storage, controller handover/focus fixes, idle/error-safe system audio, stale-record protection, atomic terminal recovery cleanup, historical Raptor configuration migration and reduced-motion loop completion. One reproduced synthetic-save numeric boundary remains documented in docs/DEEP_REVIEW.md.
+- Coalesced recovery snapshots behind slow requests while preserving deletion order and newer sessions. Fixed stale profile-list/activation responses and kept newly created players available after failed refreshes. Removed unused profile history reads, added compact achievement summaries and reduced achievement list queries. Progress now distinguishes loading from empty results and cancels abandoned record views.
+- Stopped periodic recovery writes while paused while preserving immediate pause/exit snapshots. Added Full HD drawing-buffer and paused-write regressions during production browser review, and documented a headless software-canvas screenshot limitation without slowing production rendering.
+- Added lazy route/backup loading, shared visibility-aware background checks, cross-tab retry locking, idle controller sleep, full-history sorting and filters, restore previews, seven-copy automatic server backups, root crash recovery and conflict-checked controls. Added desktop/zoom accessibility checks and a Full HD laptop diagnostic for native GPU, late-run scenes and repeated-entry memory.
+- Made backup export use a fixed nine database queries, include results/recovery held in browser memory, and validate/remap browser entries on restore. Reconciled result retries across tabs, ignored corrupt performance history, and improved keyboard focus in nested menus and dialogs.
+- Further reduced Flight overhead by reusing streamed sectors, skipping unchanged asteroid uploads, suspending silent engine audio, deduplicating audio automation and batching HUD layout reads before writes.
+- Reduced game rendering work with a 60 FPS cap, suspended paused frame loops, Full HD Snake/Breakout artwork caches, precomputed Tetris rotations and per-asteroid camera culling. Both 3D games request low-power GPUs while retaining resolution, antialiasing and scene detail; benchmarks now include 1920 × 1080 runs and rendering resource counts.
 - Added a single local launcher, production frontend serving, and a manual validation command. No CI/CD.
 - Simplified navigation to Home, Games, Favorites and Progress; added real Continue, five-second recovery snapshots, backup export/import as copies, and visible result retries.
 - Made completion atomic with replayed receipts, versioned mode/difficulty records, qualified awards, household comparisons and paginated history.

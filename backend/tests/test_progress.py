@@ -247,3 +247,53 @@ def test_receipts_from_before_elapsed_metric_remain_replayable(player, settings)
     assert replay.status_code == 200, replay.text
     assert replay.json() == original
     assert player.get("/api/stats/snake").json()["sessions_count"] == 1
+
+
+def test_terminal_loss_clears_recovery_atomically_and_rejects_late_checkpoint(player):
+    identity = str(uuid4())
+    checkpoint = {"data": {"session_id": identity, "state": {"score": 50}}}
+    assert player.put("/api/progress/recovery/snake", json=checkpoint).status_code == 200
+    result = player.post(
+        "/api/progress/snake/complete",
+        json={
+            "session_id": identity,
+            "score": 50,
+            "playtime_seconds": 20,
+            "metrics": {"ended": True},
+        },
+    )
+    assert result.status_code == 200, result.text
+    assert player.get("/api/progress/recovery").json() == []
+    assert player.put("/api/progress/recovery/snake", json=checkpoint).status_code == 409
+    newer = {"data": {"session_id": str(uuid4())}}
+    assert player.put("/api/progress/recovery/snake", json=newer).status_code == 200
+    assert (
+        player.post(
+            "/api/progress/snake/complete",
+            json={
+                "session_id": identity,
+                "score": 50,
+                "playtime_seconds": 20,
+                "metrics": {"ended": True},
+            },
+        ).status_code
+        == 200
+    )
+    assert player.get("/api/progress/recovery").json()[0]["data"] == newer["data"]
+
+
+def test_ordinary_flight_quit_retains_recovery_even_after_a_collision(player):
+    identity = str(uuid4())
+    checkpoint = {"data": {"session_id": identity}}
+    player.put("/api/progress/recovery/stellar-flight", json=checkpoint)
+    result = player.post(
+        "/api/progress/stellar-flight/complete",
+        json={
+            "session_id": identity,
+            "score": 50,
+            "playtime_seconds": 20,
+            "metrics": {"ended": False, "crashed": True},
+        },
+    )
+    assert result.status_code == 200, result.text
+    assert player.get("/api/progress/recovery").json()[0]["data"] == checkpoint["data"]

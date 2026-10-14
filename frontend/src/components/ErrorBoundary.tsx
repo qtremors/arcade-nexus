@@ -1,7 +1,7 @@
 /**
  * Error Boundary Component - Catches React errors gracefully
  */
-import { Component, type ReactNode } from "react";
+import { Component, createRef, type ReactNode } from "react";
 
 interface Props {
   children: ReactNode;
@@ -11,27 +11,48 @@ interface Props {
 interface State {
   hasError: boolean;
   error: Error | null;
+  exporting: boolean;
+  backupError: string;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
+  private heading = createRef<HTMLHeadingElement>();
   constructor(props: Props) {
     super(props);
-    this.state = { hasError: false, error: null };
+    this.state = {
+      hasError: false,
+      error: null,
+      exporting: false,
+      backupError: "",
+    };
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    return { hasError: true, error, exporting: false, backupError: "" };
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    // Log error for debugging (in production, send to error tracking service)
+    this.heading.current?.focus();
     if (import.meta.env.DEV) {
       console.error("[ErrorBoundary] Caught error:", error, errorInfo);
     }
   }
 
   handleReset = () => {
-    this.setState({ hasError: false, error: null });
+    this.setState({ hasError: false, error: null, backupError: "" });
+  };
+  handleExport = async () => {
+    this.setState({ exporting: true, backupError: "" });
+    try {
+      await (await import("../services/backup")).exportBackup();
+    } catch {
+      this.setState({
+        backupError:
+          "The backup could not be exported. Keep this tab open, restart the local console if needed, then try exporting again.",
+      });
+    } finally {
+      this.setState({ exporting: false });
+    }
   };
 
   render() {
@@ -41,38 +62,48 @@ export class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/95 backdrop-blur-xl z-[100] p-8 text-center animate-in fade-in duration-700">
-          <div className="w-24 h-24 rounded-full bg-red-500/10 flex items-center justify-center mb-8 border-2 border-red-500/30 animate-pulse">
-            <div className="text-red-500 font-bold text-4xl">!</div>
-          </div>
-
-          <h2 className="text-4xl font-black mb-2 text-white tracking-widest uppercase italic">
-            Something went wrong
-          </h2>
-          <p className="text-gray-500 mb-10 max-w-md font-mono text-sm leading-relaxed">
-            The console ran into an unexpected error. Reload to try again.
+        <main className="recovery-screen">
+          <h1 ref={this.heading} tabIndex={-1}>
+            The console needs to recover
+          </h1>
+          <p>
+            Your saved progress is kept on this computer. You can retry this
+            screen or reload the console.
           </p>
-
-          <div className="bg-red-950/20 border border-red-500/20 rounded-lg p-6 mb-10 w-full max-w-xl overflow-hidden shadow-[0_0_30px_rgba(239,68,68,0.1)]">
-            <div className="text-red-500/50 text-[10px] font-mono mb-2 text-left uppercase tracking-tighter">
-              Stack Trace / Exception
-            </div>
-            <p className="text-red-400 font-mono text-xs text-left whitespace-pre-wrap break-all leading-tight">
-              {import.meta.env.DEV
-                ? this.state.error?.message || "NULL_POINTER_RESET"
-                : "SYSTEM_PANIC — Error details hidden in production mode."}
-            </p>
-          </div>
-
-          <div className="flex gap-6">
+          <p>
+            Before reloading or returning Home, export a backup to keep any
+            results or recovery snapshots still held in this tab.
+          </p>
+          {this.state.backupError && (
+            <p role="alert">{this.state.backupError}</p>
+          )}
+          <div className="recovery-actions">
             <button
-              onClick={this.handleReset}
-              className="px-10 py-4 bg-white text-black font-black uppercase tracking-widest hover:bg-gray-200 transition-all rounded-sm shadow-[4px_4px_0_rgba(255,255,255,0.2)] active:translate-x-1 active:translate-y-1 active:shadow-none"
+              disabled={this.state.exporting}
+              onClick={() => void this.handleExport()}
             >
+              {this.state.exporting ? "Exporting backup…" : "Export backup"}
+            </button>
+            <button disabled={this.state.exporting} onClick={this.handleReset}>
               Try again
             </button>
+            <button
+              disabled={this.state.exporting}
+              onClick={() => window.location.reload()}
+            >
+              Reload console
+            </button>
+            <a className="secondary-action" href="/home">
+              Return to Home
+            </a>
           </div>
-        </div>
+          {import.meta.env.DEV && (
+            <details>
+              <summary>Technical details</summary>
+              <pre>{this.state.error?.stack || this.state.error?.message}</pre>
+            </details>
+          )}
+        </main>
       );
     }
 

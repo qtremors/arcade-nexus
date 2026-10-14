@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { watchVisibleTask } from "./background";
 import { API_BASE_URL, ApiError, progressApi } from "../api/client";
 import type { CompletionReceipt } from "../api/client";
 import type { GameMetrics } from "../sdk/GameSDK";
@@ -19,6 +20,7 @@ export interface Completion {
 }
 const prefix = "nexus-result-v1:";
 const pending = new Map<string, Completion>();
+const memoryOnly = new Set<string>();
 export const completionSchema = z.object({
   slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   sessionId: z.uuid(),
@@ -33,6 +35,7 @@ export const completionSchema = z.object({
   rulesVersion: z.number().int().min(1).max(10000).default(1),
   metrics: z
     .object({
+      ended: z.boolean().optional(),
       jumps: z.number().int().min(0).max(1000000).optional(),
       max_altitude: z.number().min(0).max(10000000).optional(),
       crashed: z.boolean().optional(),
@@ -55,27 +58,45 @@ export const completionSchema = z.object({
 const changed = () => window.dispatchEvent(new Event("nexus-progress"));
 export function pendingResults(): Completion[] {
   try {
+    const stored = new Set<string>();
     for (const key of Object.keys(localStorage).filter((k) =>
       k.startsWith(prefix),
     )) {
+      const value = localStorage.getItem(key);
       try {
-        const parsed = completionSchema.safeParse(
-          JSON.parse(localStorage.getItem(key) ?? "null"),
-        );
-        if (parsed.success && key === prefix + parsed.data.sessionId)
-          pending.set(parsed.data.sessionId, parsed.data);
+        const parsed = completionSchema.safeParse(JSON.parse(value ?? "null"));
+        if (parsed.success && key === prefix + parsed.data.sessionId) {
+          stored.add(parsed.data.sessionId);
+          if (!memoryOnly.has(parsed.data.sessionId))
+            pending.set(parsed.data.sessionId, parsed.data);
+        }
       } catch {
         /* Preserve malformed data for export, without blocking valid results. */
       }
     }
+    for (const id of pending.keys())
+      if (!stored.has(id) && !memoryOnly.has(id)) pending.delete(id);
   } catch {
     /* Memory-only fallback. */
   }
   return [...pending.values()];
 }
+function persistCompletion(item: Completion): boolean {
+  pending.set(item.sessionId, item);
+  try {
+    localStorage.setItem(prefix + item.sessionId, JSON.stringify(item));
+    memoryOnly.delete(item.sessionId);
+    return true;
+  } catch {
+    memoryOnly.add(item.sessionId);
+    return false;
+  }
+}
 export function enqueueCompletion(completion: Completion): boolean {
   const item = completionSchema.parse(completion);
-  const old = pending.get(item.sessionId);
+  const old = pendingResults().find(
+    (value) => value.sessionId === item.sessionId,
+  );
   const saved = {
     ...item,
     ...(old
@@ -87,15 +108,9 @@ export function enqueueCompletion(completion: Completion): boolean {
         }
       : {}),
   };
-  pending.set(item.sessionId, saved);
-  try {
-    localStorage.setItem(prefix + item.sessionId, JSON.stringify(saved));
-    changed();
-    return true;
-  } catch {
-    changed();
-    return false;
-  }
+  const durable = persistCompletion(saved);
+  changed();
+  return durable;
 }
 const payload = (item: Completion) => ({
   session_id: item.sessionId,
@@ -110,10 +125,14 @@ const inFlight = new Map<string, Promise<CompletionReceipt>>();
 export function sendCompletion(item: Completion): Promise<CompletionReceipt> {
   const previous = inFlight.get(item.sessionId);
   if (previous) return previous;
+  const wasQueued = pendingResults().some(
+    (value) => value.sessionId === item.sessionId,
+  );
   const promise = progressApi
     .complete(item.slug, payload(item), item.profileId)
     .then((result) => {
       pending.delete(item.sessionId);
+      memoryOnly.delete(item.sessionId);
       try {
         localStorage.removeItem(prefix + item.sessionId);
       } catch {
@@ -123,7 +142,15 @@ export function sendCompletion(item: Completion): Promise<CompletionReceipt> {
       return result;
     })
     .catch((error: unknown) => {
-      const attempts = (pending.get(item.sessionId)?.attempts ?? 0) + 1;
+      const current = pendingResults().find(
+        (value) => value.sessionId === item.sessionId,
+      );
+      // Another tab may have completed and removed this durable result while this request failed.
+      if (wasQueued && !current) {
+        changed();
+        throw error;
+      }
+      const attempts = (current?.attempts ?? item.attempts ?? 0) + 1;
       const blocked =
         error instanceof ApiError &&
         !!error.status &&
@@ -138,12 +165,7 @@ export function sendCompletion(item: Completion): Promise<CompletionReceipt> {
           Date.now() + Math.min(300000, 1000 * 2 ** Math.min(attempts, 8)),
         error: error instanceof Error ? error.message : String(error),
       };
-      pending.set(item.sessionId, failed);
-      try {
-        localStorage.setItem(prefix + item.sessionId, JSON.stringify(failed));
-      } catch {
-        /* Memory retained. */
-      }
+      persistCompletion(failed);
       changed();
       throw error;
     })
@@ -151,15 +173,41 @@ export function sendCompletion(item: Completion): Promise<CompletionReceipt> {
   inFlight.set(item.sessionId, promise);
   return promise;
 }
-export async function flushCompletions(force = false): Promise<void> {
-  for (const item of pendingResults()) {
-    if (!force && (item.blocked || (item.retryAt ?? 0) > Date.now())) continue;
-    try {
-      await sendCompletion(item);
-    } catch {
-      /* Retained with a visible error and retry policy. */
+export async function flushCompletions(
+  force = false,
+  signal?: AbortSignal,
+): Promise<void> {
+  const flush = async () => {
+    // Reload after acquiring the lock: another tab may have acknowledged these results.
+    for (const item of pendingResults()) {
+      if (signal?.aborted) return;
+      if (!force && (item.blocked || (item.retryAt ?? 0) > Date.now()))
+        continue;
+      try {
+        await sendCompletion(item);
+      } catch {
+        /* Retained with a visible error and retry policy. */
+      }
     }
-  }
+  };
+  if (navigator.locks?.request)
+    await navigator.locks.request("nexus-completion-sync", { signal }, flush);
+  else await flush(); // Durable server receipts keep fallback retries idempotent.
+}
+export function startCompletionSync() {
+  return watchVisibleTask(
+    (signal) => flushCompletions(false, signal),
+    () => {
+      const due = pendingResults().filter((item) => !item.blocked);
+      return due.length
+        ? Math.max(
+            0,
+            Math.min(...due.map((item) => item.retryAt ?? 0)) - Date.now(),
+          )
+        : null;
+    },
+    ["nexus-progress", "storage"],
+  );
 }
 export function sendCompletionOnExit(item: Completion): void {
   void fetch(`${API_BASE_URL}/progress/${item.slug}/complete`, {

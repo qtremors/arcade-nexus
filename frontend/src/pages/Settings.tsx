@@ -1,41 +1,71 @@
 import { recentMeasurements } from "../services/performance";
-import { exportBackup, restoreBackup, downloadJson } from "../services/backup";
+import { downloadJson } from "../services/download";
 import { pendingResults, flushCompletions } from "../services/sessionQueue";
 import { useProfileStore } from "../stores/profileStore";
 import { useToast } from "../hooks/useToast";
 import { useConfirmation } from "../hooks/useConfirmation";
-import { useEffect, useState } from "react";
-import { useSettingsStore } from "../stores/settingsStore";
-import { HEALTH_URL } from "../api/client";
+import { lazy, Suspense, useEffect, useState } from "react";
+import {
+  usePreferenceStorageUnavailable,
+  useSettingsStore,
+} from "../stores/settingsStore";
+import { useLocalConnection } from "../hooks/useLocalConnection";
 import { PageHeading } from "../components/ConsoleUI";
 import { AudioManager } from "../sdk/AudioManager";
+const AutomaticBackups = lazy(() =>
+  import("../components/AutomaticBackups").then((module) => ({
+    default: module.AutomaticBackups,
+  })),
+);
 export function Settings() {
   const preferences = useSettingsStore();
+  const preferencesTemporary = usePreferenceStorageUnavailable();
   const { showToast } = useToast();
   const { ask, confirmation } = useConfirmation();
   const [pending, setPending] = useState(pendingResults),
     [busy, setBusy] = useState(false);
   const [binding, setBinding] = useState<string | null>(null);
+  const [showSnapshots, setShowSnapshots] = useState(false);
   useEffect(() => {
     const update = () => setPending(pendingResults());
+    const storage = (event: StorageEvent) => {
+      if (event.key === null || event.key.startsWith("nexus-result-v1:"))
+        update();
+    };
     window.addEventListener("nexus-progress", update);
-    return () => window.removeEventListener("nexus-progress", update);
+    window.addEventListener("storage", storage);
+    return () => {
+      window.removeEventListener("nexus-progress", update);
+      window.removeEventListener("storage", storage);
+    };
   }, []);
   useEffect(() => {
     if (!binding) return;
     const handler = (event: KeyboardEvent) => {
       event.preventDefault();
       event.stopImmediatePropagation();
+      if (event.code === "Escape") {
+        setBinding(null);
+        return;
+      }
+      if (event.ctrlKey || event.altKey || event.metaKey) {
+        showToast("Choose a single key without Ctrl, Alt or Command.", "error");
+        return;
+      }
       if (
-        event.code !== "Escape" &&
-        /^(Key[A-Z]|Arrow(Up|Down|Left|Right)|Space|Enter)$/.test(event.code)
+        !/^(Key[A-Z]|Arrow(Up|Down|Left|Right)|Space|Enter)$/.test(event.code)
       )
-        preferences.setBinding(binding, event.code);
+        return;
+      const problem = preferences.setBinding(binding, event.code);
+      if (problem) {
+        showToast(problem, "error");
+        return;
+      }
       setBinding(null);
     };
     window.addEventListener("keydown", handler, true);
     return () => window.removeEventListener("keydown", handler, true);
-  }, [binding, preferences]);
+  }, [binding, preferences, showToast]);
   const run = async (action: () => Promise<void>) => {
     setBusy(true);
     try {
@@ -47,42 +77,26 @@ export function Settings() {
     }
   };
 
-  const [connection, setConnection] = useState("Checking…");
-  useEffect(() => {
-    const controller = new AbortController();
-    const check = async () => {
-      const before = performance.now();
-      try {
-        const response = await fetch(HEALTH_URL, { signal: controller.signal });
-        if (!controller.signal.aborted)
-          setConnection(
-            response.ok
-              ? `Connected · ${Math.round(performance.now() - before)} ms`
-              : "Server unavailable",
-          );
-      } catch {
-        if (!controller.signal.aborted) setConnection("Disconnected");
-      }
-    };
-    void check();
-    const timer = setInterval(() => void check(), 30000);
-    return () => {
-      controller.abort();
-      clearInterval(timer);
-    };
-  }, []);
+  const connection = useLocalConnection();
   return (
     <div className="console-page">
       {confirmation}
       <PageHeading kicker="MAKE IT YOURS" title="Settings">
         Sound, motion, and your local console. Preferences stay in this browser.
       </PageHeading>
+      {preferencesTemporary && (
+        <p role="status" className="detail-panel">
+          Preferences are working for this visit, but browser storage is
+          unavailable. Export a backup to keep your current settings before
+          closing this page.
+        </p>
+      )}
       <details className="detail-panel">
         <summary>Local performance measurements</summary>
         <p>
           Recent game frame intervals and initialization times on this browser.
-          Budgets: 16.7 ms at 60 FPS, 8.3 ms at 120 FPS. Rendering follows your
-          display. Games keep Full HD rendering and full scene detail under
+          Budget: 16.7 ms at 60 FPS. Rendering is limited to 60 FPS to reduce
+          power use. Games keep Full HD rendering and full scene detail under
           load. Measurements are saved when you leave a game and do not measure
           input latency.
         </p>
@@ -145,13 +159,19 @@ export function Settings() {
           </label>
           <p>
             Full HD graphics preserve scene detail and antialiasing. Resolution
-            is not reduced to raise FPS. The target is at least 60 FPS; actual
-            performance depends on your hardware. Press F11 for fullscreen.
+            is not reduced to raise FPS. Games target 60 FPS; actual performance
+            depends on your hardware. Press F11 for fullscreen.
           </p>
         </section>
         <section className="detail-panel">
           <h2>Local connection</h2>
-          <p role="status">{connection}</p>
+          <p role="status">
+            {connection.status === "checking"
+              ? "Checking…"
+              : connection.status === "online"
+                ? `Connected · ${connection.latencyMs} ms`
+                : "Server unavailable"}
+          </p>
         </section>
         <section className="detail-panel">
           <h2>Controls</h2>
@@ -169,6 +189,10 @@ export function Settings() {
             }
           />
           <p>Remap movement and the primary action. Escape always pauses.</p>
+          <p>
+            Each key belongs to one action. Pause and secondary game shortcuts
+            keep their assigned keys.
+          </p>
           <div className="binding-list">
             {["up", "down", "left", "right", "action"].map((action) => (
               <button key={action} onClick={() => setBinding(action)}>
@@ -179,6 +203,14 @@ export function Settings() {
           {binding && (
             <p role="status">Press a key for {binding}. Escape cancels.</p>
           )}
+          <button
+            onClick={() => {
+              setBinding(null);
+              useSettingsStore.setState({ bindings: {} });
+            }}
+          >
+            Reset controls
+          </button>
         </section>
         <section className="detail-panel">
           <h2>Pending results</h2>
@@ -215,7 +247,14 @@ export function Settings() {
             records, achievements, browser preferences, and pending results.
             Import creates restored player copies and keeps existing players.
           </p>
-          <button disabled={busy} onClick={() => void run(exportBackup)}>
+          <button
+            disabled={busy}
+            onClick={() =>
+              void run(async () =>
+                (await import("../services/backup")).exportBackup(),
+              )
+            }
+          >
             Export backup
           </button>
           <label className="import-backup">
@@ -228,25 +267,40 @@ export function Settings() {
                 const file = event.target.files?.[0];
                 event.target.value = "";
                 if (file)
-                  void ask({
-                    title: "Restore this backup?",
-                    message:
-                      "Restored players will be added as copies. Browser preferences will be restored too. Existing players and their progress are kept.",
-                    confirmText: "Restore backup",
-                  }).then((answer) => {
-                    if (answer)
-                      void run(async () => {
-                        const result = await restoreBackup(file);
-                        await useProfileStore.getState().fetchProfiles();
-                        showToast(
-                          `Restored ${result.imported} players${result.skipped ? `; ${result.skipped} browser entries could not be restored` : ""}.`,
-                          "success",
-                        );
-                      });
+                  void run(async () => {
+                    const { previewBackup, restoreBackup } =
+                      await import("../services/backup");
+                    const preview = await previewBackup(file);
+                    const names =
+                      preview.names.slice(0, 5).join(", ") +
+                      (preview.names.length > 5 ? ", …" : "");
+                    const answer = await ask({
+                      title: "Restore this backup?",
+                      message: `${file.name} (${Math.ceil(file.size / 1024)} KB) adds ${preview.profiles} player copies${names ? `: ${names}` : ""}. Includes ${preview.saves} manual saves, ${preview.recoveries + preview.browserRecoveries} recovery snapshots, ${preview.sessions} completed sessions, ${preview.records} records and ${preview.queued} pending results. ${preview.preferences ? "Browser preferences will be replaced. " : ""}${preview.invalid ? `${preview.invalid} invalid browser entries will be skipped. ` : ""}Existing players and their progress are kept.`,
+                      confirmText: "Restore backup",
+                    });
+                    if (answer) {
+                      const result = await restoreBackup(file);
+                      await useProfileStore.getState().fetchProfiles();
+                      showToast(
+                        `Restored ${result.imported} players${result.skipped ? `; ${result.skipped} browser entries could not be saved` : ""}.`,
+                        "success",
+                      );
+                    }
                   });
               }}
             />
           </label>
+          <details
+            onToggle={(event) => setShowSnapshots(event.currentTarget.open)}
+          >
+            <summary>Automatic backups</summary>
+            {showSnapshots && (
+              <Suspense fallback={<p role="status">Loading backups…</p>}>
+                <AutomaticBackups />
+              </Suspense>
+            )}
+          </details>
           <button onClick={preferences.reset}>Reset preferences</button>
         </section>
       </div>

@@ -1,18 +1,38 @@
 import type { GameRenderInfo } from "../sdk/GameSDK";
-export interface GameMeasurement extends GameRenderInfo {
-  averageFps?: number;
-  slug: string;
-  recordedAt: string;
-  launchMs: number;
-  frames: number;
-  p50: number;
-  p95: number;
-  slowFrames: number;
-}
+import { z } from "zod";
+const nonnegative = z.number().finite().nonnegative();
+const measurementSchema = z
+  .object({
+    slug: z.string().min(1),
+    recordedAt: z.iso.datetime({ offset: true }),
+    launchMs: nonnegative,
+    frames: z.number().int().positive(),
+    p50: nonnegative,
+    p95: nonnegative,
+    slowFrames: z.number().int().nonnegative(),
+    averageFps: nonnegative.optional(),
+    targetFps: z.number().finite().positive().optional(),
+    renderer: z.string().nullable().optional(),
+    quality: z.string().optional(),
+    width: z.number().int().positive().optional(),
+    height: z.number().int().positive().optional(),
+  })
+  .refine(
+    (value) => value.p95 >= value.p50 && value.slowFrames <= value.frames,
+  );
+export type GameMeasurement = z.infer<typeof measurementSchema>;
 const key = "nexus-performance";
 export function recentMeasurements(): GameMeasurement[] {
   try {
-    return JSON.parse(localStorage.getItem(key) ?? "[]");
+    const stored: unknown = JSON.parse(localStorage.getItem(key) ?? "[]");
+    if (!Array.isArray(stored)) return [];
+    const measurements: GameMeasurement[] = [];
+    for (const entry of stored) {
+      const parsed = measurementSchema.safeParse(entry);
+      if (parsed.success) measurements.push(parsed.data);
+      if (measurements.length === 10) break;
+    }
+    return measurements;
   } catch {
     return [];
   }
@@ -28,9 +48,7 @@ export function recordMeasurement(
   const sorted = [...samples].sort((a, b) => a - b);
   const value = {
     ...renderInfo,
-    targetFps:
-      renderInfo.targetFps ??
-      (sorted[Math.floor(sorted.length * 0.1)] < 11 ? 120 : 60),
+    targetFps: renderInfo.targetFps ?? 60,
     averageFps:
       Math.round(
         (10000 * samples.length) / samples.reduce((sum, n) => sum + n, 0),
@@ -47,10 +65,12 @@ export function recordMeasurement(
       ) / 10,
     slowFrames: samples.filter((n) => n > 33.4).length,
   };
+  const parsed = measurementSchema.safeParse(value);
+  if (!parsed.success) return;
   try {
     localStorage.setItem(
       key,
-      JSON.stringify([value, ...recentMeasurements()].slice(0, 10)),
+      JSON.stringify([parsed.data, ...recentMeasurements()].slice(0, 10)),
     );
   } catch {
     /* Measurements are optional. */

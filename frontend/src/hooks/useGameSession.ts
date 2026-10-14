@@ -36,6 +36,7 @@ import type { Completion } from "../services/sessionQueue";
 import { useModalFocus } from "../hooks/useModalFocus";
 import { isEditing } from "../sdk/InputManager";
 import { useConfirmation } from "../hooks/useConfirmation";
+import { watchVisibleTask } from "../services/background";
 type Difficulty = "easy" | "normal" | "hard";
 const emptyConfig = {};
 export function useGameSession({
@@ -68,6 +69,7 @@ export function useGameSession({
   const [recovery, setRecovery] = useState<SaveEnvelope | null>(null);
   const [bestTime, setBestTime] = useState<number | null>(null);
   const [receipt, setReceipt] = useState<CompletionReceipt | null>(null);
+  const recordsRevision = useRef(0);
   const warnedStorage = useRef(false);
 
   const [controlMode, setControlMode] = useState<"keyboard" | "controller">(
@@ -178,6 +180,7 @@ export function useGameSession({
     try {
       const result = await sendCompletion(item);
       if (mounted.current) {
+        recordsRevision.current++;
         setReceipt(result);
         setBestTime(result.best_time_ms ?? null);
         setHighScore(result.high_score);
@@ -327,14 +330,19 @@ export function useGameSession({
       );
     };
     window.addEventListener("nexus-controller-disconnected", disconnect);
-    const timer = window.setInterval(checkpoint, 5000);
     return () => {
       document.removeEventListener("visibilitychange", hide);
       window.removeEventListener("blur", blur);
       window.removeEventListener("nexus-controller-disconnected", disconnect);
-      clearInterval(timer);
     };
   }, [checkpoint, showToast]);
+  useEffect(() => {
+    if (state !== "playing") return;
+    return watchVisibleTask(
+      () => checkpoint(),
+      () => 5000,
+    );
+  }, [state, checkpoint]);
   const act = async (fn: () => Promise<void>) => {
     if (busyRef.current) return;
     busyRef.current = true;
@@ -514,10 +522,11 @@ export function useGameSession({
   }, [state, recovery]);
   useEffect(() => {
     let active = true;
+    const revision = recordsRevision.current;
     void progressApi
       .records()
       .then((records) => {
-        if (active) {
+        if (active && revision === recordsRevision.current) {
           const record = records.find(
             (r) =>
               r.game_slug === slug &&

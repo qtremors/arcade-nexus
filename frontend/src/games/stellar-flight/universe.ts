@@ -91,17 +91,37 @@ export function createSector(coordinates: Coordinates, seed: number): Sector {
     ],
   };
 }
-/** Only the surrounding 27 sectors are resident, regardless of trip length. */
+/** Reuse overlapping world descriptions, retaining only the current 27 sectors. */
+export class SectorStream {
+  private seed: number | undefined;
+  private sectors = new Map<string, Sector>();
+
+  nearby(position: Coordinates, seed: number): Sector[] {
+    const center = sectorCoordinates(position),
+      next = new Map<string, Sector>();
+    if (seed !== this.seed) this.sectors.clear();
+    for (let x = -1; x <= 1; x++)
+      for (let y = -1; y <= 1; y++)
+        for (let z = -1; z <= 1; z++) {
+          const coordinates: Coordinates = [
+            center[0] + x,
+            center[1] + y,
+            center[2] + z,
+          ];
+          const key = sectorKey(coordinates);
+          next.set(
+            key,
+            this.sectors.get(key) ?? createSector(coordinates, seed),
+          );
+        }
+    this.seed = seed;
+    this.sectors = next;
+    return [...next.values()];
+  }
+}
+
 export function nearbySectors(position: Coordinates, seed: number): Sector[] {
-  const center = sectorCoordinates(position),
-    sectors: Sector[] = [];
-  for (let x = -1; x <= 1; x++)
-    for (let y = -1; y <= 1; y++)
-      for (let z = -1; z <= 1; z++)
-        sectors.push(
-          createSector([center[0] + x, center[1] + y, center[2] + z], seed),
-        );
-  return sectors;
+  return new SectorStream().nearby(position, seed);
 }
 /** Swept sphere collision catches obstacles even during a boosted frame. */
 export function intersectsBody(

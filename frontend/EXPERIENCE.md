@@ -1,5 +1,7 @@
 # Console experience standard
 
+Historical review record. For current contracts and validation, see [DEVELOPMENT.md](../DEVELOPMENT.md) and [the deep review](../docs/DEEP_REVIEW.md).
+
 Arcade Nexus is a local browser console. The quality target covers the whole journey: choosing a player, browsing, launching, learning controls, playing, pausing, saving and returning. Reliability checks establish whether behavior works; they do not establish whether a game is enjoyable or finished.
 
 ## Quality pass — 2026-10-10
