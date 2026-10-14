@@ -1,3 +1,4 @@
+import { formatTime, timeRanked } from "../games/records";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { progressApi } from "../api/client";
@@ -95,12 +96,19 @@ export function Progress() {
                   </td>
                   <td>{r.difficulty}</td>
                   <td>
-                    {r.high_score.toLocaleString()}{" "}
-                    {r.game_slug === "stellar-flight" && r.mode === "classic"
-                      ? "m/s"
-                      : gameSlugs.includes(r.game_slug)
-                        ? getDescriptor(r.game_slug).scoreUnit
-                        : "points"}
+                    {timeRanked(r.game_slug, r.mode, r.rules_version) ? (
+                      formatTime(r.best_time_ms)
+                    ) : (
+                      <>
+                        {r.high_score.toLocaleString()}{" "}
+                        {r.game_slug === "stellar-flight" &&
+                        r.mode === "classic"
+                          ? "m/s"
+                          : gameSlugs.includes(r.game_slug)
+                            ? getDescriptor(r.game_slug).scoreUnit
+                            : "points"}
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}

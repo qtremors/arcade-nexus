@@ -72,7 +72,7 @@ def test_unlocks_are_scoped_and_paginated_counts_are_total(player, profile):
     result = player.get(
         "/api/achievements", params={"limit": 1}, headers={"X-Profile-ID": str(profile["id"])}
     ).json()
-    assert result["total"] == 22
+    assert result["total"] == 31
     assert result["unlocked_count"] == 1
     assert len(result["achievements"]) == 1
 

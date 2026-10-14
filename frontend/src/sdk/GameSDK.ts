@@ -52,7 +52,15 @@ export interface GameMetrics {
   lives?: number;
   highest_tile?: number;
   completed?: boolean;
+  elapsed_ms?: number;
   medal?: "gold" | "silver" | "bronze";
+}
+export interface GameRenderInfo {
+  renderer?: string | null;
+  quality?: string;
+  targetFps?: number;
+  width?: number;
+  height?: number;
 }
 export type GameStatus = "playing" | "recoverable" | "complete";
 
@@ -84,6 +92,7 @@ export interface GameInstanceBase {
 
   /** Bounded measurements used for local achievement qualification. */
   getMetrics?(): GameMetrics;
+  getRenderInfo?(): GameRenderInfo;
   getStatus?(): GameStatus;
   recover?(): void;
 

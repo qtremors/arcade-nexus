@@ -144,6 +144,51 @@ INITIAL_GAMES.extend(
 )
 
 
+INITIAL_GAMES.extend(
+    [
+        {
+            "slug": "tetris",
+            "title": "Neon Tetris",
+            "description": "Stack seven-piece bags, preview your next pieces, hold a piece, and clear lines. Marathon and 40-line sprint.",
+            "category": Category.PUZZLE,
+            "thumbnail": "/games/tetris.svg",
+            "config": {},
+            "achievements": [
+                {"slug": "score-100", "title": "First Spark", "description": "Score 100 points"},
+                {"slug": "score-1000", "title": "In the Zone", "description": "Score 1000 points"},
+                {"slug": "score-5000", "title": "Arcade Ace", "description": "Score 5000 points"},
+            ],
+        },
+        {
+            "slug": "asteroids",
+            "title": "Asteroids",
+            "description": "Pilot an inertial ship through splitting asteroid waves. Thrust, shoot, and survive with three lives.",
+            "category": Category.ACTION,
+            "thumbnail": "/games/asteroids.svg",
+            "config": {},
+            "achievements": [
+                {"slug": "score-100", "title": "First Spark", "description": "Score 100 points"},
+                {"slug": "score-1000", "title": "In the Zone", "description": "Score 1000 points"},
+                {"slug": "score-5000", "title": "Arcade Ace", "description": "Score 5000 points"},
+            ],
+        },
+        {
+            "slug": "prism-rush",
+            "title": "Prism Rush",
+            "description": "A 3D neon lane runner. Read the gates, collect crystals, and switch lanes before impact.",
+            "category": Category.ARCADE,
+            "thumbnail": "/games/prism-rush.svg",
+            "config": {},
+            "achievements": [
+                {"slug": "score-100", "title": "First Spark", "description": "Score 100 points"},
+                {"slug": "score-1000", "title": "In the Zone", "description": "Score 1000 points"},
+                {"slug": "score-5000", "title": "Arcade Ace", "description": "Score 5000 points"},
+            ],
+        },
+    ]
+)
+
+
 CATALOG = json.loads((Path(__file__).resolve().parents[2] / "catalog.json").read_text())
 
 

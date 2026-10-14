@@ -6,7 +6,7 @@ const fleet = [
     tag: "AVAILABLE",
     style: "dart",
     color: "#8ceaff",
-    description: "Balanced engines. Precise turns.",
+    description: "Quick acceleration and turns. Shorter boost.",
     path: "M50 5 59 48 95 78 59 68 50 85 41 68 5 78 41 48Z",
   },
   {
@@ -14,7 +14,7 @@ const fleet = [
     tag: "AVAILABLE",
     style: "jet",
     color: "#b8c4e8",
-    description: "Your original ship. A familiar feel.",
+    description: "Efficient engines. Longer boost.",
     path: "M50 5 57 47 92 70 86 78 56 65 57 85 50 79 43 85 44 65 14 78 8 70 43 47Z",
   },
   {
@@ -22,7 +22,7 @@ const fleet = [
     tag: "LEVEL 3",
     style: "twin",
     color: "#ffcf91",
-    description: "Twin heavy engines. Higher top speed.",
+    description: "High speed and strong shields. Wide turns.",
     path: "M24 8 34 34 44 34 50 15 56 34 66 34 76 8 86 38 83 85 66 85 66 53 58 53 60 77 40 77 42 53 34 53 34 85 17 85 14 38Z",
   },
   {
@@ -30,7 +30,7 @@ const fleet = [
     tag: "LEVEL 5",
     style: "crescent",
     color: "#d1b0ff",
-    description: "Wide wings. The most agile handling.",
+    description: "Agile surveyor. Fast boost recharge.",
     path: "M50 8 63 40 97 27 91 65 68 82 50 67 32 82 9 65 3 27 37 40Z",
   },
 ];

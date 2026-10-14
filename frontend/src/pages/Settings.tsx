@@ -81,13 +81,20 @@ export function Settings() {
         <summary>Local performance measurements</summary>
         <p>
           Recent game frame intervals and initialization times on this browser.
-          A 60 Hz frame is about 16.7 ms; these measurements are not
-          input-latency or GPU certification.
+          Budgets: 16.7 ms at 60 FPS, 8.3 ms at 120 FPS. Rendering follows your
+          display. Games keep Full HD rendering and full scene detail under
+          load. Measurements are saved when you leave a game and do not measure
+          input latency.
         </p>
         {recentMeasurements().map((sample, i) => (
           <p key={i}>
             {sample.slug} · launch {sample.launchMs} ms · frame p50 {sample.p50}{" "}
             ms / p95 {sample.p95} ms · {sample.slowFrames} frames over 33 ms
+            {sample.averageFps != null && ` · ${sample.averageFps} FPS average`}
+            {sample.width &&
+              sample.height &&
+              ` · ${sample.width}×${sample.height}`}
+            {sample.quality && ` · ${sample.quality} quality`}
           </p>
         ))}
         <button
@@ -137,8 +144,9 @@ export function Settings() {
             Reduce animations
           </label>
           <p>
-            Games scale to your browser window. Press F11 for browser
-            fullscreen.
+            Full HD graphics preserve scene detail and antialiasing. Resolution
+            is not reduced to raise FPS. The target is at least 60 FPS; actual
+            performance depends on your hardware. Press F11 for fullscreen.
           </p>
         </section>
         <section className="detail-panel">

@@ -61,3 +61,6 @@ logs/
 *.bak
 *.tmp
 *.temp
+
+# Local game benchmark output
+frontend/performance-results.json

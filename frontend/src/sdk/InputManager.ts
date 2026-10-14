@@ -101,6 +101,7 @@ export class InputManager {
         KeyV: !!(keys.KeyV || button(2)),
         KeyN: !!(keys.KeyN || button(1)),
         KeyC: !!(keys.KeyC || button(11)),
+        KeyH: !!(keys.KeyH || button(10)),
       },
     };
   }

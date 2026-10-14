@@ -31,9 +31,11 @@ def test_literal_search_and_pagination(client):
         result = client.get("/api/games", params={"search": search}).json()
         assert result["total"] == 1
         assert result["games"][0]["slug"] == "literal"
-    assert client.get("/api/games", params={"search": "   "}).json()["total"] == 6
+    assert (
+        client.get("/api/games", params={"search": "   "}).json()["total"] == len(INITIAL_GAMES) + 1
+    )
     page = client.get("/api/games", params={"limit": 1, "skip": 1}).json()
-    assert page["total"] == 6 and len(page["games"]) == 1
+    assert page["total"] == len(INITIAL_GAMES) + 1 and len(page["games"]) == 1
     assert client.get("/api/games/literal").json()["config"] == {"grid_size": 20}
     assert (
         client.post("/api/games", json={"slug": "literal", "title": "Duplicate"}).status_code == 400
@@ -66,7 +68,7 @@ def test_catalog_sync_is_repeatable_and_preserves_progress(player):
 
     player.portal.call(sync)
     assert INITIAL_GAMES == original
-    assert player.get("/api/achievements").json()["total"] == 22
+    assert player.get("/api/achievements").json()["total"] == 31
     assert player.get("/api/saves/snake").json()["saves"][0]["data"]["score"] == 100
 
 
@@ -88,7 +90,7 @@ def test_inactive_games_preserve_history_and_saves_but_reject_new_play(player, g
     assert player.post("/api/stats/snake/start").status_code == 404
     assert player.post("/api/stats/snake/score", json={"score": 100}).status_code == 404
     assert player.post("/api/saves/snake", json={"slot": 1, "data": {}}).status_code == 404
-    assert player.get("/api/achievements").json()["total"] == 18
+    assert player.get("/api/achievements").json()["total"] == 27
     assert player.delete("/api/saves/snake/1").status_code == 204
 
 

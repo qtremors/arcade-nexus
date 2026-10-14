@@ -1,9 +1,11 @@
+import { fullHdScale, graphicsCapabilities } from "./GraphicsQuality";
 import type { GameInstance, GameConfig, GameMetrics } from "./GameSDK";
 import { is3DGame } from "./GameSDK";
 import { InputManager } from "./InputManager";
 import { recordMeasurement } from "../services/performance";
 export class GameEngine {
   private ctx: CanvasRenderingContext2D | null = null;
+  private renderScale = 1;
   private game: GameInstance | null = null;
   private input = new InputManager();
   private destroyed = false;
@@ -31,7 +33,14 @@ export class GameEngine {
     // Stable logical dimensions: resizing the browser scales the playfield without changing its rules.
     canvas.width = config.width ?? 960;
     canvas.height = config.height ?? 640;
-    this.ctx = is3DGame(game) ? null : canvas.getContext("2d");
+    this.ctx = is3DGame(game)
+      ? null
+      : canvas.getContext("2d", {
+          alpha: false,
+          desynchronized: true,
+          // A software GPU adds expensive raster/transfer work to these small 2D canvases.
+          willReadFrequently: graphicsCapabilities().software,
+        });
     if (!is3DGame(game) && !this.ctx)
       throw new Error("Canvas rendering is unavailable");
     try {
@@ -39,6 +48,14 @@ export class GameEngine {
       if (this.destroyed) {
         game.destroy?.();
         return;
+      }
+      if (!is3DGame(game)) {
+        // Games capture logical dimensions during init; backing resolution must not alter rules or saves.
+        const width = config.width ?? 960,
+          height = config.height ?? 640;
+        this.renderScale = fullHdScale(width, height);
+        canvas.width = Math.round(width * this.renderScale);
+        canvas.height = Math.round(height * this.renderScale);
       }
       this.render();
       this.launchMs = performance.now() - started;
@@ -84,7 +101,19 @@ export class GameEngine {
     if (this.destroyed) return;
     this.destroyed = true;
     this.stop();
-    recordMeasurement(this.slug, this.launchMs, this.samples);
+    recordMeasurement(
+      this.slug,
+      this.launchMs,
+      this.samples,
+      this.game?.getRenderInfo?.() ?? {
+        renderer: graphicsCapabilities().software
+          ? "Canvas 2D · CPU raster"
+          : "Canvas 2D · browser acceleration",
+        quality: "1080p · full detail",
+        width: this.ctx?.canvas?.width,
+        height: this.ctx?.canvas?.height,
+      },
+    );
     this.game?.destroy?.();
     this.game = null;
     this.ctx = null;
@@ -142,7 +171,10 @@ export class GameEngine {
   private render(): void {
     if (!this.game) return;
     if (is3DGame(this.game)) this.game.render();
-    else if (this.ctx) this.game.render(this.ctx);
+    else if (this.ctx) {
+      this.ctx.setTransform(this.renderScale, 0, 0, this.renderScale, 0, 0);
+      this.game.render(this.ctx);
+    }
   }
   private loop = (now: number): void => {
     if (!this.isRunning || this.destroyed) return;

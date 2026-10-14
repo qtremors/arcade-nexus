@@ -18,11 +18,11 @@ export class FlightHUD {
     this.root.className = "flight-hud space-hud flagship-hud";
     this.root.setAttribute("aria-label", "Flight instruments");
     this.root.innerHTML = `<div class="space-location space-panel"><span class="space-eyebrow">FRONTIER</span><strong class="space-heading"></strong><span class="space-location-detail"></span></div>
-      <div class="space-contract space-panel"><span class="space-eyebrow">NEXT OBJECTIVE</span><strong class="space-contract-title"></strong><span class="space-contract-detail"></span><progress class="space-contract-progress" max="100"></progress></div>
+      <div class="space-contract space-panel"><span class="space-eyebrow">NEXT OBJECTIVE</span><strong class="space-contract-title"></strong><span class="space-contract-detail"></span><progress class="space-contract-progress" max="100"></progress><span>H / L3 · Change contract (resets progress)</span></div>
       <div class="space-speed space-panel"><span class="space-eyebrow">VELOCITY</span><div><strong class="space-speed-value">120</strong><span>m/s</span></div><span class="space-trip"></span><span class="space-score"></span></div>
       <div class="space-race space-panel"><div class="space-race-heading"></div><div class="space-race-pips"></div><div class="space-race-detail"></div><span class="space-race-best"></span></div>
       <div class="space-fleet space-panel"><span class="space-eyebrow">YOUR SHIP</span><strong class="space-ship"></strong><span class="space-level"></span><div class="space-meters"><label>BOOST <progress class="space-energy" max="100" value="100"></progress></label><label>SHIELD <progress class="space-shield" max="100" value="100"></progress></label><label>UPGRADE <progress class="space-upgrade" max="100" value="0"></progress></label></div><span class="space-unlock"></span></div>
-      <div class="space-event"><span class="space-status"></span></div><div class="space-race-result" hidden></div><div class="space-controls">WASD / arrows <span>steer</span> · Shift / RT <span>boost</span> · M / Y <span>new route</span> · V / X <span>ship</span> · N / B <span>explore</span> · C / R3 <span>camera</span></div><span class="sr-only space-instruments"></span>`;
+      <div class="space-event"><span class="space-status"></span></div><div class="space-race-result" hidden></div><div class="space-controls">WASD / arrows <span>steer</span> · Shift / RT <span>boost</span> · M / Y <span>new route</span> · V / X <span>ship</span> · N / B <span>explore</span> · C / R3 <span>camera</span> · H / L3 <span>contract</span></div><span class="sr-only space-instruments"></span>`;
     this.radar.width = this.radar.height = 112;
     this.radar.className = "space-radar";
     this.radar.setAttribute(
@@ -93,7 +93,7 @@ export class FlightHUD {
       ".space-unlock",
       nextShip
         ? `${nextShip.name} unlocks at level ${nextShip.level}`
-        : "Fleet unlocked · V / X to switch ship",
+        : `${journey.specification.role} · V / X`,
     );
     this.meter(".space-energy", journey.energy);
     this.meter(".space-shield", journey.shield);
@@ -113,8 +113,8 @@ export class FlightHUD {
     this.text(
       ".space-race-heading",
       journey.navigation === "race"
-        ? `RACE ${journey.races + 1} / ${journey.raceTime.toFixed(1)}s`
-        : "FREE EXPLORATION / SURVEY",
+        ? `${journey.routeName} / ${journey.raceTime.toFixed(1)}s`
+        : `SURVEY / ${journey.landmark}`,
     );
     this.text(
       ".space-race-pips",

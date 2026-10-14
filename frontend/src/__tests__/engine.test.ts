@@ -14,7 +14,7 @@ const canvas = () =>
   ({
     width: 0,
     height: 0,
-    getContext: () => ({}),
+    getContext: () => ({ setTransform: vi.fn() }),
   }) as unknown as HTMLCanvasElement;
 const game = (): Game2DInstance => ({
   type: "2d",

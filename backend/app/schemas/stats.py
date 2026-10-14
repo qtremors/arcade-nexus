@@ -28,6 +28,7 @@ class SessionMetrics(RequestSchema):
     lives: Annotated[int, Field(ge=0, le=3, strict=True)] | None = None
     highest_tile: Annotated[int, Field(ge=0, le=1_048_576, strict=True)] | None = None
     completed: bool | None = None
+    elapsed_ms: Annotated[int, Field(ge=1, le=604_800_000, strict=True)] | None = None
     medal: Literal["gold", "silver", "bronze"] | None = None
 
 

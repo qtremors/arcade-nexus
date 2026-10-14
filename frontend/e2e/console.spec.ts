@@ -538,9 +538,7 @@ test("Flight surveys a real beacon, restores its camera, and fits a narrow viewp
     .boundingBox();
   expect(playfield!.width).toBeGreaterThan(1400);
   await page.keyboard.press("KeyN");
-  await expect(page.locator(".space-race-heading")).toContainText(
-    "FREE EXPLORATION",
-  );
+  await expect(page.locator(".space-race-heading")).toContainText("SURVEY");
   await page.keyboard.press("KeyW", { delay: 200 });
   await page.keyboard.down("ShiftLeft");
   await expect(page.locator(".space-location-detail")).toContainText(
@@ -695,10 +693,13 @@ test("featured shelf, catalog empty states, and controller guide are usable", as
   await expect(
     page.getByRole("button", { name: "Start Neon Snake", exact: true }),
   ).toBeVisible();
+  const shelf = page.locator(".shelf-game");
+  const selectedIndex = await shelf.evaluateAll((nodes) =>
+    nodes.findIndex((node) => node.getAttribute("aria-pressed") === "true"),
+  );
+  const nextGame = shelf.nth((selectedIndex + 1) % (await shelf.count()));
   await page.keyboard.press("ArrowRight");
-  await expect(
-    page.getByRole("button", { name: "Select Raptor Run", exact: true }),
-  ).toHaveAttribute("aria-pressed", "true");
+  await expect(nextGame).toHaveAttribute("aria-pressed", "true");
   await page.screenshot({ path: info.outputPath("oled-home.png") });
   await page.getByRole("link", { name: "Games", exact: true }).click();
   await page.getByLabel("Search games").fill("no-such-title");
@@ -1042,5 +1043,291 @@ test("Breakout awards medals and legacy Flight courses migrate to endless journe
       history.find((s: { game_slug: string }) => s.game_slug === slug).metrics
         .completed,
     ).toBe(true);
+  }
+});
+
+for (const slug of ["tetris", "asteroids", "prism-rush"]) {
+  test(`${slug} plays, saves, and resumes through the console`, async ({
+    page,
+  }, info) => {
+    await start(page, slug);
+    await page.keyboard.press("ArrowLeft");
+    if (slug !== "prism-rush") await page.keyboard.press("Space");
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: info.outputPath(`${slug}-playing.png`) });
+    await pause(page);
+    const state = await save(page, slug);
+    expect(state.version).toBe(1);
+    await page.goto(`/play/${slug}`);
+    await page
+      .getByRole("button", { name: "Continue saved run", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Paused", exact: true }),
+    ).toBeVisible();
+    const restored = await save(page, slug, 2);
+    expect(restored).toEqual(state);
+    await page.getByRole("button", { name: "Resume", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: "Pause (Esc / P)" }),
+    ).toBeVisible();
+    if (slug === "prism-rush") {
+      await expect
+        .poll(
+          async () => {
+            const text = await page
+              .getByLabel("Prism Rush instruments")
+              .textContent();
+            return Number(text?.match(/·\s+(\d+)\s+m/)?.[1] ?? 0);
+          },
+          { timeout: 20000 },
+        )
+        .toBeGreaterThan(65);
+      await page.screenshot({ path: info.outputPath("prism-rush-gates.png") });
+    }
+    await pause(page);
+  });
+}
+
+test("daily 2048 is playable through its semantic board and records a solved puzzle", async ({
+  page,
+  request,
+  profileId,
+}, info) => {
+  const headers = { "X-Profile-ID": String(profileId) };
+  await request.post("/api/saves/merge-2048", {
+    headers,
+    data: {
+      slot: 1,
+      data: {
+        format: 2,
+        game: "merge-2048",
+        mode: "daily",
+        rules_version: 3,
+        difficulty: "normal",
+        config: { challenge_date: "2026-10-13" },
+        state: {
+          version: 1,
+          mode: "daily",
+          puzzle: 0,
+          moves: 0,
+          score: 0,
+          randomState: 42,
+          board: [8, 8, 16, 0, ...Array(12).fill(0)],
+        },
+      },
+    },
+  });
+  await page.goto("/play/merge-2048");
+  await page.getByRole("button", { name: "Load game", exact: true }).click();
+  await page.getByRole("button", { name: /^Slot 1 ·/ }).click();
+  await page.getByRole("button", { name: "Resume", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Pause (Esc / P)" }),
+  ).toBeVisible();
+  await page
+    .getByText("Board reader & move explanations", { exact: true })
+    .click();
+  await expect(page.getByRole("table", { name: "2048 board" })).toBeVisible();
+  await page.getByRole("button", { name: "Slide left", exact: true }).focus();
+  await page.keyboard.press("Space");
+  await expect(page.locator(".puzzle-explanation")).toContainText("8 + 8 = 16");
+  await page.screenshot({ path: info.outputPath("2048-reader.png") });
+  await page.getByRole("button", { name: "Slide left", exact: true }).focus();
+  await page.keyboard.press("Space");
+  await expect(
+    page.getByRole("heading", { name: "Daily puzzle solved" }),
+  ).toBeVisible();
+  await expect
+    .poll(async () =>
+      (
+        await (await request.get("/api/progress/records", { headers })).json()
+      ).some((r: { mode: string }) => r.mode === "daily-2026-10-13"),
+    )
+    .toBe(true);
+});
+
+test("arcade pickups survive saving and Flight contracts can be selected", async ({
+  page,
+  request,
+  profileId,
+}, info) => {
+  const headers = { "X-Profile-ID": String(profileId) };
+  await request.post("/api/saves/breakout", {
+    headers,
+    data: {
+      slot: 1,
+      data: {
+        format: 2,
+        game: "breakout",
+        mode: "arcade",
+        rules_version: 2,
+        difficulty: "normal",
+        state: {
+          version: 1,
+          mode: "arcade",
+          stage: 4,
+          paddle: 480,
+          ball: { x: 480, y: 550, vx: 0, vy: -350 },
+          bricks: Array(60).fill(true),
+          score: 500,
+          lives: 3,
+          launched: true,
+          difficulty: "normal",
+          pickups: [
+            { x: 480, y: 568, kind: "wide" },
+            { x: 480, y: 568, kind: "multi" },
+          ],
+        },
+      },
+    },
+  });
+  await page.goto("/play/breakout");
+  await page.getByRole("button", { name: "Load game", exact: true }).click();
+  await page.getByRole("button", { name: /^Slot 1 ·/ }).click();
+  await page.getByRole("button", { name: "Resume", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Pause (Esc / P)" }),
+  ).toBeVisible();
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+        ),
+      ),
+  );
+  await pause(page);
+  const saved = await save(page, "breakout", 2);
+  expect(Number(saved.wideTime)).toBeGreaterThan(0);
+  expect(Number(saved.multiTime)).toBeGreaterThan(0);
+  expect(saved.extraBalls).toHaveLength(2);
+  await page.getByRole("button", { name: "Resume", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Pause (Esc / P)" }),
+  ).toBeVisible();
+  await page.screenshot({ path: info.outputPath("breakout-arcade.png") });
+  await pause(page);
+  await start(page, "stellar-flight");
+  await expect(page.locator(".flight-hud")).toContainText("Race rings");
+  await page.keyboard.press("KeyH", { delay: 80 });
+  await expect(page.locator(".flight-hud")).toContainText("Chart new sectors");
+  await page.keyboard.press("KeyN", { delay: 80 });
+  await expect(page.locator(".flight-hud")).toContainText("SURVEY");
+  await page.screenshot({
+    path: info.outputPath("flight-contract-survey.png"),
+  });
+  await pause(page);
+  const flight = await save(page, "stellar-flight");
+  expect(flight.contractChoice).toBe(1);
+  expect(flight.navigation).toBe("explore");
+});
+
+test("completed Tetris sprints show time records in results and progress", async ({
+  page,
+  request,
+  profileId,
+}, info) => {
+  const headers = { "X-Profile-ID": String(profileId) };
+  const board = Array.from({ length: 20 }, (_, y) =>
+    Array.from({ length: 10 }, (_, x) => (y >= 16 && x !== 5 ? 2 : 0)),
+  );
+  await request.post("/api/saves/tetris", {
+    headers,
+    data: {
+      slot: 1,
+      data: {
+        format: 2,
+        game: "tetris",
+        mode: "sprint",
+        rules_version: 2,
+        difficulty: "normal",
+        state: {
+          version: 1,
+          mode: "sprint",
+          difficulty: "normal",
+          board,
+          piece: 0,
+          rotation: 1,
+          x: 3,
+          y: 0,
+          queue: [1, 2, 3, 4, 5, 6, 0],
+          held: null,
+          canHold: true,
+          score: 1000,
+          lines: 36,
+          elapsed: 85321,
+          fall: 0,
+          lock: 0,
+          resets: 0,
+          terminal: false,
+          random: 42,
+        },
+      },
+    },
+  });
+  await page.goto("/play/tetris");
+  await page.getByRole("button", { name: "Load game", exact: true }).click();
+  await page.getByRole("button", { name: /^Slot 1 ·/ }).click();
+  await page.getByRole("button", { name: "Resume", exact: true }).click();
+  await expect(
+    page.getByRole("button", { name: "Pause (Esc / P)" }),
+  ).toBeVisible();
+  await page.keyboard.press("Space", { delay: 80 });
+  await expect(
+    page.getByRole("heading", { name: "Sprint complete" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("NEW PERSONAL BEST", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText(/^Best: 1:/)).toBeVisible();
+  await page.screenshot({ path: info.outputPath("tetris-sprint-result.png") });
+  await page.goto("/progress");
+  await expect(
+    page.getByRole("cell", { name: /^1:2[5-9]\.\d{3}$/ }),
+  ).toBeVisible();
+});
+
+test("all games retain Full HD detail and 3D antialiasing", async ({
+  page,
+}) => {
+  test.setTimeout(120000);
+  for (const slug of [
+    "snake",
+    "raptor-run",
+    "breakout",
+    "merge-2048",
+    "tetris",
+    "asteroids",
+    "prism-rush",
+    "stellar-flight",
+  ]) {
+    await start(page, slug);
+    // Exercise actual rendered frames, including the software GPU under load.
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          let frames = 0;
+          const next = () =>
+            ++frames >= 12 ? resolve() : requestAnimationFrame(next);
+          requestAnimationFrame(next);
+        }),
+    );
+    const detail = await page
+      .locator("canvas.game-canvas")
+      .evaluate((canvas: HTMLCanvasElement, slug) => {
+        const gl = ["prism-rush", "stellar-flight"].includes(slug)
+          ? canvas.getContext("webgl2")
+          : null;
+        return {
+          width: canvas.width,
+          height: canvas.height,
+          antialias: gl?.getContextAttributes()?.antialias,
+        };
+      }, slug);
+    expect(detail.height, slug).toBe(1080);
+    expect(detail.width, slug).toBeLessThanOrEqual(1920);
+    if (["prism-rush", "stellar-flight"].includes(slug))
+      expect(detail.antialias, slug).toBe(true);
   }
 });

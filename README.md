@@ -1,6 +1,6 @@
 # Arcade Nexus
 
-A local arcade console for short desktop sessions, built with React, FastAPI, and SQLite. Five bundled games, keyboard and standard-controller controls, local players, recovery saves, and household records. Assets and fonts are included; normal play does not require Internet access after setup.
+A local arcade console for short desktop sessions, built with React, FastAPI, and SQLite. Eight bundled games, keyboard and standard-controller controls, local players, recovery saves, and household records. Assets and fonts are included; normal play does not require Internet access after setup.
 
 ## Start the console
 
@@ -31,17 +31,20 @@ This runs both reload servers and opens **http://127.0.0.1:5173**. Browser prefe
 - **Home:** Continue recovery saves, recently played games, and today's seeded challenge.
 - **Games:** Play any bundled title immediately. Favorites are optional.
 - **Progress:** Records separated by game, mode, difficulty, and rules version; household comparisons, awards, and paginated session history.
-- **Settings:** Volume, reduced motion, remapping, controller dead zone, pending-result retries, backup export/import, and local performance measurements.
+- **Settings:** Volume, reduced motion, remapping, controller dead zone, pending-result retries, backup export/import, Full HD graphics, and local FPS/performance measurements.
 
 | Game | Modes and objective |
 | --- | --- |
-| Neon Snake | Classic, authored maze, or 60-second sprint. Food scores points; walls and your body end the run. |
-| Raptor Run | Classic or daily seeded obstacle sequence. Jump, duck, and chase distance milestones. |
-| Neon Breakout | Three sectors with armored and explosive bricks, final-brick aiming assistance, and completion medals. Daily layouts also available. |
-| Merge 2048 | Relaxed play with one-move undo, including after a losing move; challenge mode disables undo. Reach 2048 and keep playing. |
-| Stellar Flight | Explore an endless procedural universe, chase gold in timed ring races, complete contracts, and survey beacons to refuel. Level up your engines and handling, unlock four ships, and choose chase, nose, or wide cameras. Collisions preserve progress. |
+| Neon Snake | Classic, four authored mazes, 60-second sprint, or Bonus Sprint with timed gold packets. |
+| Raptor Run | Classic or daily authored obstacle phrases, four biomes, and genuine close-pass feedback. Jump, duck, and chase distance milestones. |
+| Neon Breakout | Classic/daily three-sector campaigns or six-sector Arcade with timed wide-paddle and multiball pickups. Visible final-brick assistance and completion medals. |
+| Merge 2048 | Relaxed play with deterministic one-move undo, no-undo challenge, or move-limited daily puzzles. Optional text board, slide buttons, and merge explanations. |
+| Stellar Flight | Explore an endless procedural universe, chase gold across four race patterns, choose contracts, and survey three landmark types to refuel. Level up your engines and handling, unlock four ships with different energy and handling tradeoffs, and choose chase, nose, or wide cameras. Collisions preserve progress. |
+| Neon Tetris | Marathon or time-ranked 40-line sprint, seven-piece bags, next previews, ghost landing, hold, wall kicks, and lock delay. |
+| Asteroids | Inertial movement, wrapping arena, splitting rocks, escalating waves, three hulls, and respawn protection. |
+| Prism Rush | 3D three-lane highway, authored gate rhythms with a clear route, collectible crystals, braking, and three shields. |
 
-Pause with Escape/P or controller Start. Games pause on focus loss or controller disconnect. In menus, use directional controls and A/B; shoulder buttons change main tabs. Controller A on text fields opens an on-screen keyboard. Flight uses analog steering/triggers; Y plots a new race, X switches ships, B toggles surveys, and right stick click changes the camera. Each launch menu has a controls guide.
+Pause with Escape/P or controller Start. Games pause on focus loss or controller disconnect. In menus, use directional controls and A/B; shoulder buttons change main tabs. Controller A on text fields opens an on-screen keyboard. Flight uses analog steering/triggers; Y plots a new race, X switches ships, B toggles surveys, right stick click changes the camera, and H/left stick click selects a contract (resetting its progress). Each launch menu has a controls guide.
 
 Recovery snapshots are taken every five seconds and on pause/exit, separately from five manual slots. Continue restores the saved state as a new play session, preserving earlier history without counting earlier playtime twice. Sudden termination can lose up to the interval since the last durable snapshot. Result submission is atomic and retryable; Settings keeps failures visible and exportable.
 
@@ -61,5 +64,7 @@ python scripts/check.py --browser
 ```
 
 The check script runs local lint, tests, type checking, and production build. Omit `--browser` for the faster checks. **There is no CI/CD configuration.**
+
+For shipped improvements and remaining playtest priorities, see [the game improvement plan](docs/GAME_IMPROVEMENTS.md).
 
 See [DEVELOPMENT.md](DEVELOPMENT.md), the [SDK guide](frontend/src/sdk/README.md), and [manual playtest checklist](docs/PLAYTEST.md). The [Tremors Source License](LICENSE.md) requires attribution; commercial use requires permission.

@@ -1,11 +1,12 @@
 import * as THREE from "three";
+import { ROUTES } from "./routes";
 import { z } from "zod";
 import type { InputState } from "../../sdk/GameSDK";
 import { Random } from "../../sdk/Random";
 import { FlightController } from "./FlightController";
 import { crossGate } from "./course";
 import { SHIPS, type ShipId } from "./ships";
-import { contractFor, type JourneyCounters } from "./contracts";
+import { contracts, contractFor, type JourneyCounters } from "./contracts";
 import {
   nearbySectors,
   sectorCoordinates,
@@ -83,6 +84,19 @@ const journeySchema = z
     raceLength: positive.default(0),
     lastRace: raceResultSchema.nullable().default(null),
     contractIndex: count.default(0),
+    contractHeld: z.boolean().default(false),
+    contractChoice: z
+      .number()
+      .int()
+      .min(0)
+      .max(contracts.length - 1)
+      .optional(),
+    routeStyle: z
+      .number()
+      .int()
+      .min(0)
+      .max(ROUTES.length - 1)
+      .default(0),
     contractBaseline: countersSchema.default({
       gates: 0,
       sectors: 1,
@@ -182,6 +196,25 @@ export class SpaceJourney {
   raceLength = 0;
   lastRace: z.infer<typeof raceResultSchema> | null = null;
   contractIndex = 0;
+  contractChoice = 0;
+  routeStyle = 0;
+  private contractHeld = false;
+  get routeName() {
+    return ROUTES[this.routeStyle].name;
+  }
+  get landmark() {
+    const target = this.target;
+    return (
+      this.sectors.find((sector) =>
+        sector.beacon.every((v, i) => v === target[i]),
+      )?.landmark ?? this.currentSector.landmark
+    );
+  }
+  cycleContract() {
+    this.contractChoice = (this.contractChoice + 1) % contracts.length;
+    this.contractBaseline = this.counters;
+    this.notify(`NEW CONTRACT · ${this.contract.title} · Progress starts now`);
+  }
   contractBaseline: JourneyCounters = {
     gates: 0,
     sectors: 1,
@@ -253,6 +286,7 @@ export class SpaceJourney {
       this.contractIndex,
       this.contractBaseline,
       this.counters,
+      this.contractChoice,
     );
   }
   get target(): Coordinates {
@@ -313,6 +347,12 @@ export class SpaceJourney {
     this.refreshBodies();
   }
   newRoute(first = false) {
+    this.routeStyle = first
+      ? 0
+      : (this.routeStyle +
+          1 +
+          Math.floor(this.random.next() * (ROUTES.length - 1))) %
+        ROUTES.length;
     this.gates = [];
     const point = this.position.clone();
     const rotation = this.rotation.clone();
@@ -322,15 +362,13 @@ export class SpaceJourney {
         rotation.multiply(
           new THREE.Quaternion().setFromAxisAngle(
             this.yawAxis,
-            (this.random.next() - 0.5) *
-              (0.3 + Math.min(0.25, this.races * 0.018)),
+            ROUTES[this.routeStyle].yaw[i],
           ),
         );
         rotation.multiply(
           new THREE.Quaternion().setFromAxisAngle(
             this.pitchAxis,
-            (this.random.next() - 0.5) *
-              (0.14 + Math.min(0.12, this.races * 0.008)),
+            ROUTES[this.routeStyle].pitch[i],
           ),
         );
       }
@@ -403,9 +441,7 @@ export class SpaceJourney {
         (unlocked.findIndex((ship) => ship.id === this.ship) + 1) %
           unlocked.length
       ].id;
-    this.notify(
-      `${this.specification.name} · ${this.ship === "twin" ? "Heavy engines" : this.ship === "crescent" ? "Agile handling" : "Ready to race"}`,
-    );
+    this.notify(`${this.specification.name} · ${this.specification.role}`);
   }
   update(deltaTime: number, input: InputState): boolean {
     const dt = Math.max(0, Math.min(deltaTime / 1000, 0.1));
@@ -425,6 +461,13 @@ export class SpaceJourney {
       );
     }
     this.cameraHeld = camera;
+    const chooseContract = !!input.keys.KeyH;
+    if (
+      chooseContract &&
+      (!this.contractHeld || input.pressed?.includes("KeyH"))
+    )
+      this.cycleContract();
+    this.contractHeld = chooseContract;
     const navigation = !!input.keys.KeyN;
     if (
       navigation &&
@@ -447,7 +490,7 @@ export class SpaceJourney {
       this.navigation = "race";
       this.newRoute();
       this.combo = 0;
-      this.notify("New race plotted ahead · Explore freely between races");
+      this.notify(`${this.routeName} · New race plotted ahead`);
     }
     this.routeHeld = route;
     const ship = !!input.keys.KeyV;
@@ -467,13 +510,17 @@ export class SpaceJourney {
       Math.min(
         100,
         this.energy +
-          dt * (this.boosting ? -18 : 12 + Math.min(20, this.level) * 0.3),
+          dt *
+            (this.boosting
+              ? -this.specification.boostDrain
+              : this.specification.recharge + Math.min(20, this.level) * 0.3),
       ),
     );
     if (this.boosting && this.energy === 0) this.boostLocked = true;
     this.shield = Math.min(
       100,
-      this.shield + (this.invulnerable > 0 ? 0 : dt * 12),
+      this.shield +
+        (this.invulnerable > 0 ? 0 : dt * this.specification.shieldRegen),
     );
     const braking = !!(
       input.keys.ControlLeft ||
@@ -484,7 +531,8 @@ export class SpaceJourney {
       (140 + Math.log2(this.level) * 18) * this.specification.speed;
     this.controller.minSpeed = 35;
     this.controller.maxSpeed = this.maxSpeed;
-    this.controller.acceleration = 100 + Math.min(20, this.level) * 3;
+    this.controller.acceleration =
+      this.specification.acceleration + Math.min(20, this.level) * 3;
     this.controller.deceleration = 160;
     this.controller.update(dt, {
       ...input,
@@ -557,7 +605,7 @@ export class SpaceJourney {
       if (body) {
         this.collisions++;
         const absorbed = this.shield >= 40;
-        this.shield = Math.max(0, this.shield - 45);
+        this.shield = Math.max(0, this.shield - this.specification.impactCost);
         this.energy = Math.max(0, this.energy - (absorbed ? 15 : 30));
         this.controller.speed = Math.max(
           35,
@@ -689,6 +737,7 @@ export class SpaceJourney {
     const contract = this.contract;
     if (contract.progress >= contract.target) {
       this.contractIndex++;
+      this.contractChoice = (this.contractChoice + 1) % contracts.length;
       this.contractBaseline = this.counters;
       this.notify(
         `CONTRACT COMPLETE · ${contract.title} · +${contract.reward} XP`,
@@ -735,6 +784,9 @@ export class SpaceJourney {
       raceLength: this.raceLength,
       lastRace: this.lastRace ? { ...this.lastRace } : null,
       contractIndex: this.contractIndex,
+      contractHeld: this.contractHeld,
+      contractChoice: this.contractChoice,
+      routeStyle: this.routeStyle,
       contractBaseline: { ...this.contractBaseline },
       scanned: [...this.scanned],
       navigation: this.navigation,
@@ -812,6 +864,10 @@ export class SpaceJourney {
     this.bestPace = data.bestPace;
     this.lastRace = data.lastRace;
     this.contractBaseline = data.contractBaseline;
+    this.contractChoice =
+      data.contractChoice ?? data.contractIndex % contracts.length;
+    this.routeStyle = data.routeStyle;
+    this.contractHeld = data.contractHeld;
     this.scanned = new Set(data.scanned);
     this.navigation = data.navigation;
     this.navigationHeld = data.navigationHeld;

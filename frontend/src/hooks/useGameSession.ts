@@ -66,6 +66,7 @@ export function useGameSession({
     setModeState(next);
   };
   const [recovery, setRecovery] = useState<SaveEnvelope | null>(null);
+  const [bestTime, setBestTime] = useState<number | null>(null);
   const [receipt, setReceipt] = useState<CompletionReceipt | null>(null);
   const warnedStorage = useRef(false);
 
@@ -178,6 +179,7 @@ export function useGameSession({
       const result = await sendCompletion(item);
       if (mounted.current) {
         setReceipt(result);
+        setBestTime(result.best_time_ms ?? null);
         setHighScore(result.high_score);
         setNewHigh(result.is_new_high_score);
       }
@@ -515,19 +517,20 @@ export function useGameSession({
     void progressApi
       .records()
       .then((records) => {
-        if (active)
-          setHighScore(
-            records.find(
-              (r) =>
-                r.game_slug === slug &&
-                r.mode ===
-                  (mode === "daily"
-                    ? `daily-${options.current.config.challenge_date ?? new Date().toISOString().slice(0, 10)}`
-                    : mode) &&
-                r.difficulty === difficulty &&
-                r.rules_version === options.current.rules_version,
-            )?.high_score ?? 0,
+        if (active) {
+          const record = records.find(
+            (r) =>
+              r.game_slug === slug &&
+              r.mode ===
+                (mode === "daily"
+                  ? `daily-${options.current.config.challenge_date ?? new Date().toISOString().slice(0, 10)}`
+                  : mode) &&
+              r.difficulty === difficulty &&
+              r.rules_version === options.current.rules_version,
           );
+          setHighScore(record?.high_score ?? 0);
+          setBestTime(record?.best_time_ms ?? null);
+        }
       })
       .catch(() => {});
     return () => {
@@ -607,6 +610,7 @@ export function useGameSession({
     receipt,
     score,
     highScore,
+    bestTime,
     newHigh,
     error,
     busy,

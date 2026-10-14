@@ -15,6 +15,7 @@ export interface Sector {
   planet: SpaceBody | null;
   planetStyle: "terran" | "gas" | "ice";
   beacon: Coordinates;
+  landmark: "Relay spire" | "Ring archive" | "Crystal garden";
 }
 const regions = [
   { name: "Azure Reach", color: 0x66d9ff },
@@ -85,6 +86,9 @@ export function createSector(coordinates: Coordinates, seed: number): Sector {
     planet,
     planetStyle,
     beacon,
+    landmark: (["Relay spire", "Ring archive", "Crystal garden"] as const)[
+      hash % 3
+    ],
   };
 }
 /** Only the surrounding 27 sectors are resident, regardless of trip length. */

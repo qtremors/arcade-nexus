@@ -1,3 +1,4 @@
+import { buildMaze, MAZE_NAMES } from "./mazes";
 import { Random } from "../../sdk/Random";
 /**
  * Zen Snake - Minimalist Snake with Premium Aesthetics
@@ -69,6 +70,10 @@ export class SnakeGame implements Game2DInstance {
   private elapsed = 0;
   private cause = "Run complete";
   private walls: Point[] = [];
+  private mazeIndex = 0;
+  private bonus: (Point & { expires: number }) | null = null;
+  private bonusAt = 10000;
+  private bonuses = 0;
   private gameOver = false;
   private moveTimer = 0;
   private moveInterval = 120; // ms per move
@@ -113,17 +118,13 @@ export class SnakeGame implements Game2DInstance {
 
     // Calculate grid
     this.calculateGrid();
+    this.mazeIndex =
+      this.mode === "maze"
+        ? Math.floor(this.random.next() * MAZE_NAMES.length)
+        : 0;
     this.walls =
       this.mode === "maze"
-        ? Array.from({ length: Math.max(1, this.rows - 8) }, (_, i) => ({
-            x: Math.floor(this.cols / 3),
-            y: i + 4,
-          })).concat(
-            Array.from({ length: Math.max(1, this.rows - 8) }, (_, i) => ({
-              x: Math.floor((this.cols * 2) / 3),
-              y: i + 4,
-            })),
-          )
+        ? buildMaze(this.cols, this.rows, this.mazeIndex)
         : [];
     this.startNewGame();
   }
@@ -164,9 +165,16 @@ export class SnakeGame implements Game2DInstance {
   }
 
   private spawnFood(): void {
+    if (
+      this.bonus &&
+      this.snake.length + this.walls.length + 1 >= this.cols * this.rows
+    )
+      this.bonus = null;
     const empty: Point[] = [];
     const occupied = new Set(
-      [...this.snake, ...this.walls].map((p) => `${p.x},${p.y}`),
+      [...this.snake, ...this.walls, ...(this.bonus ? [this.bonus] : [])].map(
+        (p) => `${p.x},${p.y}`,
+      ),
     );
     for (let y = 0; y < this.rows; y++)
       for (let x = 0; x < this.cols; x++) {
@@ -203,12 +211,30 @@ export class SnakeGame implements Game2DInstance {
   update(dt: number, input: InputState): boolean {
     if (this.gameOver) return false;
     this.elapsed += dt;
-    if (this.mode === "sprint" && this.elapsed >= 60000) {
+    if (this.mode.startsWith("sprint") && this.elapsed >= 60000) {
       this.cause = "Sprint complete";
       this.gameOver = true;
       return false;
     }
     this.feedback.update(dt);
+    if (this.bonus && this.elapsed >= this.bonus.expires) this.bonus = null;
+    if (this.mode === "sprint-plus" && this.elapsed >= this.bonusAt) {
+      this.bonusAt += 10000;
+      const cells: Point[] = [];
+      for (let y = 0; y < this.rows; y++)
+        for (let x = 0; x < this.cols; x++)
+          if (
+            !(this.food.x === x && this.food.y === y) &&
+            !this.snake.some((p) => p.x === x && p.y === y) &&
+            Math.abs(x - this.snake[0].x) + Math.abs(y - this.snake[0].y) >= 6
+          )
+            cells.push({ x, y });
+      if (cells.length)
+        this.bonus = {
+          ...cells[Math.floor(this.random.next() * cells.length)],
+          expires: this.elapsed + 4500,
+        };
+    }
 
     // Handle input
     const requested: Direction | null = input.up
@@ -320,6 +346,18 @@ export class SnakeGame implements Game2DInstance {
     // Add new head
     this.snake.unshift(head);
 
+    if (this.bonus && head.x === this.bonus.x && head.y === this.bonus.y) {
+      this.score += 30;
+      this.bonuses++;
+      this.bonus = null;
+      this.feedback.sound("collect");
+      this.feedback.burst(
+        this.gridOffsetX + head.x * this.cellSize + 14,
+        this.gridOffsetY + head.y * this.cellSize,
+        "#ffd779",
+        "+30 BONUS",
+      );
+    }
     // Check food
     if (head.x === this.food.x && head.y === this.food.y) {
       this.score += 10;
@@ -366,7 +404,7 @@ export class SnakeGame implements Game2DInstance {
         this.cellSize - 4,
         this.cellSize - 4,
       );
-    if (this.mode === "sprint") {
+    if (this.mode.startsWith("sprint")) {
       ctx.font = "18px system-ui";
       ctx.fillStyle = "#fff";
       ctx.fillText(
@@ -376,6 +414,31 @@ export class SnakeGame implements Game2DInstance {
       );
     }
 
+    if (this.mode === "maze") {
+      ctx.textAlign = "left";
+      ctx.font = "16px Rajdhani, system-ui";
+      ctx.fillStyle = "#c4b5fd";
+      ctx.fillText(MAZE_NAMES[this.mazeIndex], this.gridOffsetX, height - 18);
+    }
+    if (this.bonus) {
+      const x = this.gridOffsetX + (this.bonus.x + 0.5) * this.cellSize,
+        y = this.gridOffsetY + (this.bonus.y + 0.5) * this.cellSize;
+      ctx.fillStyle = "#ffd779";
+      ctx.beginPath();
+      ctx.moveTo(x, y - 10);
+      ctx.lineTo(x + 10, y);
+      ctx.lineTo(x, y + 10);
+      ctx.lineTo(x - 10, y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.textAlign = "left";
+      ctx.font = "16px Rajdhani, system-ui";
+      ctx.fillText(
+        `BONUS +30 · ${Math.ceil((this.bonus.expires - this.elapsed) / 1000)}s`,
+        this.gridOffsetX,
+        height - 18,
+      );
+    }
     // Food with glow
     this.renderFood();
 
@@ -442,7 +505,7 @@ export class SnakeGame implements Game2DInstance {
 
     // Glow
     ctx.shadowColor = this.colors.foodGlow;
-    ctx.shadowBlur = 20;
+    ctx.shadowBlur = 20 * ctx.getTransform().a;
 
     // Food
     ctx.fillStyle = this.colors.food;
@@ -500,7 +563,7 @@ export class SnakeGame implements Game2DInstance {
       // Glow for head
       if (isHead) {
         ctx.shadowColor = this.colors.snakeGlow;
-        ctx.shadowBlur = 15;
+        ctx.shadowBlur = 15 * ctx.getTransform().a;
       }
 
       // Color gradient from head to tail
@@ -620,6 +683,10 @@ export class SnakeGame implements Game2DInstance {
       mode: this.mode,
       elapsed: this.elapsed,
       walls: this.walls,
+      mazeIndex: this.mazeIndex,
+      bonus: this.bonus,
+      bonusAt: this.bonusAt,
+      bonuses: this.bonuses,
       cellSize: this.cellSize,
       score: this.score,
       snake: this.snake,
@@ -644,8 +711,22 @@ export class SnakeGame implements Game2DInstance {
       .object({
         version: z.literal(1),
         randomState: z.number().int().min(0).max(4294967295).default(42),
-        mode: z.enum(["classic", "maze", "sprint"]).default("classic"),
+        mode: z
+          .enum(["classic", "maze", "sprint", "sprint-plus"])
+          .default("classic"),
         elapsed: z.number().min(0).max(604800000).default(0),
+        mazeIndex: z
+          .number()
+          .int()
+          .min(0)
+          .max(MAZE_NAMES.length - 1)
+          .default(0),
+        bonus: point
+          .extend({ expires: z.number().min(0).max(65000) })
+          .nullable()
+          .default(null),
+        bonusAt: z.number().min(10000).max(70000).default(10000),
+        bonuses: z.number().int().min(0).max(6).default(0),
         walls: z.array(point).max(400).default([]),
         cellSize: z.number().min(20).max(40).default(28),
         score: z.number().int().nonnegative().max(2147483647),
@@ -675,10 +756,23 @@ export class SnakeGame implements Game2DInstance {
       )
     )
       throw new Error("Invalid Snake save");
+    if (
+      data.bonus &&
+      (data.bonus.x >= data.cols ||
+        data.bonus.y >= data.rows ||
+        occupied.has(`${data.bonus.x},${data.bonus.y}`) ||
+        data.walls.some((p) => p.x === data.bonus!.x && p.y === data.bonus!.y))
+    )
+      throw new Error("Invalid bonus packet");
     this.random.state = data.randomState;
     this.mode = data.mode;
     this.elapsed = data.elapsed;
+
     this.walls = data.walls;
+    this.mazeIndex = data.mazeIndex;
+    this.bonus = data.bonus;
+    this.bonusAt = data.bonusAt;
+    this.bonuses = data.bonuses;
     this.cellSize = data.cellSize;
     this.cols = data.cols;
     this.rows = data.rows;
@@ -704,7 +798,7 @@ export class SnakeGame implements Game2DInstance {
         this.snake.length === this.cols * this.rows
           ? "Grid completed"
           : this.cause,
-      detail: `${this.score} points · Length ${this.snake.length}`,
+      detail: `${this.score} points · Length ${this.snake.length}${this.mode === "sprint-plus" ? ` · ${this.bonuses} bonus packets` : ""}`,
     };
   }
   onPause(): void {}

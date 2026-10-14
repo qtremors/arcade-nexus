@@ -4,12 +4,13 @@ import httpx2 as httpx
 import pytest
 
 from app.main import create_app
+from app.seed import INITIAL_GAMES
 
 
 def test_startup_seeds_without_creating_a_profile(client):
     assert client.get("/").json()["status"] == "running"
     assert client.get("/health").json() == {"status": "healthy"}
-    assert client.get("/api/games").json()["total"] == 5
+    assert client.get("/api/games").json()["total"] == len(INITIAL_GAMES)
     assert client.get("/api/profiles").json() == {"profiles": [], "active_id": None}
     assert client.get("/api/stats").status_code == 409
     assert client.get("/api/profiles").json()["profiles"] == []

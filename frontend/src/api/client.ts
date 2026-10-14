@@ -118,6 +118,10 @@ export interface GameSession {
 export interface CompletionReceipt {
   high_score: number;
   is_new_high_score: boolean;
+  previous_high_score?: number;
+  best_time_ms?: number | null;
+  previous_best_time_ms?: number | null;
+  is_new_best_time?: boolean;
   awards: { slug: string; title: string; description: string | null }[];
   medal?: string | null;
 }
@@ -129,6 +133,7 @@ export interface ModeRecord {
   difficulty: string;
   rules_version: number;
   high_score: number;
+  best_time_ms?: number | null;
 }
 export const progressApi = {
   complete: async (

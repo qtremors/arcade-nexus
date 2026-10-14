@@ -161,3 +161,89 @@ def test_endless_flight_accepts_upgraded_speed_and_exploration_metrics(player):
     achievements = player.get("/api/achievements/stellar-flight").json()["achievements"]
     assert next(a for a in achievements if a["slug"] == "clean-course")["unlocked"]
     assert next(a for a in achievements if a["slug"] == "course-complete")["unlocked"]
+
+
+def test_sprint_times_rank_completed_runs_and_survive_backup(player, profile):
+    def finish(ms, score=100, completed=True, **changes):
+        data = {
+            **payload(),
+            "mode": "sprint",
+            "rules_version": 2,
+            "score": score,
+            "metrics": {"completed": completed, "elapsed_ms": ms},
+            **changes,
+        }
+        response = player.post("/api/progress/tetris/complete", json=data)
+        assert response.status_code == 200, response.text
+        assert player.post("/api/progress/tetris/complete", json=data).json() == response.json()
+        return response.json()
+
+    assert finish(90000)["is_new_best_time"] is True
+    slower = finish(120000, score=9000)
+    assert slower["best_time_ms"] == 90000
+    assert slower["is_new_best_time"] is False
+    assert finish(1000, completed=False)["best_time_ms"] == 90000
+    faster = finish(85321, score=200)
+    assert faster["best_time_ms"] == 85321
+    assert faster["previous_best_time_ms"] == 90000
+    assert faster["is_new_best_time"] is True
+    assert finish(100, rules_version=1)["best_time_ms"] is None
+    assert finish(1000, difficulty="hard")["best_time_ms"] == 1000
+    another = player.post("/api/profiles", json={"username": "Sprinter"}).json()
+    assert (
+        player.get("/api/progress/records", headers={"X-Profile-ID": str(another["id"])}).json()
+        == []
+    )
+    rows = player.get("/api/progress/records").json()
+    normal = next(r for r in rows if r["rules_version"] == 2 and r["difficulty"] == "normal")
+    assert normal["best_time_ms"] == 85321
+    assert normal["high_score"] == 9000
+    backup = player.get("/api/data/export").json()
+    response = player.post("/api/data/import", json=backup)
+    assert response.status_code == 200, response.text
+    headers = {"X-Profile-ID": str(response.json()["profile_map"][str(profile["id"])])}
+    restored = player.get("/api/progress/records", headers=headers).json()
+    assert (
+        next(r for r in restored if r["rules_version"] == 2 and r["difficulty"] == "normal")[
+            "best_time_ms"
+        ]
+        == 85321
+    )
+
+
+def test_sprint_default_difficulty_shares_the_normal_record(player):
+    for difficulty, ms in [(None, 90000), ("normal", 120000)]:
+        data = {
+            **payload(),
+            "mode": "sprint",
+            "rules_version": 2,
+            "difficulty": difficulty,
+            "metrics": {"completed": True, "elapsed_ms": ms},
+        }
+        response = player.post("/api/progress/tetris/complete", json=data)
+        assert response.status_code == 200, response.text
+        assert response.json()["best_time_ms"] == 90000
+    assert player.get("/api/progress/records").json()[0]["best_time_ms"] == 90000
+
+
+def test_receipts_from_before_elapsed_metric_remain_replayable(player, settings):
+    import json
+    import sqlite3
+
+    data = payload()
+    original = player.post("/api/progress/snake/complete", json=data).json()
+    with sqlite3.connect(settings.DATABASE_URL.removeprefix("sqlite+aiosqlite:///")) as db:
+        saved = json.loads(
+            db.execute(
+                "SELECT completion FROM game_sessions WHERE session_id=?", (data["session_id"],)
+            ).fetchone()[0]
+        )
+        saved["payload"]["metrics"].pop("elapsed_ms")
+        db.execute(
+            "UPDATE game_sessions SET completion=? WHERE session_id=?",
+            (json.dumps(saved), data["session_id"]),
+        )
+    replay = player.post("/api/progress/snake/complete", json=data)
+    assert replay.status_code == 200, replay.text
+    assert replay.json() == original
+    assert player.get("/api/stats/snake").json()["sessions_count"] == 1

@@ -1,4 +1,5 @@
 import "./flight.css";
+import { fullHdScale, graphicsCapabilities } from "../../sdk/GraphicsQuality";
 import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import type { Game3DInstance, GameConfig, InputState } from "../../sdk/GameSDK";
@@ -22,6 +23,11 @@ export class StellarFlightGame implements Game3DInstance {
   private sectors = new Map<string, THREE.Group>();
   private gates: THREE.Mesh[] = [];
   private raceRocks: THREE.InstancedMesh | null = null;
+  private lastSectors: Sector[] | null = null;
+  private worldRocks: THREE.InstancedMesh | null = null;
+  private worldOrigin = new THREE.Vector3();
+  private lastRaceObstacles: SpaceJourney["raceObstacles"] | null = null;
+  private raceOrigin = new THREE.Vector3();
   private rockGeometry = new THREE.IcosahedronGeometry(1, 1);
   private rockMaterial = new THREE.MeshLambertMaterial({
     color: 0x7d8b9d,
@@ -34,14 +40,6 @@ export class StellarFlightGame implements Game3DInstance {
   private survey = new THREE.Group();
   private resize: ResizeObserver | null = null;
   private renderDelta = 0;
-  private lastRender = 0;
-  private frameAverage = 16.7;
-  private qualityFrames = 0;
-  private pixelRatio = 1.4;
-  private pixelBudget = 1600000;
-  private pixelCeiling = 1.4;
-  private viewportWidth = 0;
-  private viewportHeight = 0;
   private initialized = false;
   private disposed = false;
   private feedback = new GameFeedback();
@@ -77,16 +75,18 @@ export class StellarFlightGame implements Game3DInstance {
       0.1,
       18000,
     );
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-    const graphics = this.renderer.getContext();
-    const details = graphics.getExtension("WEBGL_debug_renderer_info");
-    if (
-      details &&
-      /swiftshader|llvmpipe|software/i.test(
-        String(graphics.getParameter(details.UNMASKED_RENDERER_WEBGL)),
-      )
-    )
-      this.pixelBudget = 480000;
+    this.renderer = new THREE.WebGLRenderer({
+      canvas,
+      context:
+        canvas.getContext("webgl2", {
+          alpha: false,
+          antialias: true,
+          desynchronized: true,
+          powerPreference: "high-performance",
+        }) ?? undefined,
+      antialias: true,
+      powerPreference: "high-performance",
+    });
     this.resize = new ResizeObserver(() => this.resizeRenderer());
     this.resize.observe(canvas);
     this.resizeRenderer();
@@ -162,6 +162,34 @@ export class StellarFlightGame implements Game3DInstance {
       }),
     );
     this.survey.add(pillar);
+    // Silhouettes distinguish survey destinations even without their HUD labels.
+    for (const name of ["Relay spire", "Ring archive", "Crystal garden"]) {
+      const landmark = new THREE.Group();
+      landmark.name = name;
+      const material = new THREE.MeshLambertMaterial({
+        color: name === "Crystal garden" ? 0x7de8c4 : 0xb99bff,
+        emissive: 0x211a36,
+      });
+      for (let i = 0; i < (name === "Relay spire" ? 1 : 5); i++) {
+        const geometry =
+          name === "Relay spire"
+            ? new THREE.CylinderGeometry(3, 12, 100, 6)
+            : name === "Ring archive"
+              ? new THREE.TorusGeometry(40 + i * 8, 2, 6, 32)
+              : new THREE.OctahedronGeometry(12 + i * 2);
+        const mesh = new THREE.Mesh(geometry, material);
+        if (name === "Ring archive") mesh.rotation.set(i * 0.45, i * 0.3, 0);
+        else if (name === "Crystal garden")
+          mesh.position.set(
+            Math.cos(i * 1.256) * 30,
+            (i % 2) * 16,
+            Math.sin(i * 1.256) * 30,
+          );
+        else mesh.position.y = 50;
+        landmark.add(mesh);
+      }
+      this.survey.add(landmark);
+    }
     this.scene.add(this.survey);
     this.syncWorld();
     this.syncShip();
@@ -322,30 +350,11 @@ export class StellarFlightGame implements Game3DInstance {
   }
   private createSectorGroup(sector: Sector): THREE.Group {
     const group = new THREE.Group();
+    group.userData.seed = this.journey.seed;
     group.userData.center = new THREE.Vector3(
       ...sector.coordinates,
     ).multiplyScalar(SECTOR_SIZE);
     const center = group.userData.center as THREE.Vector3;
-    const asteroids = new THREE.InstancedMesh(
-      this.rockGeometry,
-      this.rockMaterial,
-      sector.asteroids.length,
-    );
-    sector.asteroids.forEach((body, index) => {
-      this.dummy.position.set(...body.position).sub(center);
-      this.dummy.scale.setScalar(body.radius);
-      asteroids.setColorAt(
-        index,
-        new THREE.Color(
-          index % 3 === 0 ? 0x889dab : index % 3 === 1 ? 0xa39488 : 0x77879b,
-        ),
-      );
-      this.dummy.rotation.set(index * 0.7, index * 1.3, index * 0.5);
-      this.dummy.updateMatrix();
-      asteroids.setMatrixAt(index, this.dummy.matrix);
-    });
-    asteroids.computeBoundingSphere();
-    group.add(asteroids);
     if (sector.planet) {
       const radius = sector.planet.radius;
       const geometry = new THREE.SphereGeometry(radius, 24, 16);
@@ -413,44 +422,97 @@ export class StellarFlightGame implements Game3DInstance {
       .fromArray(this.journey.target)
       .sub(this.journey.position);
     this.survey.visible = this.journey.navigation === "explore";
-    const needed = new Set(this.journey.sectors.map((sector) => sector.key));
-    for (const [key, group] of this.sectors) {
-      if (needed.has(key)) continue;
-      this.scene.remove(group);
-      group.traverse((child) => {
-        if (child instanceof THREE.InstancedMesh) child.dispose();
-        else if (child instanceof THREE.Mesh) {
-          child.geometry.dispose();
-          for (const material of Array.isArray(child.material)
-            ? child.material
-            : [child.material])
-            material.dispose();
+    const landmark = this.journey.landmark;
+    for (const child of this.survey.children)
+      if (child.name) child.visible = child.name === landmark;
+    if (this.lastSectors !== this.journey.sectors) {
+      this.lastSectors = this.journey.sectors;
+      const needed = new Set(this.journey.sectors.map((sector) => sector.key));
+      // Rebuild the asteroid batch only when streaming into a new neighborhood.
+      const count = this.journey.sectors.reduce(
+        (sum, sector) => sum + sector.asteroids.length,
+        0,
+      );
+      if (!this.worldRocks || this.worldRocks.instanceMatrix.count < count) {
+        if (this.worldRocks) {
+          this.scene.remove(this.worldRocks);
+          this.worldRocks.dispose();
         }
-      });
-      this.sectors.delete(key);
-    }
-    for (const sector of this.journey.sectors) {
-      if (!this.sectors.has(sector.key)) {
-        const group = this.createSectorGroup(sector);
-        this.sectors.set(sector.key, group);
-        this.scene.add(group);
+        this.worldRocks = new THREE.InstancedMesh(
+          this.rockGeometry,
+          this.rockMaterial,
+          count,
+        );
+        this.scene.add(this.worldRocks);
       }
-      const group = this.sectors.get(sector.key)!;
+      this.worldRocks.count = count;
+      this.worldOrigin.copy(this.journey.position);
+      const colors = [
+        new THREE.Color(0x889dab),
+        new THREE.Color(0xa39488),
+        new THREE.Color(0x77879b),
+      ];
+      let instance = 0;
+      for (const sector of this.journey.sectors) {
+        sector.asteroids.forEach((body, index) => {
+          this.dummy.position.set(...body.position).sub(this.worldOrigin);
+          this.dummy.scale.setScalar(body.radius);
+          this.dummy.rotation.set(index * 0.7, index * 1.3, index * 0.5);
+          this.dummy.updateMatrix();
+          this.worldRocks!.setMatrixAt(instance, this.dummy.matrix);
+          this.worldRocks!.setColorAt(instance++, colors[index % 3]);
+        });
+      }
+      this.worldRocks.instanceMatrix.needsUpdate = true;
+      if (this.worldRocks.instanceColor)
+        this.worldRocks.instanceColor.needsUpdate = true;
+      this.worldRocks.computeBoundingSphere();
+      for (const [key, group] of this.sectors) {
+        if (needed.has(key) && group.userData.seed === this.journey.seed)
+          continue;
+        this.scene.remove(group);
+        group.traverse((child) => {
+          if (child instanceof THREE.InstancedMesh) child.dispose();
+          else if (child instanceof THREE.Mesh) {
+            child.geometry.dispose();
+            for (const material of Array.isArray(child.material)
+              ? child.material
+              : [child.material])
+              material.dispose();
+          }
+        });
+        this.sectors.delete(key);
+      }
+      for (const sector of this.journey.sectors) {
+        if (!this.sectors.has(sector.key)) {
+          const group = this.createSectorGroup(sector);
+          this.sectors.set(sector.key, group);
+          this.scene.add(group);
+        }
+      }
+    }
+    this.worldRocks?.position.copy(this.worldOrigin).sub(this.journey.position);
+    for (const group of this.sectors.values()) {
       // Ship stays at the render origin; distant journeys retain GPU precision.
       group.position
         .copy(group.userData.center as THREE.Vector3)
         .sub(this.journey.position);
     }
     if (this.raceRocks) {
-      this.journey.raceObstacles.forEach((body, index) => {
-        this.dummy.position.set(...body.position).sub(this.journey.position);
-        this.dummy.scale.setScalar(body.radius);
-        this.dummy.rotation.set(index * 1.3, index * 0.6, 0);
-        this.dummy.updateMatrix();
-        this.raceRocks!.setMatrixAt(index, this.dummy.matrix);
-      });
-      this.raceRocks.instanceMatrix.needsUpdate = true;
-      this.raceRocks.computeBoundingSphere();
+      if (this.lastRaceObstacles !== this.journey.raceObstacles) {
+        this.lastRaceObstacles = this.journey.raceObstacles;
+        this.raceOrigin.copy(this.journey.position);
+        this.journey.raceObstacles.forEach((body, index) => {
+          this.dummy.position.set(...body.position).sub(this.raceOrigin);
+          this.dummy.scale.setScalar(body.radius);
+          this.dummy.rotation.set(index * 1.3, index * 0.6, 0);
+          this.dummy.updateMatrix();
+          this.raceRocks!.setMatrixAt(index, this.dummy.matrix);
+        });
+        this.raceRocks.instanceMatrix.needsUpdate = true;
+        this.raceRocks.computeBoundingSphere();
+      }
+      this.raceRocks.position.copy(this.raceOrigin).sub(this.journey.position);
     }
     this.gates.forEach((mesh, i) => {
       mesh.visible =
@@ -511,18 +573,7 @@ export class StellarFlightGame implements Game3DInstance {
     if (!this.canvas || !this.renderer) return;
     const width = Math.max(1, this.canvas.clientWidth),
       height = Math.max(1, this.canvas.clientHeight);
-    const budget = Math.min(
-      window.devicePixelRatio || 1,
-      1.4,
-      Math.sqrt(this.pixelBudget / (width * height)),
-    );
-    this.pixelCeiling = Math.max(0.45, budget);
-    if (width !== this.viewportWidth || height !== this.viewportHeight) {
-      this.pixelRatio = this.pixelCeiling;
-      this.viewportWidth = width;
-      this.viewportHeight = height;
-    } else this.pixelRatio = Math.max(0.45, Math.min(this.pixelRatio, budget));
-    this.renderer.setPixelRatio(this.pixelRatio);
+    this.renderer.setPixelRatio(fullHdScale(width, height));
     this.renderer.setSize(width, height, false);
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
@@ -572,30 +623,6 @@ export class StellarFlightGame implements Game3DInstance {
   }
   render(): void {
     if (!this.initialized) return;
-    const now = performance.now();
-    if (this.lastRender > 0 && this.renderDelta > 0) {
-      this.frameAverage +=
-        (Math.min(200, now - this.lastRender) - this.frameAverage) * 0.04;
-      this.qualityFrames++;
-      if (
-        this.qualityFrames >= 45 &&
-        this.frameAverage > 34 &&
-        this.pixelRatio > 0.46
-      ) {
-        this.pixelRatio = Math.max(0.45, this.pixelRatio * 0.85);
-        this.resizeRenderer();
-        this.qualityFrames = 0;
-      } else if (
-        this.qualityFrames >= 150 &&
-        this.frameAverage < 22 &&
-        this.pixelRatio < this.pixelCeiling
-      ) {
-        this.pixelRatio = Math.min(this.pixelCeiling, this.pixelRatio * 1.1);
-        this.resizeRenderer();
-        this.qualityFrames = 0;
-      }
-    }
-    this.lastRender = now;
     this.syncVisuals(Math.min(0.25, this.renderDelta));
     this.renderDelta = 0;
     this.renderer.render(this.scene, this.camera);
@@ -605,7 +632,14 @@ export class StellarFlightGame implements Game3DInstance {
   }
   onResume(): void {
     this.audio.resume();
-    this.lastRender = 0;
+  }
+  getRenderInfo() {
+    return {
+      renderer: graphicsCapabilities().renderer,
+      quality: "1080p · full scene detail",
+      width: this.canvas?.width,
+      height: this.canvas?.height,
+    };
   }
   getScore(): number {
     return this.journey.score;

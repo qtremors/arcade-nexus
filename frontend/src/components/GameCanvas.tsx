@@ -1,3 +1,4 @@
+import { formatTime, timeRanked } from "../games/records";
 import type { CSSProperties } from "react";
 import { Keyboard, Gamepad2 } from "lucide-react";
 import { FlightBriefing } from "./FlightBriefing";
@@ -27,6 +28,7 @@ export function GameCanvas(props: {
     receipt,
     score,
     highScore,
+    bestTime,
     newHigh,
     error,
     busy,
@@ -193,7 +195,12 @@ export function GameCanvas(props: {
                     </dl>
                   </div>
                   <p className="launch-record">
-                    Personal best <strong>{highScore.toLocaleString()}</strong>
+                    Personal best{" "}
+                    <strong>
+                      {timeRanked(slug, mode)
+                        ? formatTime(bestTime)
+                        : highScore.toLocaleString()}
+                    </strong>
                     <span>Save your run from the pause menu</span>
                   </p>
                   <fieldset className="mode-choices">
@@ -294,10 +301,49 @@ export function GameCanvas(props: {
               {state === "gameover" && (
                 <>
                   <p className="game-final-score">{score}</p>
-                  <p>Best: {highScore}</p>
-                  {newHigh && engine.current?.getResult() && (
-                    <p className="game-best-badge">NEW PERSONAL BEST</p>
-                  )}
+                  <p>
+                    Best:{" "}
+                    {timeRanked(slug, mode) ? formatTime(bestTime) : highScore}
+                  </p>
+                  {receipt &&
+                    !timeRanked(slug, mode) &&
+                    (receipt.previous_high_score ?? 0) > 0 && (
+                      <p>
+                        {score === receipt.previous_high_score!
+                          ? "Matched"
+                          : score > receipt.previous_high_score!
+                            ? `+${score - receipt.previous_high_score!} above`
+                            : `${receipt.previous_high_score! - score} below`}{" "}
+                        your previous best
+                      </p>
+                    )}
+                  {receipt?.previous_best_time_ms &&
+                    timeRanked(slug, mode) &&
+                    engine.current?.getMetrics().completed && (
+                      <p>
+                        {(
+                          Math.abs(
+                            engine.current.getMetrics().elapsed_ms! -
+                              receipt.previous_best_time_ms,
+                          ) / 1000
+                        ).toFixed(3)}
+                        s{" "}
+                        {engine.current.getMetrics().elapsed_ms! <
+                        receipt.previous_best_time_ms
+                          ? "faster than"
+                          : engine.current.getMetrics().elapsed_ms! >
+                              receipt.previous_best_time_ms
+                            ? "slower than"
+                            : "from"}{" "}
+                        your previous best
+                      </p>
+                    )}
+                  {(timeRanked(slug, mode)
+                    ? receipt?.is_new_best_time
+                    : newHigh) &&
+                    engine.current?.getResult() && (
+                      <p className="game-best-badge">NEW PERSONAL BEST</p>
+                    )}
                   {engine.current?.getResult() && (
                     <p>{engine.current.getResult()?.detail}</p>
                   )}

@@ -6,11 +6,60 @@ export interface GameExperience {
   controls: { action: string; keyboard: string; controller: string }[];
 }
 const experiences: Record<string, GameExperience> = {
+  tetris: {
+    accent: "#bda4ff",
+    mood: "One piece ahead",
+    goal: "Clear full rows. Build your marathon score or finish a 40-line sprint.",
+    tip: "The outline shows your landing. Hold a piece once per drop; clearing four lines earns the biggest bonus.",
+    controls: [
+      {
+        action: "Move / soft drop",
+        keyboard: "← → / ↓",
+        controller: "D-pad / left stick",
+      },
+      { action: "Rotate", keyboard: "↑ / W", controller: "D-pad up" },
+      { action: "Hard drop", keyboard: "Space", controller: "A" },
+      { action: "Hold", keyboard: "C / V", controller: "X" },
+    ],
+  },
+  asteroids: {
+    accent: "#ffbe83",
+    mood: "Stay in motion",
+    goal: "Break every asteroid to reach the next wave. You have three lives.",
+    tip: "Your ship keeps drifting when you release thrust. Screen edges wrap; small fragments move faster.",
+    controls: [
+      {
+        action: "Turn",
+        keyboard: "← → / A D",
+        controller: "D-pad / left stick",
+      },
+      {
+        action: "Thrust / brake",
+        keyboard: "↑ ↓ / W S",
+        controller: "D-pad / left stick",
+      },
+      { action: "Fire", keyboard: "Space (hold)", controller: "A (hold)" },
+    ],
+  },
+  "prism-rush": {
+    accent: "#73e6ed",
+    mood: "Read the road",
+    goal: "Dodge red barriers and collect gold crystals. Three impacts end the run.",
+    tip: "Every gate has a clear lane. Release and press again to change another lane; brake to give yourself time.",
+    controls: [
+      {
+        action: "Change lane",
+        keyboard: "← → / A D",
+        controller: "D-pad / left stick",
+      },
+      { action: "Brake", keyboard: "↓ / S", controller: "D-pad down" },
+    ],
+  },
   snake: {
     accent: "#7de8c4",
     mood: "Find your rhythm",
     goal: "Grow your snake. Collect packets and keep an escape route open.",
-    tip: "Leave yourself an escape route. Queue your next turn before reaching a corner.",
+    tip: "Leave yourself an escape route. Queue your next turn before a corner. Maze has four layouts; Bonus Sprint adds optional gold packets that expire.",
     controls: [
       {
         action: "Turn",
@@ -22,7 +71,7 @@ const experiences: Record<string, GameExperience> = {
   "raptor-run": {
     accent: "#ffc68a",
     mood: "One more run",
-    goal: "Cross the desert and beat your longest distance.",
+    goal: "Read obstacle sequences across four biomes and beat your longest distance.",
     tip: "Jump over rocks and cacti; duck under low birds. Down also brings you back to the ground faster.",
     controls: [
       { action: "Jump", keyboard: "Space / ↑", controller: "A / D-pad up" },
@@ -36,8 +85,8 @@ const experiences: Record<string, GameExperience> = {
   breakout: {
     accent: "#9eb2ff",
     mood: "Make every hit count",
-    goal: "Clear three sectors with three lives. Aim with the paddle edges.",
-    tip: "The paddle edges change the ball’s angle. Keep the ball above the paddle and find a path through the bricks.",
+    goal: "Clear the classic three-sector campaign or six arcade sectors with timed power-ups.",
+    tip: "Aim with the paddle edges. In Arcade, catch W for a wider paddle and M for multiball; watch their countdowns.",
     controls: [
       {
         action: "Move paddle",
@@ -51,7 +100,7 @@ const experiences: Record<string, GameExperience> = {
     accent: "#d5b5ff",
     mood: "A little room to think",
     goal: "Merge matching tiles to reach 2048. No timer, just your next move.",
-    tip: "Keep your largest tile in a corner. Undo is available for your last move.",
+    tip: "Keep your largest tile in a corner. Classic lets you undo the last move. Daily puzzles have a move limit and no new tiles; open the board reader for text controls.",
     controls: [
       {
         action: "Slide tiles",
@@ -78,6 +127,11 @@ const experiences: Record<string, GameExperience> = {
       { action: "Plot new race ahead", keyboard: "M", controller: "Y" },
       { action: "Switch unlocked ship", keyboard: "V", controller: "X" },
       { action: "Race / survey exploration", keyboard: "N", controller: "B" },
+      {
+        action: "Change contract (resets progress)",
+        keyboard: "H",
+        controller: "Left stick click",
+      },
       { action: "Camera view", keyboard: "C", controller: "Right stick click" },
     ],
   },

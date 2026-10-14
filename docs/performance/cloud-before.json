@@ -1,0 +1,181 @@
+{
+  "date": "2026-10-13T14:37:48.568Z",
+  "browser": "151.0.7922.173",
+  "cpu": "AMD EPYC 7763 64-Core Processor",
+  "logicalCpus": 3,
+  "viewport": [
+    1280,
+    800
+  ],
+  "canvasCss": [
+    960,
+    640
+  ],
+  "dpr": 1,
+  "warmupSeconds": 3,
+  "sampleSeconds": 15,
+  "build": "Vite development server; engine + game, no React shell",
+  "notes": "Headless Chromium / software WebGL; scripted normal-mode play; auto-reset on game over. Not a native GPU benchmark or worst-case stress test.",
+  "results": [
+    {
+      "slug": "snake",
+      "mode": "classic",
+      "frames": 361,
+      "wallMs": 15004,
+      "averageFps": 24.1,
+      "medianFrameMs": 33.4,
+      "p95FrameMs": 66.7,
+      "slowFramesOver33ms": 171,
+      "resets": 0,
+      "renderer": null,
+      "buffer": [
+        960,
+        640
+      ],
+      "score": 0,
+      "error": null,
+      "pageErrors": []
+    },
+    {
+      "slug": "raptor-run",
+      "mode": "classic",
+      "frames": 197,
+      "wallMs": 15035,
+      "averageFps": 13.2,
+      "medianFrameMs": 83.3,
+      "p95FrameMs": 116.7,
+      "slowFramesOver33ms": 181,
+      "resets": 0,
+      "renderer": null,
+      "buffer": [
+        960,
+        640
+      ],
+      "score": 1042,
+      "error": null,
+      "pageErrors": []
+    },
+    {
+      "slug": "breakout",
+      "mode": "classic",
+      "frames": 316,
+      "wallMs": 15001,
+      "averageFps": 21,
+      "medianFrameMs": 49.9,
+      "p95FrameMs": 66.7,
+      "slowFramesOver33ms": 170,
+      "resets": 0,
+      "renderer": null,
+      "buffer": [
+        960,
+        640
+      ],
+      "score": 180,
+      "error": null,
+      "pageErrors": []
+    },
+    {
+      "slug": "merge-2048",
+      "mode": "classic",
+      "frames": 200,
+      "wallMs": 15001,
+      "averageFps": 13.3,
+      "medianFrameMs": 83.3,
+      "p95FrameMs": 116.7,
+      "slowFramesOver33ms": 191,
+      "resets": 0,
+      "renderer": null,
+      "buffer": [
+        960,
+        640
+      ],
+      "score": 620,
+      "error": null,
+      "pageErrors": []
+    },
+    {
+      "slug": "tetris",
+      "mode": "marathon",
+      "frames": 492,
+      "wallMs": 15001,
+      "averageFps": 32.9,
+      "medianFrameMs": 16.7,
+      "p95FrameMs": 66.7,
+      "slowFramesOver33ms": 158,
+      "resets": 0,
+      "renderer": null,
+      "buffer": [
+        960,
+        640
+      ],
+      "score": 438,
+      "error": null,
+      "pageErrors": []
+    },
+    {
+      "slug": "asteroids",
+      "mode": "classic",
+      "frames": 443,
+      "wallMs": 15003,
+      "averageFps": 29.5,
+      "medianFrameMs": 33.3,
+      "p95FrameMs": 66.7,
+      "slowFramesOver33ms": 154,
+      "resets": 0,
+      "renderer": null,
+      "buffer": [
+        960,
+        640
+      ],
+      "score": 1680,
+      "error": null,
+      "pageErrors": []
+    },
+    {
+      "slug": "prism-rush",
+      "mode": "classic",
+      "frames": 376,
+      "wallMs": 15004,
+      "averageFps": 25.1,
+      "medianFrameMs": 33.4,
+      "p95FrameMs": 66.7,
+      "slowFramesOver33ms": 169,
+      "resets": 0,
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "buffer": [
+        960,
+        640
+      ],
+      "score": 1213,
+      "error": null,
+      "pageErrors": []
+    },
+    {
+      "slug": "stellar-flight",
+      "mode": "endless",
+      "frames": 275,
+      "wallMs": 15004,
+      "averageFps": 18.3,
+      "medianFrameMs": 50.1,
+      "p95FrameMs": 83.4,
+      "slowFramesOver33ms": 195,
+      "resets": 0,
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "buffer": [
+        613,
+        408
+      ],
+      "score": 10961,
+      "error": null,
+      "pageErrors": []
+    }
+  ],
+  "baseline": {
+    "description": "Single solid canvas fill; 1 second warmup, 5 second sample",
+    "frames": 260,
+    "averageFps": 51.5,
+    "p95FrameMs": 33.3
+  },
+  "cpuQuota": "2 CPU equivalents (cpu.max = 200000 100000)",
+  "memoryLimitGiB": 8
+}

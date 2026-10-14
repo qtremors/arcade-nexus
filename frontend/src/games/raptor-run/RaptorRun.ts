@@ -1,3 +1,4 @@
+import { PHRASES, BIOMES, phraseGap } from "./phrases";
 import { Random } from "../../sdk/Random";
 /**
  * Raptor Run - Endless Runner Game
@@ -14,6 +15,7 @@ interface Obstacle {
   height: number;
   type: "cactus" | "rock" | "bird";
   y: number;
+  closest?: number;
 }
 
 interface Particle {
@@ -56,6 +58,8 @@ export class RaptorRunGame implements Game2DInstance {
   private score = 0;
   private random = new Random();
   private pattern = 0;
+  private phraseIndex = 0;
+  private phraseStep = 0;
   private nearMisses = 0;
   private milestone = 0;
   private jumps = 0;
@@ -197,15 +201,14 @@ export class RaptorRunGame implements Game2DInstance {
     if (this.spawnTimer >= this.spawnInterval) {
       this.spawnObstacle();
       this.spawnTimer = 0;
-      this.spawnInterval = Math.max(
-        920,
-        Math.max(800, 1500 - this.score * 2) *
-          (this.difficulty === "easy"
-            ? 1.2
-            : this.difficulty === "hard"
-              ? 0.8
-              : 1),
-      );
+      this.spawnInterval =
+        phraseGap(
+          this.JUMP_FORCE,
+          this.GRAVITY,
+          this.gameSpeed,
+          this.difficulty,
+          this.phraseStep === 0,
+        ) * 1000;
     }
 
     // Update obstacles
@@ -216,14 +219,26 @@ export class RaptorRunGame implements Game2DInstance {
       if (
         before >= this.raptorX &&
         obs.x + obs.width < this.raptorX &&
-        (this.isJumping || this.isDucking)
+        (obs.closest ?? 1000) <= 12
       ) {
         this.nearMisses++;
-        this.feedback.burst(150, this.groundY - 100, "#ffd195", "CLEAN DODGE");
+        this.feedback.burst(150, this.groundY - 100, "#ffd195", "NEAR MISS");
       }
       if (obs.x < -100) {
         this.obstacles.splice(i, 1);
         continue;
+      }
+      const rTop = this.isDucking ? this.raptorY + 30 : this.raptorY + 5;
+      const rBottom = this.raptorY + 55;
+      if (
+        obs.x + obs.width - 5 > this.raptorX + 10 &&
+        obs.x + 5 < this.raptorX + 40
+      ) {
+        const gap = Math.max(
+          obs.y + 5 - rBottom,
+          rTop - (obs.y + obs.height - 5),
+        );
+        if (gap >= 0) obs.closest = Math.min(obs.closest ?? 1000, gap);
       }
       if (this.checkCollision(obs)) {
         this.gameOver = true;
@@ -269,36 +284,23 @@ export class RaptorRunGame implements Game2DInstance {
   }
 
   private spawnObstacle(): void {
-    const patterns: Obstacle["type"][][] =
-      this.score < 200
-        ? [["rock", "cactus", "rock", "cactus"]]
-        : [
-            ["rock", "cactus", "bird", "rock"],
-            ["bird", "rock", "cactus", "bird"],
-          ];
-    const sequence = patterns[Math.floor(this.random.next() * patterns.length)];
-    const type = sequence[this.pattern++ % sequence.length];
-    let width = 30,
-      height = 50,
-      y = this.groundY;
+    if (this.phraseStep === 0)
+      this.phraseIndex = Math.floor(
+        this.random.next() * (this.score < 200 ? 2 : PHRASES.length),
+      );
+    const phrase = PHRASES[this.phraseIndex];
+    const type = phrase.hazards[this.phraseStep];
+    this.phraseStep = (this.phraseStep + 1) % phrase.hazards.length;
+    this.pattern++;
+    const width = type === "bird" ? 40 : type === "cactus" ? 30 : 40;
+    const height =
+      type === "bird"
+        ? 25
+        : type === "cactus"
+          ? Math.min(64, (this.JUMP_FORCE ** 2 / (2 * this.GRAVITY)) * 0.45)
+          : 28;
+    const y = this.groundY - height - (type === "bird" ? 30 : 0);
 
-    if (type === "cactus") {
-      width = 25 + this.random.next() * 15;
-      height = 50 + this.random.next() * 25;
-      y = this.groundY - height;
-    } else if (type === "rock") {
-      width = 35 + this.random.next() * 20;
-      height = 25 + this.random.next() * 15;
-      y = this.groundY - height;
-    } else if (type === "bird") {
-      width = 40;
-      height = 25;
-      const heights = [30, 60, 90];
-      y =
-        this.groundY -
-        heights[Math.floor(this.random.next() * heights.length)] -
-        height;
-    }
     this.obstacles.push({ x: this.width + 50, width, height, type, y });
   }
 
@@ -318,9 +320,10 @@ export class RaptorRunGame implements Game2DInstance {
 
   render(ctx: CanvasRenderingContext2D): void {
     const isNight = this.dayTime > 0.5;
-    const skyTop = isNight ? "#151b36" : "#637993";
-    const skyBottom = isNight ? "#47415e" : "#efc39b";
-    const groundColor = isNight ? "#252735" : "#514b4e";
+    const biome = BIOMES[Math.floor(this.score / 750) % BIOMES.length];
+    const skyTop = isNight ? "#151b36" : biome.top;
+    const skyBottom = isNight ? "#47415e" : biome.bottom;
+    const groundColor = isNight ? "#252735" : biome.ground;
 
     // Sky
     const grad = ctx.createLinearGradient(0, 0, 0, this.height);
@@ -333,7 +336,7 @@ export class RaptorRunGame implements Game2DInstance {
     const celestialY = 155 + Math.sin(this.dayTime * Math.PI * 2) * 40;
     ctx.fillStyle = isNight ? "#e1e5f0" : "#ffe4bb";
     ctx.shadowColor = ctx.fillStyle;
-    ctx.shadowBlur = 30;
+    ctx.shadowBlur = 30 * ctx.getTransform().a;
     ctx.beginPath();
     ctx.arc(this.width - 100, celestialY, 25, 0, Math.PI * 2);
     ctx.fill();
@@ -444,7 +447,7 @@ export class RaptorRunGame implements Game2DInstance {
     ctx.fillStyle = "#cbd5e1";
     ctx.font = "600 15px Rajdhani, system-ui";
     ctx.textAlign = "left";
-    ctx.fillText("RAPTOR RUN / ENDLESS", 50, 49);
+    ctx.fillText(`RAPTOR RUN / ${biome.name}`, 50, 49);
     ctx.fillStyle = "#fff";
     ctx.font = "700 30px Rajdhani, system-ui";
     ctx.fillText(`${this.getScore()} m`, 50, 79);
@@ -472,6 +475,14 @@ export class RaptorRunGame implements Game2DInstance {
       ctx.font = "700 20px Rajdhani, system-ui";
       ctx.fillText("↓ DUCK", nearest.x + nearest.width / 2, nearest.y - 18);
     }
+    ctx.textAlign = "center";
+    ctx.font = "16px Rajdhani, system-ui";
+    ctx.fillStyle = "#e5efff";
+    ctx.fillText(
+      `${PHRASES[this.phraseIndex].name} · ${this.nearMisses} near misses`,
+      this.width / 2,
+      this.height - 24,
+    );
     this.feedback.render(ctx);
 
     // Game over
@@ -667,6 +678,8 @@ export class RaptorRunGame implements Game2DInstance {
       version: 1,
       randomState: this.random.state,
       pattern: this.pattern,
+      phraseIndex: this.phraseIndex,
+      phraseStep: this.phraseStep,
       nearMisses: this.nearMisses,
       milestone: this.milestone,
       gravity: this.GRAVITY,
@@ -693,6 +706,13 @@ export class RaptorRunGame implements Game2DInstance {
       .object({
         version: z.literal(1),
         randomState: z.number().int().min(0).max(4294967295).default(42),
+        phraseIndex: z
+          .number()
+          .int()
+          .min(0)
+          .max(PHRASES.length - 1)
+          .default(0),
+        phraseStep: z.number().int().min(0).max(3).default(0),
         pattern: z.number().int().min(0).max(1000000).default(0),
         nearMisses: z.number().int().min(0).max(1000000).default(0),
         milestone: z.number().int().min(0).max(10000000).default(0),
@@ -709,8 +729,8 @@ export class RaptorRunGame implements Game2DInstance {
         isDucking: z.boolean(),
         gameSpeed: z.number().min(0).max(1200),
         dayTime: z.number().min(0).max(1),
-        spawnTimer: z.number().min(0).max(2000),
-        spawnInterval: z.number().min(600).max(2000),
+        spawnTimer: z.number().min(0).max(4000),
+        spawnInterval: z.number().min(600).max(4000),
         jumpBuffer: z.number().min(0).max(0.12).default(0),
         obstacles: z
           .array(
@@ -720,11 +740,14 @@ export class RaptorRunGame implements Game2DInstance {
               width: z.number().min(1).max(100),
               height: z.number().min(1).max(100),
               type: z.enum(["cactus", "rock", "bird"]),
+              closest: z.number().min(0).max(1000).optional(),
             }),
           )
           .max(20),
       })
       .parse(state);
+    if (data.phraseStep >= PHRASES[data.phraseIndex].hazards.length)
+      throw new Error("Invalid obstacle phrase");
     Object.assign(this, data);
     this.random.state = data.randomState;
     this.GRAVITY = data.gravity;
@@ -738,7 +761,7 @@ export class RaptorRunGame implements Game2DInstance {
   getResult(): { title: string; detail: string } {
     return {
       title: "Run complete",
-      detail: `${this.getScore()} metres · ${this.jumps} jumps · ${this.nearMisses} clean dodges`,
+      detail: `${this.getScore()} metres · ${this.jumps} jumps · ${this.nearMisses} near misses`,
     };
   }
   onPause(): void {

@@ -8,6 +8,7 @@ from sqlalchemy.dialects.sqlite import insert
 
 from app.datetime_utils import utc_now
 from app.dependencies import CurrentUser, DbSession
+from app.game_rules import time_ranked
 from app.models import (
     Achievement,
     AchievementUnlocked,
@@ -38,7 +39,12 @@ async def complete(slug: str, data: CompletionRecord, current_user: CurrentUser,
         if session.user_id != current_user.id or session.game_id != game.id:
             raise HTTPException(409, "Session belongs to another player or game")
         if session.completion:
-            if session.completion["payload"] != payload:
+            if (
+                CompletionRecord.model_validate(session.completion["payload"]).model_dump(
+                    mode="json"
+                )
+                != payload
+            ):
                 raise HTTPException(409, "A completed session cannot be changed")
             return session.completion["result"]
         if session.end_time is not None and not same_completion(session, data):
@@ -73,7 +79,28 @@ async def complete(slug: str, data: CompletionRecord, current_user: CurrentUser,
     )
     await db.execute(insert(GameRecord).values(**key, high_score=0).on_conflict_do_nothing())
     record = await db.scalar(select(GameRecord).filter_by(**key))
+    previous_high = record.high_score
     new_high = data.score > record.high_score
+    best_time = previous_time = None
+    new_time = False
+    if time_ranked(slug, data.mode, data.rules_version):
+        previous_time = await db.scalar(
+            select(func.min(GameSession.metrics["elapsed_ms"].as_integer())).where(
+                GameSession.user_id == current_user.id,
+                GameSession.game_id == game.id,
+                GameSession.mode == data.mode,
+                func.coalesce(GameSession.difficulty, "normal") == (data.difficulty or "normal"),
+                GameSession.rules_version == data.rules_version,
+                GameSession.session_id != str(data.session_id),
+                GameSession.end_time.is_not(None),
+                GameSession.metrics["completed"].as_boolean().is_(True),
+                GameSession.metrics["elapsed_ms"].as_integer() > 0,
+            )
+        )
+        best_time = previous_time
+        if data.metrics.completed and data.metrics.elapsed_ms:
+            new_time = previous_time is None or data.metrics.elapsed_ms < previous_time
+            best_time = min(previous_time or data.metrics.elapsed_ms, data.metrics.elapsed_ms)
     record.high_score = max(record.high_score, data.score)
     await db.execute(
         update(UserLibrary)
@@ -112,6 +139,10 @@ async def complete(slug: str, data: CompletionRecord, current_user: CurrentUser,
     result = {
         "session_id": str(data.session_id),
         "high_score": record.high_score,
+        "previous_high_score": previous_high,
+        "best_time_ms": best_time,
+        "previous_best_time_ms": previous_time,
+        "is_new_best_time": new_time,
         "is_new_high_score": new_high,
         "awards": awards,
         "medal": session.metrics.get("medal"),
@@ -141,6 +172,32 @@ async def records(current_user: CurrentUser, db: DbSession, household: bool = Fa
     if not household:
         query = query.where(GameRecord.user_id == current_user.id)
     rows = (await db.execute(query.order_by(GameRecord.high_score.desc(), GameRecord.id))).all()
+    time_rows = (
+        await db.execute(
+            select(
+                GameSession.user_id,
+                GameSession.game_id,
+                GameSession.mode,
+                func.coalesce(GameSession.difficulty, "normal"),
+                GameSession.rules_version,
+                func.min(GameSession.metrics["elapsed_ms"].as_integer()),
+            )
+            .where(
+                GameSession.end_time.is_not(None),
+                GameSession.metrics["completed"].as_boolean().is_(True),
+                GameSession.metrics["elapsed_ms"].as_integer() > 0,
+                *([] if household else [GameSession.user_id == current_user.id]),
+            )
+            .group_by(
+                GameSession.user_id,
+                GameSession.game_id,
+                GameSession.mode,
+                func.coalesce(GameSession.difficulty, "normal"),
+                GameSession.rules_version,
+            )
+        )
+    ).all()
+    times = {tuple(row[:5]): row[5] for row in time_rows}
     return [
         {
             "game_slug": slug,
@@ -150,6 +207,9 @@ async def records(current_user: CurrentUser, db: DbSession, household: bool = Fa
             "difficulty": r.difficulty,
             "rules_version": r.rules_version,
             "high_score": r.high_score,
+            "best_time_ms": times.get((r.user_id, r.game_id, r.mode, r.difficulty, r.rules_version))
+            if time_ranked(slug, r.mode, r.rules_version)
+            else None,
         }
         for r, slug, name in rows
     ]

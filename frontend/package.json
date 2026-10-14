@@ -10,7 +10,8 @@
     "test": "vitest",
     "preview": "vite preview",
     "test:unit": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "benchmark:games": "node scripts/benchmark-games.mjs"
   },
   "dependencies": {
     "@fontsource/jetbrains-mono": "^5.3.0",

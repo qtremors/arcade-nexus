@@ -5,7 +5,7 @@ export type JourneyCounters = {
   distance: number;
   races: number;
 };
-const contracts = [
+export const contracts = [
   {
     counter: "gates",
     target: 5,
@@ -46,8 +46,9 @@ export function contractFor(
   index: number,
   baseline: JourneyCounters,
   counters: JourneyCounters,
+  choice = index % contracts.length,
 ) {
-  const contract = contracts[index % contracts.length];
+  const contract = contracts[choice];
   const cycle = Math.floor(index / contracts.length);
   const target = contract.target + cycle * 2;
   const progress = Math.max(

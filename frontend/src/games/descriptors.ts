@@ -10,12 +10,26 @@ const schema = z.record(
     rulesVersion: z.number().int().positive(),
     scoreUnit: z.string(),
     difficulty: z.boolean(),
-    modes: z.array(z.object({ id: z.string(), label: z.string() })).min(1),
+    modes: z
+      .array(
+        z.object({
+          id: z.string(),
+          label: z.string(),
+          ranking: z.enum(["points", "time"]).default("points"),
+          rankingSince: z.number().int().positive().default(1),
+        }),
+      )
+      .min(1),
     config: z.record(z.string(), z.unknown()),
   }),
 );
 const definitions = schema.parse(catalog);
 const loaders: Record<string, () => Promise<GameInstance>> = {
+  tetris: async () => new (await import("./tetris/Tetris")).TetrisGame(),
+  asteroids: async () =>
+    new (await import("./asteroids/Asteroids")).AsteroidsGame(),
+  "prism-rush": async () =>
+    new (await import("./prism-rush/PrismRush")).PrismRushGame(),
   snake: async () => new (await import("./snake/Snake")).SnakeGame(),
   "raptor-run": async () =>
     new (await import("./raptor-run/RaptorRun")).RaptorRunGame(),

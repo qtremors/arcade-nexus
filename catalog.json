@@ -1,6 +1,6 @@
 {
   "snake": {
-    "rulesVersion": 2,
+    "rulesVersion": 3,
     "scoreUnit": "points",
     "difficulty": true,
     "modes": [
@@ -15,6 +15,10 @@
       {
         "id": "sprint",
         "label": "60-second sprint"
+      },
+      {
+        "id": "sprint-plus",
+        "label": "Bonus packet sprint"
       }
     ],
     "config": {
@@ -24,7 +28,7 @@
     "title": "Neon Snake"
   },
   "raptor-run": {
-    "rulesVersion": 2,
+    "rulesVersion": 3,
     "scoreUnit": "metres",
     "difficulty": true,
     "modes": [
@@ -56,13 +60,17 @@
       {
         "id": "daily",
         "label": "Daily sectors"
+      },
+      {
+        "id": "arcade",
+        "label": "Arcade \u00b7 six sectors + power-ups"
       }
     ],
     "config": {},
     "title": "Neon Breakout"
   },
   "merge-2048": {
-    "rulesVersion": 2,
+    "rulesVersion": 3,
     "scoreUnit": "points",
     "difficulty": false,
     "modes": [
@@ -73,13 +81,17 @@
       {
         "id": "challenge",
         "label": "Challenge \u00b7 no undo"
+      },
+      {
+        "id": "daily",
+        "label": "Daily puzzle \u00b7 limited moves"
       }
     ],
     "config": {},
     "title": "Merge 2048"
   },
   "stellar-flight": {
-    "rulesVersion": 4,
+    "rulesVersion": 5,
     "scoreUnit": "points",
     "difficulty": false,
     "modes": [
@@ -93,5 +105,50 @@
       "initial_speed": 120
     },
     "title": "Stellar Flight"
+  },
+  "tetris": {
+    "title": "Neon Tetris",
+    "rulesVersion": 2,
+    "scoreUnit": "points",
+    "difficulty": true,
+    "modes": [
+      {
+        "id": "marathon",
+        "label": "Marathon"
+      },
+      {
+        "id": "sprint",
+        "label": "40-line sprint",
+        "ranking": "time",
+        "rankingSince": 2
+      }
+    ],
+    "config": {}
+  },
+  "asteroids": {
+    "title": "Asteroids",
+    "rulesVersion": 1,
+    "scoreUnit": "points",
+    "difficulty": true,
+    "modes": [
+      {
+        "id": "classic",
+        "label": "Wave survival"
+      }
+    ],
+    "config": {}
+  },
+  "prism-rush": {
+    "title": "Prism Rush",
+    "rulesVersion": 2,
+    "scoreUnit": "points",
+    "difficulty": true,
+    "modes": [
+      {
+        "id": "classic",
+        "label": "Endless highway"
+      }
+    ],
+    "config": {}
   }
 }

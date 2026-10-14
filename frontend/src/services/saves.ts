@@ -38,6 +38,14 @@ export function readSave(value: unknown, slug: string): SaveEnvelope {
     result.rules_version < descriptor.rulesVersion
   )
     result = { ...result, rules_version: descriptor.rulesVersion };
+  // Preserve historical records; resumed runs use the current validated rules.
+  if (
+    ["snake", "raptor-run", "merge-2048", "tetris", "prism-rush"].includes(
+      slug,
+    ) &&
+    result.rules_version < descriptor.rulesVersion
+  )
+    result = { ...result, rules_version: descriptor.rulesVersion };
   if (!descriptor.modes.some((mode) => mode.id === result.mode))
     throw new Error("This game mode is unavailable.");
   return { ...result, format: 2 };

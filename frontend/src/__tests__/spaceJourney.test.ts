@@ -91,7 +91,7 @@ describe("endless space journey", () => {
     const xp = journey.xp;
     expect(journey.update(100, { ...idle, action: true })).toBe(true);
     expect(journey.collisions).toBe(1);
-    expect(journey.shield).toBe(55);
+    expect(journey.shield).toBe(50);
     expect(journey.xp).toBeGreaterThanOrEqual(xp);
     expect(journey.score).toBeGreaterThanOrEqual(500);
     expect(journey.controller.speed).toBeLessThan(600);
@@ -197,7 +197,7 @@ describe("endless space journey", () => {
       "stellar-flight",
     );
     expect(envelope.mode).toBe("endless");
-    expect(envelope.rules_version).toBe(4);
+    expect(envelope.rules_version).toBe(5);
     const journey = new SpaceJourney(123);
     journey.setState(envelope.state);
     expect(journey.gatesPassed).toBe(12);
@@ -337,7 +337,7 @@ it("earlier endless saves retain their progress and default new systems", () => 
     },
     "stellar-flight",
   );
-  expect(envelope.rules_version).toBe(4);
+  expect(envelope.rules_version).toBe(5);
   const restored = new SpaceJourney(999);
   restored.setState(envelope.state);
   expect(restored.gatesPassed).toBe(1);
