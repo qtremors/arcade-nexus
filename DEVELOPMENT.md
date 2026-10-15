@@ -2,7 +2,7 @@
 
 ## Runtime and architecture
 
-The [architecture review](docs/ARCHITECTURE_REVIEW.md) records current responsibility/dependency hotspots and proposed refactoring stages; [AST and contract measurements](docs/architecture-metrics.json) provide the supporting snapshot. Those stages are recommendations, not implemented module boundaries.
+The [architecture review](docs/ARCHITECTURE_REVIEW.md) records current responsibility/dependency hotspots and proposed refactoring stages; [AST and contract measurements](docs/architecture-metrics.json) provide the supporting snapshot. The subsequent [implementation follow-up](docs/REVIEW_FOLLOWUP.md) records the delivered boundaries and remaining hardware/human acceptance.
 
 Use Python 3.12 (`backend/.python-version`), Node 24 (`frontend/.nvmrc`), uv and npm. Dependencies are locked in `backend/uv.lock` and `frontend/package-lock.json`. Run `python arcade.py --setup` once, then `python arcade.py --dev`. No CI/CD services or workflows are configured.
 
@@ -66,3 +66,11 @@ Neon Tetris and Prism Rush use rules version 2; Asteroids uses rules version 1. 
 - Snake maze connectivity, 2048 puzzle solvability and undo RNG, Raptor phrase feasibility, Breakout timed power-up persistence, Flight contract baselines, and Prism rhythm continuity have deterministic tests in `improvements.test.ts`.
 - Daily 2048 boards spawn no new tiles and stop on target or move limit. The DOM board reader exposes the same live board and queues commands through the game update loop.
 - See `docs/GAME_IMPROVEMENTS.md` for per-game rules versions and `docs/PLAYTEST.md` for remaining human/hardware validation.
+
+## Review follow-up workflow
+
+`contracts/gameplay-limits.json` supplies Pydantic/browser numeric bounds. `uv run --project backend python scripts/contracts.py` regenerates `frontend/src/contracts/api.generated.ts`; the local check script rejects contract drift and ownership violations through `scripts/boundaries.py` and the TypeScript AST/import-cycle checker `frontend/scripts/check-boundaries.mjs`. Generated wire types are excluded from hand formatting.
+
+Save preflight uses each descriptor’s lazy codec before replacing a run. Add state compatibility to that game’s codec and reuse it from `setState`; keep codecs free of browser resources and preference stores. All six 2D games separate DOM-free simulations from browser renderers/effects; 2048 owns a separate semantic board reader. Flight keeps one durable aggregate coordinating movement, collisions, race progression and objective/reward policies. Session engine generations/disposal and cached result delivery have separate owners. API transport, generated-derived types and domain adapters remain behind the stable client facade; history query/filter ownership is separate from the dialog. Application adapters wire input, measurement, effects and shared audio through `services/gameRuntime.ts`.
+
+Shared style order is baseline → theme → console → feature owners; game HUD/briefing CSS remains lazy and scoped. Browser suites share `e2e/fixtures.ts`, use one worker, and clean only the isolated test household. Optional page review images use `ARCADE_CAPTURE_E2E=1`; normal regression runs retain failure traces and Full HD pixel/detail assertions without depending on software-compositor screenshots. Node simulation tests are distinct from JSDOM adapter/component tests. Benchmark consumers use typed input/diagnostic ports rather than private fields.

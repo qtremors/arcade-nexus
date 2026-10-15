@@ -1,0 +1,55 @@
+/* Shared theme tokens; console values override the historical baseline. */
+
+:root {
+  font-family: "Rajdhani", sans-serif;
+  line-height: 1.5;
+  font-weight: 500;
+
+  color-scheme: dark;
+  color: #ffffff;
+  background-color: #121214;
+  /* Lifted from #020205 */
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* Premium Console Design Tokens (Solid, High Contrast) */
+  /* Deep Charcoal - Main Background */
+  /* Lighter Charcoal - Secondary Areas */
+  /* Solid Panel Background */
+  /* Card Background */
+  --bg-hover: #2a2a2e;
+  /* Hover State */
+
+  /* Accents - Electrified */
+  --accent-blue: #2563eb;
+  --accent-purple: #9333ea;
+
+  /* Mappings for App.css compatibility */
+  --accent-primary: var(--accent-cyan);
+  --accent-secondary: var(--accent-blue);
+
+  --accent-glow: rgba(0, 255, 242, 0.15);
+  /* Slight glow for active states only */
+
+  --error: #ef4444;
+
+  --text-primary: #ffffff;
+  /* Light Gray */
+  /* Darker Gray */
+  /* Solid Border */
+  --radius-xl: 32px;
+  --radius-lg: 16px;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --bg-primary: #000000;
+  --bg-secondary: #080808;
+  --bg-panel: #111111;
+  --bg-card: #080808;
+  --border-color: #292929;
+  --text-secondary: #b4b4b4;
+  --text-muted: #888888;
+  --accent-cyan: #a1edd5;
+}

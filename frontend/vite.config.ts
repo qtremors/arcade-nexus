@@ -19,9 +19,26 @@ export default defineConfig({
     },
   },
   test: {
-    environment: "jsdom",
-    setupFiles: ["./src/__tests__/setup.ts"],
-    include: ["src/**/*.test.{ts,tsx}"],
     restoreMocks: true,
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: "simulation",
+          environment: "node",
+          include: ["src/**/*.node.test.ts"],
+        },
+      },
+      {
+        extends: true,
+        test: {
+          name: "browser",
+          environment: "jsdom",
+          setupFiles: ["./src/__tests__/setup.ts"],
+          include: ["src/**/*.test.{ts,tsx}"],
+          exclude: ["src/**/*.node.test.ts"],
+        },
+      },
+    ],
   },
 });

@@ -1,3 +1,5 @@
+import { checkedScore } from "../../contracts/gameplay";
+import { parseState, row } from "./codec";
 import { z } from "zod";
 import { Random } from "../../sdk/Random";
 import type { InputState } from "../../sdk/GameSDK";
@@ -7,31 +9,6 @@ export const RHYTHMS = [
   [2, 1, 0, 1, 2, 1],
   [1, 2, 0, 1, 0, 2],
 ];
-const lane = z.number().int().min(0).max(2);
-const row = z.object({
-  id: z.number().int().nonnegative(),
-  z: z.number().min(-120).max(8),
-  safe: lane,
-  passed: z.boolean(),
-});
-const schema = z.object({
-  version: z.literal(1),
-  rhythm: z.number().int().min(0).max(3).default(0),
-  beat: z.number().int().min(0).max(5).default(0),
-  lane,
-  x: z.number().min(-2.8).max(2.8),
-  rows: z.array(row).max(12),
-  distance: z.number().nonnegative(),
-  score: z.number().int().nonnegative(),
-  crystals: z.number().int().nonnegative(),
-  lives: z.number().int().min(0).max(3),
-  elapsed: z.number().nonnegative(),
-  spawn: z.number().min(0).max(2),
-  nextId: z.number().int().nonnegative(),
-  invulnerable: z.number().min(0).max(1),
-  difficulty: z.enum(["easy", "normal", "hard"]),
-  random: z.number().int().min(0).max(0xffffffff),
-});
 /** Durable simulation is independent of WebGL so saves and gate fairness are testable. */
 export class PrismRun {
   rhythm = 0;
@@ -106,7 +83,7 @@ export class PrismRun {
       }
     }
     this.rows = this.rows.filter((gate) => gate.z < 8);
-    this.score = Math.floor(this.distance) + this.crystals * 100;
+    this.score = checkedScore(Math.floor(this.distance) + this.crystals * 100);
     return event;
   }
   getState(): Record<string, unknown> {
@@ -130,7 +107,7 @@ export class PrismRun {
     };
   }
   setState(state: Record<string, unknown>): void {
-    const { random, ...data } = schema.parse(state);
+    const { random, ...data } = parseState(state);
     if (
       new Set(data.rows.map((r) => r.id)).size !== data.rows.length ||
       data.rows.some((r) => r.id >= data.nextId)

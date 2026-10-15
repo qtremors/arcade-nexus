@@ -2,6 +2,21 @@
 
 Automated checks cannot establish enjoyment, native GPU performance or physical-device compatibility. Use a fresh throwaway profile, export before testing an existing household, and record browser/OS/controller/display refresh rate.
 
+## Current execution status
+
+The automated review regression is recorded in [VALIDATION.md](VALIDATION.md). The following acceptance items remain unexecuted because this workspace provides cloud Linux and software rendering, without the target laptop, physical controllers or human participants. They must not be marked passed from automated input or a requested device label.
+
+| ID | Required run | Evidence needed to close |
+| --- | --- | --- |
+| H1 | Native integrated and dedicated GPU, full console and all game modes, AC and battery | Actual CPU/GPU/driver, OS/browser/display/power configuration; `laptop_check.py` JSON at 60 seconds or longer with ten reentries; platform CPU/GPU/power/thermal and physical input-latency measurements. Keep full detail/antialiasing/Full HD. |
+| H2 | Wired and Bluetooth controllers on the supported OS/browser matrix | Model/connection/versions; controller-only create/browse/start/pause/save/quit; held-button handover and disconnect/reconnect observations. |
+| H3 | Real 200% browser zoom, OS magnification and assistive technology | Browser/AT versions and user observations for menus, history, backup/recovery, onboarding and the 2048 semantic board. Automated WCAG results cover semantics/contrast, not complete nonvisual canvas gameplay. |
+| H4 | Unfamiliar-player sessions across all eight games and their modes | Completed campaigns/races/puzzles; observed control/goal confusion, difficulty/cleanup/reaction fairness, accessibility needs and voluntary replay. Make tuning changes from those observations and rerun their affected regressions. |
+
+Use the isolated hardware runner first: `python scripts/laptop_check.py --power ac --all-modes`, then repeat with `--power battery`. Use the full-console cases below alongside it. Record device details, date, observations and report paths here when these runs are performed.
+
+## Full-console acceptance cases
+
 1. After installing dependencies, disconnect Internet (keep loopback available), launch `python arcade.py`, and play all eight titles. Stop/restart and verify players, favorites and saves remain.
 2. Use only a controller to create a player with the on-screen keyboard, browse Games, start, pause, save, resume and quit. Unplug/reconnect during play. Verify no stuck motion or action leaks. Check a second controller model and Bluetooth/wired paths.
 3. Abruptly terminate the browser during an active run, reopen the same origin, and Continue. Compare to the latest five-second snapshot. Repeat while the server is temporarily stopped; restart it and retry pending results.

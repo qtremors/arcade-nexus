@@ -131,3 +131,5 @@ The launcher binds to loopback by default. Trusted hosts and browser origins are
 These controls do not authenticate local programs. Keep HOST at 127.0.0.1 for normal use. HTTP API errors avoid exposing SQL statements or echoing full save payloads. Runtime errors are logged locally.
 
 See ../DEVELOPMENT.md for current atomic completion, export/import and recovery contracts. REVIEW.md is a historical assessment.
+
+The [review follow-up](../docs/REVIEW_FOLLOWUP.md) moves portable formats to `schemas/backup.py` and reusable transfer/completion policy to services. Each application factory owns its database engine; migration and seed CLIs create/dispose their own configured engines. `scripts/contracts.py` generates/checks browser wire types offline.

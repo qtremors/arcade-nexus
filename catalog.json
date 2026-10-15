@@ -70,7 +70,7 @@
     "title": "Neon Breakout"
   },
   "merge-2048": {
-    "rulesVersion": 3,
+    "rulesVersion": 4,
     "scoreUnit": "points",
     "difficulty": false,
     "modes": [

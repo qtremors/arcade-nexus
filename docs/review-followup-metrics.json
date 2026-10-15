@@ -1,0 +1,27 @@
+{
+  "recordedAt": "2026-10-14T23:27:10.041555+00:00",
+  "baseCommit": "183ae27",
+  "scope": "Uncommitted implementation snapshot: production TS/Python, styles, catalog and shared limits. Physical lines include comments and whitespace. Excludes tests, generated builds and dependencies.",
+  "frontendProductionModules": 119,
+  "backendApplicationModules": 49,
+  "stylesheets": 12,
+  "sourceSha256": "5ba289fdb7246496ed9a2b620899ffe565d3b1fd3135cafd1584226e0ee6dce7",
+  "openapi": {
+    "operations": 45,
+    "nonemptySuccessJsonSchema": 38,
+    "emptySuccessJsonSchema": 4,
+    "withoutSuccessJsonSchema": 3,
+    "generatedComponents": 53
+  },
+  "files": {
+    "frontend/src/hooks/useGameSession.ts": 521,
+    "frontend/src/components/GameCanvas.tsx": 127,
+    "backend/app/routers/data.py": 96,
+    "backend/app/routers/progress.py": 206,
+    "frontend/src/games/raptor-run/RaptorRun.ts": 61,
+    "frontend/src/games/raptor-run/RaptorSimulation.ts": 424,
+    "frontend/src/games/raptor-run/renderer.ts": 347,
+    "frontend/src/games/stellar-flight/SpaceJourney.ts": 701,
+    "frontend/src/console.css": 1139
+  }
+}

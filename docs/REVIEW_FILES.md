@@ -1,5 +1,7 @@
 # File-by-file review ledger
 
+Historical ledger for the reviewed snapshot. Subsequent implementation and new modules are tracked in [REVIEW_FOLLOWUP.md](REVIEW_FOLLOWUP.md).
+
 Reviewed on `ag-dev`, 2026-10-14. Findings and scenario limits are in [DEEP_REVIEW.md](DEEP_REVIEW.md).
 
 The starting snapshot had 252 maintained files (40,801 text lines). This ledger covers **261 paths**, including the added regression tests and review artifacts. Generated builds, dependency internals and ignored user data are excluded. “Source” means source inspection; test, stylesheet, asset, report and lock checks use the distinct methods shown. No finding number means no additional confirmed defect was recorded for that file in this pass; it does not mean every future input is proven safe.
@@ -115,8 +117,8 @@ The starting snapshot had 252 maintained files (40,801 text lines). This ledger 
 | [frontend/EXPERIENCE.md](../frontend/EXPERIENCE.md) | Documentation / contract consistency | Historical experience passes labelled; current contracts and review linked. |
 | [frontend/README.md](../frontend/README.md) | Documentation / contract consistency | Commands, contracts, links, stated evidence and outstanding acceptance cross-checked. |
 | [frontend/REVIEW.md](../frontend/REVIEW.md) | Documentation / contract consistency | Historical review labelled; superseded renderer/count claims retained as history. |
-| [frontend/e2e/console.spec.ts](../frontend/e2e/console.spec.ts) | Test contracts / execution | Public-control browser journeys, declared state fixtures, isolation and failure artifacts. |
-| [frontend/e2e/improvements.spec.ts](../frontend/e2e/improvements.spec.ts) | Test contracts / execution | R6/R8/R14 browser regressions; backup/history/visibility/accessibility and public console flows. |
+| `frontend/e2e/console.spec.ts` → [split feature suites](../frontend/e2e/) | Test contracts / execution | Public-control browser journeys, declared state fixtures, isolation and failure artifacts. |
+| `frontend/e2e/improvements.spec.ts` → [split feature suites](../frontend/e2e/) | Test contracts / execution | R6/R8/R14 browser regressions; backup/history/visibility/accessibility and public console flows. |
 | [frontend/e2e/serve_backend.py](../frontend/e2e/serve_backend.py) | Source / process lifecycle | Ephemeral database, child shutdown and owned-process cleanup. |
 | [frontend/eslint.config.js](../frontend/eslint.config.js) | Source | Source/configuration read; runtime defaults, callers/paths and compatibility cross-checked. |
 | [frontend/index.html](../frontend/index.html) | Source | Source/configuration read; runtime defaults, callers/paths and compatibility cross-checked. |
@@ -163,7 +165,7 @@ The starting snapshot had 252 maintained files (40,801 text lines). This ledger 
 | [frontend/src/__tests__/saveCompatibility.test.ts](../frontend/src/__tests__/saveCompatibility.test.ts) | Test contracts / execution | R13: real Raptor init/restore from historical config; preserve valid/current custom tuning. |
 | [frontend/src/__tests__/sessionQueue.test.ts](../frontend/src/__tests__/sessionQueue.test.ts) | Test contracts / execution | Behavior contracts, assertions, setup/cleanup and mocking boundaries; executed by Vitest. |
 | [frontend/src/__tests__/setup.ts](../frontend/src/__tests__/setup.ts) | Test contracts / execution | Behavior contracts, assertions, setup/cleanup and mocking boundaries; executed by Vitest. |
-| [frontend/src/__tests__/spaceJourney.test.ts](../frontend/src/__tests__/spaceJourney.test.ts) | Test contracts / execution | Behavior contracts, assertions, setup/cleanup and mocking boundaries; executed by Vitest. |
+| `frontend/src/__tests__/spaceJourney.test.ts` → [Node simulation suite](../frontend/src/__tests__/spaceJourney.node.test.ts) | Test contracts / execution | Behavior contracts, assertions, setup/cleanup and mocking boundaries; executed by Vitest. |
 | [frontend/src/__tests__/stores.test.ts](../frontend/src/__tests__/stores.test.ts) | Test contracts / execution | Behavior contracts, assertions, setup/cleanup and mocking boundaries; executed by Vitest. |
 | [frontend/src/api/client.ts](../frontend/src/api/client.ts) | Source | One URL convention, profile headers, typed contracts, timeouts, cancellation and error translation. |
 | [frontend/src/components/AutomaticBackups.tsx](../frontend/src/components/AutomaticBackups.tsx) | Source | Rendering/async states, controls/actions, error feedback, focus/accessibility and lifecycle callers. |
@@ -255,7 +257,7 @@ The starting snapshot had 252 maintained files (40,801 text lines). This ledger 
 | [frontend/src/services/performance.ts](../frontend/src/services/performance.ts) | Source | Bounded validated history, frame summaries, corrupt data and storage handling. |
 | [frontend/src/services/recovery.ts](../frontend/src/services/recovery.ts) | Source | Per-owner serialized/coalesced writes, ordered guarded deletes, volatile storage fallback. |
 | [frontend/src/services/saves.ts](../frontend/src/services/saves.ts) | Source | R13 fixed: historical Raptor config; envelope validation and other rule migrations. |
-| [frontend/src/services/sessionQueue.ts](../frontend/src/services/sessionQueue.ts) | Source | R11 ended flag persists; retries/locks/storage/replay. R12 numeric boundary remains open. |
+| [frontend/src/services/sessionQueue.ts](../frontend/src/services/sessionQueue.ts) | Source | R11 ended flag persists; retries/locks/storage/replay. R12 numeric boundary was open at this snapshot; subsequently resolved. |
 | [frontend/src/stores/libraryStore.ts](../frontend/src/stores/libraryStore.ts) | Source | Request/mutation ordering, stale state, persistence/error paths and callers. |
 | [frontend/src/stores/profileStore.ts](../frontend/src/stores/profileStore.ts) | Source | Tab identity, mutation/list/stat revisions, failed-refresh behavior and activation races. |
 | [frontend/src/stores/settingsStore.ts](../frontend/src/stores/settingsStore.ts) | Source | R6 fixed: volatile preferences, safe persistence and status notification; hydration/bindings. |
@@ -267,3 +269,7 @@ The starting snapshot had 252 maintained files (40,801 text lines). This ledger 
 | [frontend/vite.config.ts](../frontend/vite.config.ts) | Source | Loopback dev/preview proxy, host/origin behavior, CSS/test integration. |
 | [scripts/check.py](../scripts/check.py) | Source | Explicit sequential local lint/unit/types/build/browser checks; failure propagation. |
 | [scripts/laptop_check.py](../scripts/laptop_check.py) | Source | Isolated visible/native diagnostic, CLI bounds, hardware/power labels, Vite lifecycle. |
+
+## Implementation follow-up
+
+This ledger preserves the reviewed 261-path snapshot. The subsequent [implementation report](REVIEW_FOLLOWUP.md) covers the new contract, service, session-feature, codec, simulation/renderer, style and diagnostic modules, plus the R16 renderer-retention fix and real browser collection regressions. [Current source measurements](review-completion-metrics.json) and [validation](VALIDATION.md) describe that changed tree; the original review does not imply source inspection of future revisions.

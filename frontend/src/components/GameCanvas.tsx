@@ -1,79 +1,23 @@
-import { formatTime, timeRanked } from "../games/records";
 import type { CSSProperties } from "react";
-import { Keyboard, Gamepad2 } from "lucide-react";
-import { FlightBriefing } from "./FlightBriefing";
-import { AudioManager } from "../sdk/AudioManager";
-import { savesApi } from "../api/client";
 import { useGameSession } from "../hooks/useGameSession";
-type Difficulty = "easy" | "normal" | "hard";
+import { useToast } from "../hooks/useToast";
+import { menuButton } from "./session/menuButton";
+import { LaunchPanel } from "./session/LaunchPanel";
+import { PausePanel } from "./session/PausePanel";
+import { ResultsPanel } from "./session/ResultsPanel";
+import { SlotsPanel } from "./session/SlotsPanel";
 export function GameCanvas(props: {
   slug: string;
   title: string;
   config?: Record<string, unknown>;
 }) {
   const { slug, title } = props;
-  const {
-    canvas,
-    engine,
-    state,
-    setState,
-    difficulty,
-    setDifficulty,
-    mode,
-    setMode,
-    descriptor,
-    recovery,
-    continueGame,
-    undoEnd,
-    receipt,
-    score,
-    highScore,
-    bestTime,
-    newHigh,
-    error,
-    busy,
-    saves,
-    modal,
-    experience,
-    controlMode,
-    setControlMode,
-    confirmation,
-    ask,
-    showToast,
-    start,
-    resume,
-    restart,
-    quit,
-    openSaves,
-    saveSlot,
-    loadSlot,
-    menuOrigin,
-    act,
-    profileId,
-    setSaves,
-    supportsDifficulty,
-  } = useGameSession(props);
-  const button = (label: string, onClick: () => void, disabled = false) => (
-    <button
-      disabled={busy || disabled}
-      onClick={() => {
-        AudioManager.getInstance().unlock();
-        onClick();
-      }}
-      data-primary={
-        [
-          "Start game",
-          "Resume",
-          "Play again",
-          "Continue saved run",
-          "Undo last move",
-        ].includes(label) || undefined
-      }
-      className="game-button"
-    >
-      {label}
-    </button>
-  );
+  const session = useGameSession(props);
+  const { canvas, modal, confirmation } = session;
+  const { state, experience, newHigh, result, busy, error } = session.view;
+  const { pause, quit } = session.commands;
+  const { showToast } = useToast();
+  const button = menuButton(busy);
   return (
     <div className="game-stage" data-game={slug} data-state={state}>
       {confirmation}
@@ -108,9 +52,7 @@ export function GameCanvas(props: {
                 Fullscreen
               </button>
             )}
-            <button onClick={() => engine.current?.pause()}>
-              Pause (Esc / P)
-            </button>
+            <button onClick={() => pause()}>Pause (Esc / P)</button>
           </div>
         </div>
       )}
@@ -149,7 +91,7 @@ export function GameCanvas(props: {
                   : state === "paused"
                     ? "Paused"
                     : state === "gameover"
-                      ? (engine.current?.getResult()?.title ??
+                      ? (result?.title ??
                         (newHigh ? "New high score!" : "Game over"))
                       : state === "error"
                         ? "Game unavailable"
@@ -158,220 +100,13 @@ export function GameCanvas(props: {
                           : "Load game"}
               </h1>
               {state === "ready" && (
-                <>
-                  <p className="launch-goal">{experience.goal}</p>
-                  {slug === "stellar-flight" && <FlightBriefing />}
-                  <div className="control-guide">
-                    <div className="controls-switch" aria-label="Control guide">
-                      {(["keyboard", "controller"] as const).map((mode) => (
-                        <button
-                          key={mode}
-                          aria-pressed={controlMode === mode}
-                          onClick={() => setControlMode(mode)}
-                        >
-                          {mode === "keyboard" ? (
-                            <Keyboard size={15} />
-                          ) : (
-                            <Gamepad2 size={15} />
-                          )}
-                          {mode === "keyboard" ? "Keyboard" : "Controller"}
-                        </button>
-                      ))}
-                    </div>
-                    <dl>
-                      {[
-                        ...experience.controls,
-                        {
-                          action: "Pause",
-                          keyboard: "Esc / P",
-                          controller: "Start",
-                        },
-                      ].map((control) => (
-                        <div key={control.action}>
-                          <dt>{control.action}</dt>
-                          <dd>{control[controlMode]}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  </div>
-                  <p className="launch-record">
-                    Personal best{" "}
-                    <strong>
-                      {timeRanked(slug, mode)
-                        ? formatTime(bestTime)
-                        : highScore.toLocaleString()}
-                    </strong>
-                    <span>Save your run from the pause menu</span>
-                  </p>
-                  <fieldset className="mode-choices">
-                    <legend>Mode</legend>
-                    {descriptor.modes.map((item) => (
-                      <button
-                        key={item.id}
-                        className="game-button"
-                        disabled={busy}
-                        aria-pressed={mode === item.id}
-                        onClick={() => setMode(item.id)}
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </fieldset>
-                  {supportsDifficulty && (
-                    <fieldset>
-                      <legend>Difficulty</legend>
-                      {(["easy", "normal", "hard"] as Difficulty[]).map((d) => (
-                        <button
-                          key={d}
-                          disabled={busy}
-                          aria-pressed={difficulty === d}
-                          onClick={() => setDifficulty(d)}
-                          className="game-button"
-                        >
-                          {d}
-                        </button>
-                      ))}
-                    </fieldset>
-                  )}
-                  {recovery && (
-                    <div className="recovery-summary">
-                      <p>
-                        Saved{" "}
-                        {recovery.saved_at
-                          ? new Date(recovery.saved_at).toLocaleString()
-                          : "run"}{" "}
-                        · {recovery.score} points · {recovery.mode}
-                      </p>
-                      {button("Continue saved run", () => void continueGame())}
-                    </div>
-                  )}
-                  {button("Start game", () => void start())}
-                  {engine.current?.canSave &&
-                    button("Load game", () => void openSaves("load"))}
-                  {button("Back to console", () => void quit())}
-                </>
+                <LaunchPanel slug={slug} title={title} session={session} />
               )}
               {state === "paused" && (
-                <>
-                  <p className="game-menu-title">{title}</p>
-                  {slug === "stellar-flight" && (
-                    <p className="flight-pause-summary">
-                      {engine.current?.getResult()?.detail}
-                    </p>
-                  )}
-                  <div className="game-pause-score">
-                    {engine.current?.getScore() ?? 0}
-                    <span> CURRENT SCORE</span>
-                  </div>
-                  <details className="pause-controls">
-                    <summary>Controls & tips</summary>
-                    <p>
-                      {experience.controls
-                        .map(
-                          (c) => `${c.action}: ${c.keyboard} / ${c.controller}`,
-                        )
-                        .join(" · ")}
-                    </p>
-                    <p>{experience.tip}</p>
-                  </details>
-                  {button("Resume", resume)}
-                  {button("Restart", () => {
-                    if (slug !== "stellar-flight") {
-                      void restart();
-                      return;
-                    }
-                    void ask({
-                      title: "Start a new journey?",
-                      message:
-                        "Starting over resets this journey’s ship upgrades and exploration. Save it to a slot first if you want to return. Your saved slots stay available.",
-                      confirmText: "Start new journey",
-                    }).then((answer) => {
-                      if (answer) void restart();
-                    });
-                  })}
-                  {engine.current?.canSave && (
-                    <div>
-                      {button("Save game", () => void openSaves("save"))}
-                      {button("Load game", () => void openSaves("load"))}
-                    </div>
-                  )}
-                  {button("Quit to console", () => void quit())}
-                </>
+                <PausePanel slug={slug} title={title} session={session} />
               )}
               {state === "gameover" && (
-                <>
-                  <p className="game-final-score">{score}</p>
-                  <p>
-                    Best:{" "}
-                    {timeRanked(slug, mode) ? formatTime(bestTime) : highScore}
-                  </p>
-                  {receipt &&
-                    !timeRanked(slug, mode) &&
-                    (receipt.previous_high_score ?? 0) > 0 && (
-                      <p>
-                        {score === receipt.previous_high_score!
-                          ? "Matched"
-                          : score > receipt.previous_high_score!
-                            ? `+${score - receipt.previous_high_score!} above`
-                            : `${receipt.previous_high_score! - score} below`}{" "}
-                        your previous best
-                      </p>
-                    )}
-                  {receipt?.previous_best_time_ms &&
-                    timeRanked(slug, mode) &&
-                    engine.current?.getMetrics().completed && (
-                      <p>
-                        {(
-                          Math.abs(
-                            engine.current.getMetrics().elapsed_ms! -
-                              receipt.previous_best_time_ms,
-                          ) / 1000
-                        ).toFixed(3)}
-                        s{" "}
-                        {engine.current.getMetrics().elapsed_ms! <
-                        receipt.previous_best_time_ms
-                          ? "faster than"
-                          : engine.current.getMetrics().elapsed_ms! >
-                              receipt.previous_best_time_ms
-                            ? "slower than"
-                            : "from"}{" "}
-                        your previous best
-                      </p>
-                    )}
-                  {(timeRanked(slug, mode)
-                    ? receipt?.is_new_best_time
-                    : newHigh) &&
-                    engine.current?.getResult() && (
-                      <p className="game-best-badge">NEW PERSONAL BEST</p>
-                    )}
-                  {engine.current?.getResult() && (
-                    <p>{engine.current.getResult()?.detail}</p>
-                  )}
-                  {engine.current?.recoverable && (
-                    <>
-                      <p>
-                        You still have one undo. Your result is recorded when
-                        you finish this run.
-                      </p>
-                      {button("Undo last move", undoEnd)}
-                    </>
-                  )}
-                  {receipt?.medal && (
-                    <p className="game-best-badge">
-                      {receipt.medal.toUpperCase()} MEDAL
-                    </p>
-                  )}
-                  {!!receipt?.awards?.length && (
-                    <div aria-label="New achievements">
-                      <h2>New achievements</h2>
-                      {receipt.awards.map((award) => (
-                        <p key={award.slug}>★ {award.title}</p>
-                      ))}
-                    </div>
-                  )}
-                  {button("Play again", () => void restart())}
-                  {button("Back to console", () => void quit())}
-                </>
+                <ResultsPanel slug={slug} title={title} session={session} />
               )}
               {state === "error" && (
                 <>
@@ -380,52 +115,7 @@ export function GameCanvas(props: {
                 </>
               )}
               {(state === "save" || state === "load") && (
-                <>
-                  <div className="save-slots">
-                    {[1, 2, 3, 4, 5].map((slot) => {
-                      const entry = saves.find((s) => s.slot === slot);
-                      return (
-                        <div key={slot}>
-                          {button(
-                            `Slot ${slot} · ${entry ? entry.name || "Saved run" : "Empty"}`,
-                            () =>
-                              void (state === "save"
-                                ? saveSlot(slot)
-                                : loadSlot(slot)),
-                            state === "load" && !entry,
-                          )}
-                          {entry &&
-                            button(`Delete slot ${slot}`, () => {
-                              void ask({
-                                title: `Delete slot ${slot}?`,
-                                message:
-                                  "This saved run will be permanently removed. Other slots and recorded scores are kept.",
-                                confirmText: "Delete save",
-                              }).then((answer) => {
-                                if (answer)
-                                  void act(async () => {
-                                    await savesApi.delete(
-                                      slug,
-                                      slot,
-                                      profileId.current ?? undefined,
-                                    );
-                                    setSaves(
-                                      (
-                                        await savesApi.list(
-                                          slug,
-                                          profileId.current ?? undefined,
-                                        )
-                                      ).saves,
-                                    );
-                                  });
-                              });
-                            })}
-                        </div>
-                      );
-                    })}
-                  </div>
-                  {button("Back", () => setState(menuOrigin.current))}
-                </>
+                <SlotsPanel slug={slug} title={title} session={session} />
               )}
               {busy && <p role="status">Working…</p>}
             </section>

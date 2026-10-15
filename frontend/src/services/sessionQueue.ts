@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { limits, scoreSchema, metricsSchema } from "../contracts/gameplay";
 import { watchVisibleTask } from "./background";
 import { API_BASE_URL, ApiError, progressApi } from "../api/client";
 import type { CompletionReceipt } from "../api/client";
@@ -25,31 +26,15 @@ export const completionSchema = z.object({
   slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/),
   sessionId: z.uuid(),
   profileId: z.number().int().positive(),
-  seconds: z.number().int().min(0).max(604800),
-  score: z.number().int().min(0).max(2147483647),
+  seconds: z.number().int().min(0).max(limits.playtime_seconds),
+  score: scoreSchema,
   difficulty: z.enum(["easy", "normal", "hard"]),
   mode: z
     .string()
     .regex(/^[a-z0-9-]{1,40}$/)
     .default("classic"),
-  rulesVersion: z.number().int().min(1).max(10000).default(1),
-  metrics: z
-    .object({
-      ended: z.boolean().optional(),
-      jumps: z.number().int().min(0).max(1000000).optional(),
-      max_altitude: z.number().min(0).max(10000000).optional(),
-      crashed: z.boolean().optional(),
-      gates: z.number().int().min(0).max(1000000).optional(),
-      misses: z.number().int().min(0).max(1000000).optional(),
-      sectors: z.number().int().min(0).max(1000000).optional(),
-      lives: z.number().int().min(0).max(3).optional(),
-      highest_tile: z.number().int().min(0).max(1048576).optional(),
-      completed: z.boolean().optional(),
-      elapsed_ms: z.number().int().min(1).max(604800000).optional(),
-      medal: z.enum(["gold", "silver", "bronze"]).optional(),
-      max_speed: z.number().min(0).max(2000).optional(),
-    })
-    .default({}),
+  rulesVersion: z.number().int().min(1).max(limits.rules_version).default(1),
+  metrics: metricsSchema.default({}),
   attempts: z.number().int().nonnegative().optional(),
   retryAt: z.number().nonnegative().optional(),
   blocked: z.boolean().optional(),
@@ -93,7 +78,12 @@ function persistCompletion(item: Completion): boolean {
   }
 }
 export function enqueueCompletion(completion: Completion): boolean {
-  const item = completionSchema.parse(completion);
+  const parsed = completionSchema.safeParse(completion);
+  if (!parsed.success)
+    throw new Error(
+      "This result exceeds supported gameplay limits and cannot be recorded. Export a backup before leaving the console.",
+    );
+  const item = parsed.data;
   const old = pendingResults().find(
     (value) => value.sessionId === item.sessionId,
   );

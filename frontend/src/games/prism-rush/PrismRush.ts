@@ -1,3 +1,5 @@
+import { renderDiagnostics } from "../../sdk/RenderDiagnostics";
+import { SharedLightingResources } from "../../sdk/SharedLightingResources";
 import * as THREE from "three";
 import "./prism.css";
 import { fullHdScale, graphicsCapabilities } from "../../sdk/GraphicsQuality";
@@ -19,8 +21,15 @@ export class PrismRushGame implements Game3DInstance {
   private hud: HTMLDivElement | null = null;
   private resize: ResizeObserver | null = null;
   private feedback = new GameFeedback();
+  private lightingResources = new SharedLightingResources();
   private notice = "Gold crystals mark the opening";
   private noticeTime = 3;
+  getInputHints() {
+    return { prism: { rows: this.run.rows, lane: this.run.lane } };
+  }
+  getRenderDiagnostics() {
+    return renderDiagnostics(this.renderer);
+  }
   init(canvas: HTMLCanvasElement, config: GameConfig): void {
     this.run = new PrismRun(config.seed, config.difficulty);
     this.renderer = new THREE.WebGLRenderer({
@@ -177,6 +186,7 @@ export class PrismRushGame implements Game3DInstance {
       whiteSpace: "pre-line",
     });
     canvas.parentElement?.appendChild(this.hud);
+    this.lightingResources.observe(this.scene);
     resize();
   }
   update(dt: number, input: InputState): boolean {
@@ -270,6 +280,7 @@ export class PrismRushGame implements Game3DInstance {
     });
     geometries.forEach((g) => g.dispose());
     materials.forEach((m) => m.dispose());
+    this.lightingResources.dispose();
     this.scene.clear();
     this.renderer?.dispose();
     this.renderer = null;

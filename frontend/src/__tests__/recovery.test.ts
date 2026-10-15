@@ -4,9 +4,9 @@ import { clearRecovery, storeRecovery } from "../services/recovery";
 import type { SaveEnvelope } from "../services/saves";
 
 function deferred() {
-  let resolve!: (value: unknown) => void;
+  let resolve!: (value: { saved: boolean }) => void;
   let reject!: (reason: Error) => void;
-  const promise = new Promise((done, fail) => {
+  const promise = new Promise<{ saved: boolean }>((done, fail) => {
     resolve = done;
     reject = fail;
   });
@@ -28,8 +28,8 @@ let profileId = 30000;
 beforeEach(() => {
   profileId++;
   localStorage.clear();
-  vi.spyOn(progressApi, "saveRecovery").mockResolvedValue({});
-  vi.spyOn(progressApi, "deleteRecovery").mockResolvedValue(undefined);
+  vi.spyOn(progressApi, "saveRecovery").mockResolvedValue({ saved: true });
+  vi.spyOn(progressApi, "deleteRecovery").mockResolvedValue({ deleted: true });
 });
 
 it("coalesces a slow server's snapshots while retaining the newest local board", async () => {
@@ -44,7 +44,7 @@ it("coalesces a slow server's snapshots while retaining the newest local board",
   expect(
     JSON.parse(localStorage.getItem(`nexus-recovery-v2:${profileId}:snake`)!),
   ).toMatchObject({ score: 100 });
-  gate.resolve({});
+  gate.resolve({ saved: true });
   await vi.waitFor(() => expect(write).toHaveBeenCalledTimes(2));
   expect(write).toHaveBeenLastCalledWith(
     "snake",
@@ -78,18 +78,21 @@ it("discards a cleared pending board and keeps deletion before a new run's write
   const operations: string[] = [];
   vi.mocked(progressApi.saveRecovery).mockImplementation((_slug, value) => {
     operations.push(`save:${value.session_id}:${value.score}`);
-    return operations.length === 1 ? gate.promise : Promise.resolve({});
+    return operations.length === 1
+      ? gate.promise
+      : Promise.resolve({ saved: true });
   });
   vi.mocked(progressApi.deleteRecovery).mockImplementation(
     async (_slug, _id, session) => {
       operations.push(`delete:${session}`);
+      return { deleted: true };
     },
   );
   storeRecovery(profileId, snapshot(1));
   storeRecovery(profileId, snapshot(2));
   clearRecovery(profileId, "snake", "first");
   storeRecovery(profileId, snapshot(3, "second"));
-  gate.resolve({});
+  gate.resolve({ saved: true });
   await vi.waitFor(() => expect(operations).toHaveLength(3));
   expect(operations).toEqual(["save:first:1", "delete:first", "save:second:3"]);
   expect(
@@ -105,7 +108,7 @@ it("does not discard a newer run when an older session's completion clears recov
   storeRecovery(profileId, snapshot(1));
   storeRecovery(profileId, snapshot(2, "second"));
   clearRecovery(profileId, "snake", "first");
-  gate.resolve({});
+  gate.resolve({ saved: true });
   await vi.waitFor(() =>
     expect(progressApi.deleteRecovery).toHaveBeenCalledWith(
       "snake",

@@ -1,5 +1,7 @@
 # Architecture and maintainability review
 
+Implementation follow-up: [REVIEW_FOLLOWUP.md](REVIEW_FOLLOWUP.md) records the subsequent code changes and validation. The measurements and recommendations below describe the original review snapshot.
+
 Reviewed on `ag-dev`, 2026-10-14, against the working tree following [the functional review](DEEP_REVIEW.md). This pass changes documentation and measurements only. The refactors below are **recommendations**, not completed code changes.
 
 The React/FastAPI/SQLite design fits this local arcade. The main architectural debt is concentrated session orchestration, weak ownership between layers, and duplicated contracts. **`useGameSession` is the clearest god-function hotspot.** File length also flags game/rendering and stylesheet work, but several large files have a coherent purpose and a lower refactoring priority.
@@ -94,7 +96,7 @@ Consolidate theme tokens and shared game-menu styles first. Move catalog/history
 
 ### A8 — Medium: tests and diagnostics depend on broad fixtures and private implementation details
 
-Evidence: [large console suite/shared helpers](../frontend/e2e/console.spec.ts#L1), [duplicate profile setup](../frontend/e2e/improvements.spec.ts#L1), [serial shared servers](../frontend/playwright.config.ts#L3), [benchmark input override](../frontend/scripts/benchmark-games.mjs#L201), and [direct game-state field reads](../frontend/scripts/benchmark-games.mjs#L213).
+Evidence: historical `console.spec.ts` / `improvements.spec.ts` (now [split feature suites](../frontend/e2e/)), [serial shared servers](../frontend/playwright.config.ts#L3), [benchmark input override](../frontend/scripts/benchmark-games.mjs#L201), and [direct game-state field reads](../frontend/scripts/benchmark-games.mjs#L213).
 
 The browser suite has valuable coverage but many domains share two broad spec files and one temporary server database. Each case creates a player without removing the household; exports/restores include that growing household. The benchmark reads private engine samples/input and game renderer/simulation fields from JavaScript, so a private rename can break diagnostics outside TypeScript checks.
 

@@ -10,8 +10,10 @@ from copy import deepcopy
 from pathlib import Path
 
 from sqlalchemy import select, text
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
-from app.database import AsyncSessionLocal, init_db
+from app.config import get_settings
+from app.database import init_db, make_engine
 from app.models.achievement import Achievement
 from app.models.game import Category, Game
 
@@ -192,13 +194,21 @@ INITIAL_GAMES.extend(
 CATALOG = json.loads((Path(__file__).resolve().parents[2] / "catalog.json").read_text())
 
 
-async def sync_games(skip_init: bool = False, *, session_factory=AsyncSessionLocal):
+async def sync_games(skip_init: bool = False, *, session_factory=None):
     """
     Smart sync: Add new games, update existing, deactivate removed.
     Preserves user progress (saves, stats, achievements_unlocked).
     """
+    if session_factory is None:
+        settings = get_settings()
+        engine = make_engine(settings.DATABASE_URL, debug=settings.DEBUG)
+        factory = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
+        try:
+            return await sync_games(skip_init, session_factory=factory)
+        finally:
+            await engine.dispose()
     if not skip_init:
-        await init_db()
+        await init_db(session_factory.kw["bind"])
 
     async with session_factory() as db:
         await db.execute(text("BEGIN IMMEDIATE"))
@@ -342,13 +352,4 @@ async def seed_games(skip_init: bool = False):
 
 
 if __name__ == "__main__":
-
-    async def main():
-        from app.database import engine
-
-        try:
-            await sync_games()
-        finally:
-            await engine.dispose()
-
-    asyncio.run(main())
+    asyncio.run(sync_games())

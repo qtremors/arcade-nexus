@@ -8,7 +8,7 @@ import {
   SectorStream,
 } from "../games/stellar-flight/universe";
 import { createShip } from "../games/stellar-flight/ships";
-import { readSave } from "../services/saves";
+import { validateSave } from "../services/saves";
 import type { InputState } from "../sdk/GameSDK";
 const idle: InputState = {
   up: false,
@@ -172,8 +172,8 @@ describe("endless space journey", () => {
       expect(journey.getState()).toEqual(saved);
     }
   });
-  it("migrates completed legacy flights into an ongoing journey", () => {
-    const envelope = readSave(
+  it("migrates completed legacy flights into an ongoing journey", async () => {
+    const envelope = await validateSave(
       {
         format: 2,
         game: "stellar-flight",
@@ -318,7 +318,7 @@ it("new camera and navigation buttons are edge-triggered and saved", () => {
   restored.update(16, { ...idle, keys: { KeyC: true } });
   expect(restored.cameraView).toBe("wide");
 });
-it("earlier endless saves retain their progress and default new systems", () => {
+it("earlier endless saves retain their progress and default new systems", async () => {
   const journey = new SpaceJourney(123);
   clearGate(journey);
   const old = journey.getState();
@@ -340,7 +340,7 @@ it("earlier endless saves retain their progress and default new systems", () => 
     "yawVelocity",
   ])
     delete old[field];
-  const envelope = readSave(
+  const envelope = await validateSave(
     {
       format: 2,
       game: "stellar-flight",

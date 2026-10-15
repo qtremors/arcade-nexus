@@ -2,12 +2,24 @@ import { fullHdScale, graphicsCapabilities } from "./GraphicsQuality";
 import type { GameInstance, GameConfig, GameMetrics } from "./GameSDK";
 import { is3DGame } from "./GameSDK";
 import { InputManager } from "./InputManager";
-import { recordMeasurement } from "../services/performance";
+import type { EnginePorts, InputPort } from "./RuntimePorts";
 export class GameEngine {
   private ctx: CanvasRenderingContext2D | null = null;
   private renderScale = 1;
   private game: GameInstance | null = null;
-  private input = new InputManager();
+  private input: InputPort;
+  private ports: EnginePorts;
+  constructor(ports: EnginePorts = {}) {
+    this.ports = ports;
+    this.input = ports.input ?? new InputManager();
+  }
+  readonly diagnostics = {
+    samples: () => [...this.samples],
+    resetSamples: () => {
+      this.samples = [];
+      this.lastRenderTime = performance.now();
+    },
+  };
   private destroyed = false;
   private isRunning = false;
   private isPaused = false;
@@ -114,7 +126,7 @@ export class GameEngine {
     if (this.destroyed) return;
     this.destroyed = true;
     this.stop();
-    recordMeasurement(this.slug, this.launchMs, this.samples, {
+    this.ports.reportMeasurement?.(this.slug, this.launchMs, this.samples, {
       targetFps: 60,
       ...(this.game?.getRenderInfo?.() ?? {
         renderer: graphicsCapabilities().software
@@ -155,7 +167,14 @@ export class GameEngine {
   }
   getState(): Record<string, unknown> {
     if (!this.canSave) throw new Error("This game does not support saves");
-    return this.game!.getState!();
+    const state = this.game!.getState!();
+    try {
+      return this.ports.validateState?.(state) ?? state;
+    } catch {
+      throw new Error(
+        "This run cannot be saved because its state exceeds supported limits. Your previous saves remain available.",
+      );
+    }
   }
   setState(state: Record<string, unknown>): void {
     if (!this.canSave) throw new Error("This game does not support saves");

@@ -41,22 +41,8 @@ export interface InputState {
   throttle?: number;
 }
 
-export interface GameMetrics {
-  /** The simulation reached a terminal result, independent of winning. */
-  ended?: boolean;
-  jumps?: number;
-  max_altitude?: number;
-  max_speed?: number;
-  crashed?: boolean;
-  gates?: number;
-  misses?: number;
-  sectors?: number;
-  lives?: number;
-  highest_tile?: number;
-  completed?: boolean;
-  elapsed_ms?: number;
-  medal?: "gold" | "silver" | "bronze";
-}
+export type { GameMetrics } from "../contracts/gameplay";
+import type { GameMetrics } from "../contracts/gameplay";
 export interface GameRenderInfo {
   renderer?: string | null;
   quality?: string;
@@ -66,11 +52,39 @@ export interface GameRenderInfo {
 }
 export type GameStatus = "playing" | "recoverable" | "complete";
 
+export interface RenderDiagnostics {
+  frame(): { calls: number; triangles: number };
+  resources(): { geometries: number; textures: number };
+  renderer: string | null;
+  antialias: boolean;
+}
+export interface InputHints {
+  snake?: {
+    head: { x: number; y: number };
+    direction: string;
+    cols: number;
+    rows: number;
+  };
+  raptor?: {
+    obstacles: readonly { x: number; width: number; type: string }[];
+    speed: number;
+    jumping: boolean;
+  };
+  breakout?: { ballX: number; paddleX: number };
+  prism?: {
+    rows: readonly { z: number; safe: number; passed: boolean }[];
+    lane: number;
+  };
+}
+
 /** Game type discriminator */
 export type GameType = "2d" | "3d";
 
 /** Base interface for all games */
 export interface GameInstanceBase {
+  /** Narrow internal ports used by diagnostics without private-field access. */
+  getRenderDiagnostics?(): RenderDiagnostics | null;
+  getInputHints?(): InputHints;
   /** Game type - '2d' for Canvas, '3d' for Three.js */
   readonly type: GameType;
 

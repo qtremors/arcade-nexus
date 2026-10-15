@@ -1,5 +1,7 @@
 # Frontend review and browser validation
 
+For the subsequent implemented review work, see [REVIEW_FOLLOWUP.md](../docs/REVIEW_FOLLOWUP.md).
+
 Historical review record. For current contracts and validation, see [DEVELOPMENT.md](../DEVELOPMENT.md) and [the deep review](../docs/DEEP_REVIEW.md).
 
 Reviewed on `ag-dev` for a local application that opens in a normal browser. FastAPI/SQLite remains the backend; no WebView or Rust migration was introduced. This records the changes and tested behavior, not a claim that every possible issue has been eliminated.

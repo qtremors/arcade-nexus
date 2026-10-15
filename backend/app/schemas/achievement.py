@@ -39,3 +39,14 @@ class AchievementListResponse(AchievementSummary):
     """Schema for list of achievements."""
 
     achievements: list[AchievementResponse]
+
+
+class UnlockedAchievement(ResponseSchema):
+    title: str
+    description: str | None
+
+
+class AchievementUnlockResponse(ResponseSchema):
+    message: str
+    unlocked: bool
+    achievement: UnlockedAchievement | None = None

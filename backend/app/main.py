@@ -16,22 +16,20 @@ from starlette.responses import FileResponse, JSONResponse
 from starlette.staticfiles import StaticFiles
 
 from app.config import Settings, get_settings
-from app.database import engine, init_db, make_engine
+from app.database import init_db, make_engine
 from app.middleware import RequestGuard
 from app.routers import achievements, data, games, library, profiles, progress, saves, stats
+from app.schemas.system import HealthResponse, RootResponse
 from app.seed import sync_games
 from app.services.backups import RotatingBackups
+from app.services.errors import ServiceError
 
 logger = logging.getLogger(__name__)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     configuration = settings or get_settings()
-    db_engine = (
-        engine
-        if settings is None
-        else make_engine(configuration.DATABASE_URL, debug=configuration.DEBUG)
-    )
+    db_engine = make_engine(configuration.DATABASE_URL, debug=configuration.DEBUG)
     session_factory = async_sessionmaker(db_engine, expire_on_commit=False, autoflush=False)
     backups = RotatingBackups(
         db_engine.url.database,
@@ -83,6 +81,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
     application.add_middleware(TrustedHostMiddleware, allowed_hosts=configuration.ALLOWED_HOSTS)
 
+    @application.exception_handler(ServiceError)
+    async def service_error(request: Request, error: ServiceError):
+        return JSONResponse({"detail": error.detail}, status_code=error.status_code)
+
     @application.exception_handler(RequestValidationError)
     async def validation_error(request: Request, error: RequestValidationError):
         # Error input may contain NaN, huge saves, or non-serializable validator context.
@@ -121,7 +123,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     ):
         application.include_router(router, prefix=f"/api/{name.lower()}", tags=[name])
 
-    @application.get("/")
+    @application.get("/", response_model=RootResponse)
     async def root():
         if configuration.FRONTEND_DIR and (configuration.FRONTEND_DIR / "index.html").is_file():
             return FileResponse(
@@ -133,7 +135,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             "status": "running",
         }
 
-    @application.get("/health")
+    @application.get("/health", response_model=HealthResponse)
     async def health_check():
         try:
             async with db_engine.connect() as connection:

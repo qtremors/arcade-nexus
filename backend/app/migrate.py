@@ -2,12 +2,15 @@
 
 import asyncio
 
-from app.database import engine, init_db
+from app.config import get_settings
+from app.database import init_db, make_engine
 
 
 async def main() -> None:
+    settings = get_settings()
+    engine = make_engine(settings.DATABASE_URL, debug=settings.DEBUG)
     try:
-        await init_db()
+        await init_db(engine)
     finally:
         await engine.dispose()
 

@@ -2,14 +2,18 @@
 
 > **Project:** Arcade Nexus  
 > **Version:** 1.4.1  
-> **Last Updated:** 2026-10-14
+> **Last Updated:** 2026-10-15
 
 ---
 
 ## Unreleased
 
+- Fixed renderer retention found during the endurance pass: release Three r186 shared lighting-texture listeners and Flight sprite geometry. Real-browser repeated-entry regressions verify disposed games, engines and canvases collect; no context loss or shader/quality changes are used.
+
+- Implemented the review follow-up: shared numeric contracts, explicit 2048 maximum-tile completion under rules version 4, pure save preflight, offline generated API types, backend transfer/session services, named session commands and phase panels, SDK ports, all six 2D simulation/renderer boundaries and a separate board reader, Flight steering/collision/race/objective policies, guarded session runtime/completion owners, API/history separation, feature style ownership and isolated browser/Node diagnostic fixtures. See docs/REVIEW_FOLLOWUP.md.
+
 - Added a measured architecture/modularity review covering session ownership, router/service direction, API contract drift, save codecs, game aggregates, global styles and test/benchmark boundaries, with prioritized refactoring stages. This assessment changes documentation/metrics only.
-- Completed a maintained-file review with a file ledger. Fixed server-save UUID mapping and unfinished reservations in backups, malformed snapshot handling, clock rollback retention, legacy session totals and development-server shutdown. Added resilient preference storage, controller handover/focus fixes, idle/error-safe system audio, stale-record protection, atomic terminal recovery cleanup, historical Raptor configuration migration and reduced-motion loop completion. One reproduced synthetic-save numeric boundary remains documented in docs/DEEP_REVIEW.md.
+- Completed a maintained-file review with a file ledger. Fixed server-save UUID mapping and unfinished reservations in backups, malformed snapshot handling, clock rollback retention, legacy session totals and development-server shutdown. Added resilient preference storage, controller handover/focus fixes, idle/error-safe system audio, stale-record protection, atomic terminal recovery cleanup, historical Raptor configuration migration and reduced-motion loop completion. The reproduced synthetic-save numeric boundary and its subsequent resolution are documented in docs/DEEP_REVIEW.md and docs/REVIEW_FOLLOWUP.md.
 - Coalesced recovery snapshots behind slow requests while preserving deletion order and newer sessions. Fixed stale profile-list/activation responses and kept newly created players available after failed refreshes. Removed unused profile history reads, added compact achievement summaries and reduced achievement list queries. Progress now distinguishes loading from empty results and cancels abandoned record views.
 - Stopped periodic recovery writes while paused while preserving immediate pause/exit snapshots. Added Full HD drawing-buffer and paused-write regressions during production browser review, and documented a headless software-canvas screenshot limitation without slowing production rendering.
 - Added lazy route/backup loading, shared visibility-aware background checks, cross-tab retry locking, idle controller sleep, full-history sorting and filters, restore previews, seven-copy automatic server backups, root crash recovery and conflict-checked controls. Added desktop/zoom accessibility checks and a Full HD laptop diagnostic for native GPU, late-run scenes and repeated-entry memory.

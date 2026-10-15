@@ -6,10 +6,11 @@ from uuid import UUID
 
 from pydantic import Field
 
+from app.limits import LIMITS
 from app.schemas.base import RequestSchema, ResponseSchema
 
-Score = Annotated[int, Field(ge=0, le=2_147_483_647, strict=True)]
-Playtime = Annotated[int, Field(ge=0, le=7 * 24 * 60 * 60, strict=True)]
+Score = Annotated[int, Field(ge=0, le=LIMITS["score"], strict=True)]
+Playtime = Annotated[int, Field(ge=0, le=LIMITS["playtime_seconds"], strict=True)]
 Difficulty = Literal["easy", "normal", "hard"]
 
 
@@ -19,17 +20,21 @@ class SessionStart(RequestSchema):
 
 class SessionMetrics(RequestSchema):
     ended: bool | None = None
-    jumps: Annotated[int, Field(ge=0, le=1_000_000, strict=True)] | None = None
-    max_altitude: Annotated[float, Field(ge=0, le=10_000_000, allow_inf_nan=False)] | None = None
+    jumps: Annotated[int, Field(ge=0, le=LIMITS["count"], strict=True)] | None = None
+    max_altitude: (
+        Annotated[float, Field(ge=0, le=LIMITS["max_altitude"], allow_inf_nan=False)] | None
+    ) = None
     crashed: bool | None = None
-    max_speed: Annotated[float, Field(ge=0, le=2000, allow_inf_nan=False)] | None = None
-    gates: Annotated[int, Field(ge=0, le=1_000_000, strict=True)] | None = None
-    misses: Annotated[int, Field(ge=0, le=1_000_000, strict=True)] | None = None
-    sectors: Annotated[int, Field(ge=0, le=1_000_000, strict=True)] | None = None
-    lives: Annotated[int, Field(ge=0, le=3, strict=True)] | None = None
-    highest_tile: Annotated[int, Field(ge=0, le=1_048_576, strict=True)] | None = None
+    max_speed: Annotated[float, Field(ge=0, le=LIMITS["max_speed"], allow_inf_nan=False)] | None = (
+        None
+    )
+    gates: Annotated[int, Field(ge=0, le=LIMITS["count"], strict=True)] | None = None
+    misses: Annotated[int, Field(ge=0, le=LIMITS["count"], strict=True)] | None = None
+    sectors: Annotated[int, Field(ge=0, le=LIMITS["count"], strict=True)] | None = None
+    lives: Annotated[int, Field(ge=0, le=LIMITS["lives"], strict=True)] | None = None
+    highest_tile: Annotated[int, Field(ge=0, le=LIMITS["highest_tile"], strict=True)] | None = None
     completed: bool | None = None
-    elapsed_ms: Annotated[int, Field(ge=1, le=604_800_000, strict=True)] | None = None
+    elapsed_ms: Annotated[int, Field(ge=1, le=LIMITS["elapsed_ms"], strict=True)] | None = None
     medal: Literal["gold", "silver", "bronze"] | None = None
 
 
@@ -48,7 +53,7 @@ class ScoreSubmit(RequestSchema):
 class CompletionRecord(SessionRecord):
     session_id: UUID
     mode: str = Field("classic", pattern=r"^[a-z0-9-]{1,40}$")
-    rules_version: int = Field(1, ge=1, le=10000, strict=True)
+    rules_version: int = Field(1, ge=1, le=LIMITS["rules_version"], strict=True)
 
 
 class GameStatsResponse(ResponseSchema):

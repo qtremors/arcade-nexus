@@ -1,11 +1,6 @@
 export const actions = ["up", "down", "left", "right", "action"] as const;
-export const defaultBindings: Record<string, string[]> = {
-  up: ["ArrowUp", "KeyW"],
-  down: ["ArrowDown", "KeyS"],
-  left: ["ArrowLeft", "KeyA"],
-  right: ["ArrowRight", "KeyD"],
-  action: ["Space", "Enter"],
-};
+import { defaultBindings } from "../sdk/inputBindings";
+export { defaultBindings } from "../sdk/inputBindings";
 const validCode = (value: unknown): value is string =>
   typeof value === "string" &&
   /^(Key[A-Z]|Arrow(Up|Down|Left|Right)|Space|Enter)$/.test(value);

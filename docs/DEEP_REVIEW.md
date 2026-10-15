@@ -1,5 +1,7 @@
 # Repository review — 2026-10-14
 
+Implementation follow-up: R12 is addressed by shared numeric contracts, pure restore preflight, visible overflow errors and an explicit 2048 ceiling. See [REVIEW_FOLLOWUP.md](REVIEW_FOLLOWUP.md), which also records the subsequently found and fixed R16 renderer-retention defect. The findings below retain their original reproduction evidence.
+
 Reviewed the working tree on `ag-dev`, based on `09eaf2f`, preserving the earlier uncommitted work. The starting inventory contains **252 maintained files and 40,801 text lines**, excluding binary image/model bytes from line counts. Added tests and reports are covered too. [The file ledger](REVIEW_FILES.md) lists every maintained path, review method and relevant findings.
 
 The subsequent [architecture review](ARCHITECTURE_REVIEW.md) examines responsibility concentration, large files, dependency direction, contract ownership and maintainability. Its recommendations are separate from the fourteen functional fixes below.
@@ -8,7 +10,7 @@ Production Python/TypeScript source was read and traced across callers. Test fil
 
 ## Confirmed findings and fixes
 
-Priority P2 means a functional/data-reliability defect; P3 means a smaller usability/resource defect. IDs preserve the review journal, so the remaining numeric-limit finding is R12.
+Priority P2 means a functional/data-reliability defect; P3 means a smaller usability/resource defect. IDs preserve the review journal, so the numeric-limit reproduction retains ID R12; its resolution is tracked in the follow-up.
 
 | ID | Priority | Trigger and previous failure | Change and evidence |
 | --- | --- | --- | --- |
@@ -27,11 +29,11 @@ Priority P2 means a functional/data-reliability defect; P3 means a smaller usabi
 | R14 | P3 | Reduced motion shortens an infinite CSS animation to 0.01 ms but leaves it infinite. Loading placeholders continue cycling rapidly. | Both system and console reduced-motion rules limit animations to one iteration. Browser coverage checks that a real loading-placeholder animation finishes under both preferences. |
 | R15 | P2 | Export after `/start` but before completion, restore, then sync a queued result. Aggregate counts include the start, but the missing reservation makes completion count it again. | Add optional unfinished reservations to database backups and restore them with the shared UUID map. An isolated baseline probe counted one run as two; the regression now checks one session, twelve seconds and one history row after repeated completion. Completed history remains separate; older exports still load with an empty reservations default. |
 
-## Remaining reproducible finding
+## R12 reproduction and subsequent resolution
 
-**R12 — P3, synthetic/extreme save limits.** Tetris (`score: count`), Asteroids and Prism accept saved scores above the completion API's signed 32-bit ceiling. A browser probe accepted Tetris score `2,147,483,648`, while the queue schema rejected its completion. `useGameSession.finish` currently enqueues before its submission error handler. In another probe, a 2048 board containing two accepted `1,048,576` tiles merged to `2,097,152`, after which the generated snapshot failed its own restore schema and exceeded the metrics limit.
+**R12 — P3, synthetic/extreme save limits.** Tetris (`score: count`), Asteroids and Prism accept saved scores above the completion API's signed 32-bit ceiling. A browser probe accepted Tetris score `2,147,483,648`, while the queue schema rejected its completion. At that snapshot, `useGameSession.finish` enqueued before its submission error handler. In another probe, a 2048 board containing two accepted `1,048,576` tiles merged to `2,097,152`, after which the generated snapshot failed its own restore schema and exceeded the metrics limit.
 
-This was reproduced with explicitly constructed states, not observed during ordinary play. Follow-up should align game/save/result bounds, reject unsupported saves before replacing an active run, and handle invalid completion payloads visibly. The 2048 continuation ceiling needs a deliberate rule: widening a validator alone just moves the same boundary. This pass does not silently clamp score, stop continued play or change comparable game rules to conceal it.
+This was reproduced with explicitly constructed states, not observed during ordinary play. The recommendation was to align game/save/result bounds, reject unsupported saves before replacing an active run, and handle invalid completion payloads visibly. The 2048 continuation ceiling needs a deliberate rule: widening a validator alone just moves the same boundary. This pass does not silently clamp score, stop continued play or change comparable game rules to conceal it.
 
 ## Scenario coverage
 
@@ -42,7 +44,7 @@ This was reproduced with explicitly constructed states, not observed during ordi
 | Persistence and recovery | Five slots, deterministic state/RNG, reload/Continue, late responses, storage quotas, in-memory export, two-tab retries, server snapshot retention/clock rollback, malformed wrappers and restored UUID/reservation identity. | Browser-only memory lasts only in its tab. An older backup without reservation data cannot reconstruct omitted historical starts. |
 | Menus/accessibility | Keyboard/controller navigation, nested/native modal ownership, disclosure visibility, disabled controls, remapping/conflicts, reduced motion, root recovery, desktop/zoom-equivalent automated accessibility. | Screen-reader game access, physical controllers, actual OS/browser zoom and unfamiliar-player usability still need people/devices. |
 | Resource use | Fixed-step/render cap, paused/hidden work, queue scheduling, Full HD canvas caches, conservative asteroid culling/uploads, bounded sector streaming, GPU/audio teardown, system-audio idle suspension, lazy startup assets. | Cloud SwiftShader cannot certify the user's i7 integrated GPU, power/thermals or physical input latency. Existing Full HD/antialiasing/detail policy is preserved. |
-| Security and dependencies | Loopback host/origin/body guards, profile scoping, SQL parameterization/allowlists, finite JSON/limits, opaque-save handling, snapshot name/symlink rejection, static-path handling, local asset references and locked dependency consistency. | Local profiles remain trusted-household selectors. No fresh remote advisory-feed scan or third-party dependency source audit is claimed. |
+| Security and dependencies | Loopback host/origin/body guards, profile scoping, SQL parameterization/allowlists, finite JSON/limits, opaque-save handling, snapshot name/symlink rejection, static-path handling, local asset references and locked dependency consistency. | Local profiles remain trusted-household selectors. This historical snapshot did not include a fresh advisory scan. The later [validation](VALIDATION.md) records point-in-time frontend/backend runtime scans; third-party dependency source auditing remains outside scope. |
 | Documentation/tooling/assets | Current commands/contracts cross-checked; historical reviews labelled; manifests/locks/export agree; CSS parses; eight SVGs contain no executable/external references; PNG integrity/dimensions and embedded GLB resources validate. | Structural checks are not an artistic/licensing certification. Historical performance reports retain their original build/renderer scope. |
 
 All eight game implementations were traced for initialization, controls, update/end conditions, collision/move rules, complete saves, restoration and cleanup. Existing deterministic tests additionally cover Snake maze connectivity/full-board/tail movement; Raptor phrase feasibility/jump buffering; Breakout sectors/armor/explosions/pickups/lives; 2048 merge-once/undo/puzzles; Tetris bags/hold/kicks/lock/sprint; Asteroids wrapping/splitting/respawn/waves; Prism lane rhythms/reaction windows; and Flight gates/collisions/contracts/surveys/streaming and a twenty-minute simulation. Browser journeys use public controls and declared saved edge-case fixtures. Automated play is not a balance or enjoyment verdict.

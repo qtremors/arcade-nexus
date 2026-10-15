@@ -81,6 +81,8 @@ Use `--browser msedge` for Edge or `--browser chromium` for an installed Chromiu
 
 See [DEVELOPMENT.md](DEVELOPMENT.md), the [SDK guide](frontend/src/sdk/README.md), and [manual playtest checklist](docs/PLAYTEST.md). The [Tremors Source License](LICENSE.md) requires attribution; commercial use requires permission.
 
-The latest [repository review](docs/DEEP_REVIEW.md) and [file-by-file ledger](docs/REVIEW_FILES.md) record confirmed fixes, remaining numeric save limits, and the distinction between automated checks and actual laptop acceptance.
+The latest [repository review](docs/DEEP_REVIEW.md) and [file-by-file ledger](docs/REVIEW_FILES.md) record confirmed fixes, numeric save/result safeguards, and the distinction between automated checks and actual laptop acceptance.
 
 The [architecture and maintainability review](docs/ARCHITECTURE_REVIEW.md) covers large files, responsibility ownership, dependency direction, contracts, styles, and a staged refactoring plan.
+
+The [review implementation follow-up](docs/REVIEW_FOLLOWUP.md) records numeric safeguards, generated wire contracts, backend services, session commands/panels, lazy save codecs, all six 2D simulation/renderer boundaries, Flight progression policies, renderer-retention cleanup and diagnostic/style ownership.

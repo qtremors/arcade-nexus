@@ -9,7 +9,7 @@ Implemented on `ag-dev`: the eight-game catalog now includes the improvements be
 | Neon Snake | Four connected maze layouts with a safe starting corridor. Separate 60-second Bonus Sprint offers optional +30 gold packets with a 4.5-second expiry. |
 | Raptor Run | Complete authored obstacle phrases, jump-aware spacing, close-hitbox near-miss feedback, and four distance-based biomes. |
 | Neon Breakout | Separate six-sector Arcade mode, 12-second wide paddle and 10-second multiball pickups, power-up timers, and visible final-brick assistance. Classic and daily campaigns retain three sectors and their records. |
-| Merge 2048 | Undo restores RNG state, including legacy one-move saves. Six authored daily puzzles have move limits and no random spawns. Optional semantic board, slide/undo buttons, and live merge explanations. |
+| Merge 2048 | Undo restores RNG state, including legacy one-move saves. Six authored daily puzzles have move limits and no random spawns. Optional semantic board, slide/undo buttons, and live merge explanations. Continued play ends explicitly at the supported 1,048,576 tile, retaining Classic undo. |
 | Stellar Flight | Four named race patterns, three survey landmark silhouettes, H/left-stick-click contract selection with a fresh baseline, and distinct acceleration, boost, recharge, shield, and handling tradeoffs. |
 | Neon Tetris | Completed 40-line sprints rank by elapsed simulation time. Results, launch screen, and Progress show milliseconds; earlier score records retain their meaning. |
 | Asteroids | Stronger small-fragment outlines and fill contrast, plus a live remaining-rock count alongside wave feedback. |
@@ -17,7 +17,7 @@ Implemented on `ag-dev`: the eight-game catalog now includes the improvements be
 
 Shared result screens compare against the previous personal best. Records remain partitioned by mode, daily date, difficulty, and rules. The offline result queue now accepts long-flight and multi-wave measurements up to the backend's existing bounds. Sprint times survive retries and backup copies without a database migration.
 
-Current gameplay rules: Snake 3, Raptor 3, Breakout 2, 2048 3, Flight 5, Tetris 2, Asteroids 1, Prism 2. Older saves gain defaults and continue under current rules; historical records are preserved. Breakout's new Arcade mode is a separate partition under its unchanged rules version.
+Current gameplay rules: Snake 3, Raptor 3, Breakout 2, 2048 4, Flight 5, Tetris 2, Asteroids 1, Prism 2. Older saves gain defaults and continue under current rules; historical records are preserved. Breakout's new Arcade mode is a separate partition under its unchanged rules version.
 
 ## Original review and remaining acceptance
 

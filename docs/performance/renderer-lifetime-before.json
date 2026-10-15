@@ -1,0 +1,28 @@
+{
+  "recordedAt": "2026-10-15T03:28:51.251Z",
+  "scope": "Headless SwiftShader, isolated Vite engine/game instances. WeakRefs plus explicit browser GC inspect JS game/engine/canvas reachability after ten public initialize/start/destroy cycles. This does not certify native GPU allocation, power or sustained process memory.",
+  "results": [
+    {
+      "slug": "prism-rush",
+      "cycles": 10,
+      "retained": {
+        "games": 0,
+        "engines": 0,
+        "canvases": 10,
+        "remainingCanvasElements": 0
+      },
+      "pageErrors": []
+    },
+    {
+      "slug": "stellar-flight",
+      "cycles": 10,
+      "retained": {
+        "games": 0,
+        "engines": 0,
+        "canvases": 10,
+        "remainingCanvasElements": 0
+      },
+      "pageErrors": []
+    }
+  ]
+}

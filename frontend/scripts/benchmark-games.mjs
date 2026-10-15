@@ -115,7 +115,14 @@ try {
         await document.fonts.ready;
         const descriptor = getDescriptor(slug),
           game = await descriptor.load(),
-          engine = new GameEngine();
+          engine = new GameEngine({
+            input: {
+              start() {},
+              stop() {},
+              consumePresses() {},
+              getState: () => scriptedInput(),
+            },
+          });
         const canvas = document.querySelector("canvas");
         await engine.init(canvas, game, {
           ...descriptor.config,
@@ -127,6 +134,7 @@ try {
           width: 960,
           height: 640,
         });
+        const diagnostics = game.getRenderDiagnostics?.();
         let initial = game.getState();
         let fixture = "Seeded first-run state";
         if (scenario === "late-run" && slug === "prism-rush") {
@@ -164,8 +172,8 @@ try {
                 bestSpeed: 300,
               });
               game.render();
-              if (game.renderer.info.render.triangles > triangles) {
-                triangles = game.renderer.info.render.triangles;
+              if (diagnostics.frame().triangles > triangles) {
+                triangles = diagnostics.frame().triangles;
                 fixture = game.getState();
               }
             }
@@ -182,9 +190,9 @@ try {
           const start = performance.now();
           render(...args);
           work.push(performance.now() - start);
-          if (game.renderer) {
-            drawCalls.push(game.renderer.info.render.calls);
-            triangles.push(game.renderer.info.render.triangles);
+          if (diagnostics) {
+            drawCalls.push(diagnostics.frame().calls);
+            triangles.push(diagnostics.frame().triangles);
           }
         };
         let resets = 0,
@@ -198,7 +206,7 @@ try {
           engine.start();
         });
         const base = performance.now();
-        engine.input.getState = () => {
+        function scriptedInput() {
           const input = {
             up: false,
             down: false,
@@ -209,28 +217,29 @@ try {
             pause: false,
             keys: {},
           };
+          const hints = game.getInputHints?.() ?? {};
           const t = performance.now() - base;
           if (slug === "snake") {
-            const h = game.snake[0];
-            let d = game.direction;
-            if (d === "right" && h.x >= game.cols - 2) d = "down";
-            else if (d === "down" && h.y >= game.rows - 2) d = "left";
+            const h = hints.snake.head;
+            let d = hints.snake.direction;
+            if (d === "right" && h.x >= hints.snake.cols - 2) d = "down";
+            else if (d === "down" && h.y >= hints.snake.rows - 2) d = "left";
             else if (d === "left" && h.x <= 1) d = "up";
             else if (d === "up" && h.y <= 1) d = "right";
             input[d] = true;
           } else if (slug === "raptor-run") {
             let next = null;
-            for (const o of game.obstacles)
+            for (const o of hints.raptor.obstacles)
               if (o.x + o.width > 90 && (!next || o.x < next.x)) next = o;
             input.action =
               !!next &&
               next.type !== "bird" &&
-              next.x - 120 < game.gameSpeed * 0.15 &&
-              !game.isJumping;
+              next.x - 120 < hints.raptor.speed * 0.15 &&
+              !hints.raptor.jumping;
             input.down = next?.type === "bird";
           } else if (slug === "breakout") {
-            input.left = game.ball.x < game.paddle - 12;
-            input.right = game.ball.x > game.paddle + 12;
+            input.left = hints.breakout.ballX < hints.breakout.paddleX - 12;
+            input.right = hints.breakout.ballX > hints.breakout.paddleX + 12;
             input.action = Math.floor(t / 400) % 2 === 0;
           } else if (slug === "merge-2048") {
             input[["left", "down", "right", "up"][Math.floor(t / 220) % 4]] =
@@ -245,7 +254,7 @@ try {
             input.up = t % 1800 < 900;
             input.action = true;
           } else if (slug === "prism-rush") {
-            const run = game.run;
+            const run = hints.prism;
             let next = null;
             for (const row of run.rows)
               if (!row.passed && (!next || row.z > next.z)) next = row;
@@ -262,25 +271,20 @@ try {
             }
           }
           return input;
-        };
-        let renderer = null;
-        if (game.renderer) {
-          const gl = game.renderer.getContext(),
-            ext = gl.getExtension("WEBGL_debug_renderer_info");
-          renderer = ext
-            ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)
-            : gl.getParameter(gl.RENDERER);
         }
+        const renderer = diagnostics?.renderer ?? null;
         engine.start();
-        await new Promise((r) => setTimeout(r, warmupSeconds * 1000));
-        engine.samples = [];
+        await new Promise((resolve) =>
+          setTimeout(resolve, warmupSeconds * 1000),
+        );
+        engine.diagnostics.resetSamples();
         work.length = drawCalls.length = triangles.length = 0;
         const start = performance.now(),
           startResets = resets;
         await new Promise((r) => setTimeout(r, sampleSeconds * 1000));
         engine.stop();
         const wallMs = performance.now() - start,
-          samples = engine.samples.filter((v) => v > 0),
+          samples = engine.diagnostics.samples().filter((v) => v > 0),
           sorted = [...samples].sort((a, b) => a - b);
         const p = (n) =>
           sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * n))];
@@ -328,9 +332,7 @@ try {
             colorDepth: screen.colorDepth,
             dpr: devicePixelRatio,
           },
-          contextAntialiasing:
-            game.renderer?.getContext().getContextAttributes()?.antialias ??
-            null,
+          contextAntialiasing: diagnostics?.antialias ?? null,
         };
         result.renderInfo = game.getRenderInfo?.();
         const average = (values) =>
@@ -351,7 +353,7 @@ try {
             ]?.toFixed(2),
           ),
         };
-        if (game.renderer) {
+        if (diagnostics) {
           result.drawCalls = {
             average: average(drawCalls),
             max: drawCalls.reduce((max, value) => Math.max(max, value), 0),
@@ -360,12 +362,12 @@ try {
             average: average(triangles),
             max: triangles.reduce((max, value) => Math.max(max, value), 0),
           };
-          result.gpuResources = { ...game.renderer.info.memory };
+          result.gpuResources = diagnostics.resources();
         }
-        const rendererInfo = game.renderer?.info;
+
         engine.destroy();
-        if (rendererInfo)
-          result.afterDestroyGpuResources = { ...rendererInfo.memory };
+        if (diagnostics)
+          result.afterDestroyGpuResources = diagnostics.resources();
         return result;
       },
       { slug, mode, scenario, warmupSeconds, sampleSeconds },
@@ -398,9 +400,9 @@ try {
             engine.start();
             await new Promise((resolve) => setTimeout(resolve, 150));
             engine.stop();
-            const info = game.renderer?.info;
+            const diagnostics = game.getRenderDiagnostics?.();
             engine.destroy();
-            return info ? { ...info.memory } : null;
+            return diagnostics?.resources() ?? null;
           },
           { slug, mode },
         );

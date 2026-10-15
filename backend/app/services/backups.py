@@ -11,6 +11,8 @@ from pathlib import Path
 from uuid import uuid4
 
 from app.datetime_utils import utc_now
+from app.schemas.backup import Backup
+from app.services.backup_transfer import export_data
 
 logger = logging.getLogger(__name__)
 SNAPSHOT = re.compile(r"auto-(\d{8}T\d{12}Z)-(daily|manual)-[a-f0-9]{8}\.json")
@@ -75,9 +77,6 @@ class RotatingBackups:
             )
             if not force and latest is not None and (now - latest).total_seconds() < self.interval:
                 return None
-            # Import lazily to keep the router and lifecycle independent.
-            from app.routers.data import Backup, export_data
-
             try:
                 async with self.session_factory() as db:
                     data = Backup.model_validate(await export_data(db))

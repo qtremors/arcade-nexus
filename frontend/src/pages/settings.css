@@ -1,0 +1,51 @@
+.checkbox-label {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin: 16px 0;
+}
+.settings-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.settings-grid {
+  max-width: 1180px;
+}
+.settings-grid .detail-panel {
+  margin: 0;
+}
+.settings-grid .detail-panel {
+  padding: 30px;
+}
+.checkbox-label input {
+  width: 16px;
+  height: 16px;
+  accent-color: #a1edd5;
+}
+@media (max-width: 600px) {
+  .settings-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.automatic-backups li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  margin-block: 1rem;
+}
+.binding-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.import-backup {
+  display: block;
+  margin: 16px 0;
+}
+.import-backup input {
+  display: block;
+  max-width: 100%;
+  margin-top: 8px;
+}

@@ -1,12 +1,12 @@
 import { expect, it } from "vitest";
-import { readSave } from "../services/saves";
+import { readSave, validateSave } from "../services/saves";
 import { RaptorRunGame } from "../games/raptor-run/RaptorRun";
 const canvas = { width: 960, height: 640 } as HTMLCanvasElement;
-it("opens legacy Raptor envelopes that carried the old unused physics configuration", () => {
+it("opens legacy Raptor envelopes that carried the old unused physics configuration", async () => {
   const original = new RaptorRunGame();
   original.init(canvas, { slug: "raptor-run", title: "Raptor" });
   const snapshot = original.getState();
-  const data = readSave(
+  const data = await validateSave(
     {
       format: 1,
       game: "raptor-run",

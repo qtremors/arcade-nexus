@@ -1,10 +1,21 @@
-import { useSettingsStore } from "../stores/settingsStore";
+import type { AudioPort } from "./RuntimePorts";
 /**
  * Audio Manager - Handles all system sound effects and music.
  * Uses Web Audio API to synthesize UI sounds (no assets required).
  */
 export class AudioManager {
   private static instance: AudioManager;
+  private static ports: AudioPort = {
+    readPreferences: () => ({ muted: false, volume: 0.5 }),
+    subscribe: () => () => {},
+    setVolume: () => {},
+    setMuted: () => {},
+  };
+  private unsubscribe?: () => void;
+  static configure(ports: AudioPort) {
+    AudioManager.ports = ports;
+    AudioManager.instance?.bindPreferences();
+  }
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private idleTimer: ReturnType<typeof setTimeout> | null = null;
@@ -12,9 +23,13 @@ export class AudioManager {
   private changingContext = false;
 
   private constructor() {
-    useSettingsStore.subscribe(() => {
+    this.bindPreferences();
+  }
+  private bindPreferences() {
+    this.unsubscribe?.();
+    this.unsubscribe = AudioManager.ports.subscribe(() => {
       if (!this.ctx || !this.masterGain) return;
-      const { muted, volume } = useSettingsStore.getState();
+      const { muted, volume } = AudioManager.ports.readPreferences();
       try {
         this.masterGain.gain.setValueAtTime(
           muted ? 0 : volume,
@@ -31,7 +46,7 @@ export class AudioManager {
   private syncContext() {
     const context = this.ctx;
     if (!context || this.changingContext) return;
-    const { muted, volume } = useSettingsStore.getState();
+    const { muted, volume } = AudioManager.ports.readPreferences();
     const active = !muted && volume > 0 && performance.now() < this.activeUntil;
     if (
       (active && context.state !== "suspended") ||
@@ -46,8 +61,8 @@ export class AudioManager {
         if (
           this.ctx === context &&
           active !==
-            (!useSettingsStore.getState().muted &&
-              useSettingsStore.getState().volume > 0 &&
+            (!AudioManager.ports.readPreferences().muted &&
+              AudioManager.ports.readPreferences().volume > 0 &&
               performance.now() < this.activeUntil)
         )
           this.syncContext();
@@ -83,7 +98,7 @@ export class AudioManager {
       this.ctx = new window.AudioContext();
       this.masterGain = this.ctx.createGain();
       this.masterGain.connect(this.ctx.destination);
-      this.masterGain.gain.value = useSettingsStore.getState().volume;
+      this.masterGain.gain.value = AudioManager.ports.readPreferences().volume;
     }
   }
 
@@ -106,7 +121,7 @@ export class AudioManager {
     duration: number,
     fadeOut: boolean = true,
   ) {
-    const preferences = useSettingsStore.getState();
+    const preferences = AudioManager.ports.readPreferences();
     if (preferences.muted || preferences.volume === 0) return;
     try {
       this.init();
@@ -159,7 +174,7 @@ export class AudioManager {
 
   /** Unlock from a user gesture; game effects share the audio preferences. */
   unlock(): void {
-    const { muted, volume } = useSettingsStore.getState();
+    const { muted, volume } = AudioManager.ports.readPreferences();
     if (muted || volume === 0) return;
     try {
       this.init();
@@ -187,10 +202,10 @@ export class AudioManager {
   }
 
   setVolume(value: number): void {
-    useSettingsStore.getState().setVolume(value);
+    AudioManager.ports.setVolume(value);
   }
   toggleMute(): void {
-    const store = useSettingsStore.getState();
-    store.setMuted(!store.muted);
+    const store = AudioManager.ports.readPreferences();
+    AudioManager.ports.setMuted(!store.muted);
   }
 }

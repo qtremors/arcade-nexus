@@ -1,6 +1,6 @@
+import type { InputPreferences } from "./RuntimePorts";
 import type { InputState } from "./GameSDK";
-import { useSettingsStore } from "../stores/settingsStore";
-import { defaultBindings } from "../services/controls";
+import { defaultBindings } from "./inputBindings";
 export function isEditing(target: EventTarget | null): boolean {
   return (
     target instanceof HTMLElement &&
@@ -9,6 +9,15 @@ export function isEditing(target: EventTarget | null): boolean {
   );
 }
 export class InputManager {
+  private readPreferences: () => InputPreferences;
+  constructor(
+    readPreferences: () => InputPreferences = () => ({
+      deadZone: 0.2,
+      bindings: {},
+    }),
+  ) {
+    this.readPreferences = readPreferences;
+  }
   private keys: Record<string, boolean> = {};
   private presses = new Set<string>();
   private blockedButtons = new Set<string>();
@@ -69,7 +78,7 @@ export class InputManager {
       if (!pressed) this.blockedButtons.delete(key);
       return pressed && !this.blockedButtons.has(key);
     };
-    const { deadZone, bindings } = useSettingsStore.getState();
+    const { deadZone, bindings } = this.readPreferences();
     const axis = (value: number) =>
       Math.abs(value) <= deadZone
         ? 0

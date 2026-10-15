@@ -99,7 +99,7 @@ const experiences: Record<string, GameExperience> = {
   "merge-2048": {
     accent: "#d5b5ff",
     mood: "A little room to think",
-    goal: "Merge matching tiles to reach 2048. No timer, just your next move.",
+    goal: "Reach 2048, then keep merging up to the final 1,048,576 tile. No timer, just your next move.",
     tip: "Keep your largest tile in a corner. Classic lets you undo the last move. Daily puzzles have a move limit and no new tiles; open the board reader for text controls.",
     controls: [
       {

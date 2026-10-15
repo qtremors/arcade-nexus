@@ -1,3 +1,5 @@
+import { renderDiagnostics } from "../../sdk/RenderDiagnostics";
+import { SharedLightingResources } from "../../sdk/SharedLightingResources";
 import "./flight.css";
 import { fullHdScale, graphicsCapabilities } from "../../sdk/GraphicsQuality";
 import * as THREE from "three";
@@ -18,6 +20,7 @@ export class StellarFlightGame implements Game3DInstance {
   private scene!: THREE.Scene;
   private camera!: THREE.PerspectiveCamera;
   private renderer!: THREE.WebGLRenderer;
+  private lightingResources = new SharedLightingResources();
   private canvas: HTMLCanvasElement | null = null;
   private jet = new THREE.Group();
   private ships = new Map<ShipId, THREE.Group>();
@@ -52,6 +55,9 @@ export class StellarFlightGame implements Game3DInstance {
   private offset = new THREE.Vector3();
   private dummy = new THREE.Object3D();
 
+  getRenderDiagnostics() {
+    return renderDiagnostics(this.renderer);
+  }
   async init(canvas: HTMLCanvasElement, config: GameConfig): Promise<void> {
     this.journey = new SpaceJourney(
       typeof config.seed === "number" ? config.seed : undefined,
@@ -233,6 +239,7 @@ export class StellarFlightGame implements Game3DInstance {
         error,
       );
     }
+    this.lightingResources.observe(this.scene);
     this.initialized = true;
     this.audio.pause();
     this.hud?.update(this.journey, this.camera, 0);
@@ -683,8 +690,10 @@ export class StellarFlightGame implements Game3DInstance {
     const materials = new Set<THREE.Material>();
     const textures = new Set<THREE.Texture>();
     object.traverse((child) => {
-      if (child instanceof THREE.Sprite) materials.add(child.material);
-      else if (
+      if (child instanceof THREE.Sprite) {
+        geometries.add(child.geometry);
+        materials.add(child.material);
+      } else if (
         child instanceof THREE.Mesh ||
         child instanceof THREE.Points ||
         child instanceof THREE.LineSegments
@@ -723,6 +732,7 @@ export class StellarFlightGame implements Game3DInstance {
     this.ships.clear();
     this.sectors.clear();
     this.gates = [];
+    this.lightingResources.dispose();
     this.renderer?.dispose();
   }
 }

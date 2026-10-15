@@ -63,10 +63,17 @@ beforeEach(() => {
   vi.spyOn(progressApi, "complete").mockResolvedValue({
     high_score: 50,
     is_new_high_score: false,
+    session_id: crypto.randomUUID(),
+    previous_high_score: 0,
+    best_time_ms: null,
+    previous_best_time_ms: null,
+    is_new_best_time: false,
+    medal: null,
+    total_playtime: 10,
     awards: [],
   });
-  vi.spyOn(progressApi, "saveRecovery").mockResolvedValue({});
-  vi.spyOn(progressApi, "deleteRecovery").mockResolvedValue(undefined);
+  vi.spyOn(progressApi, "saveRecovery").mockResolvedValue({ saved: true });
+  vi.spyOn(progressApi, "deleteRecovery").mockResolvedValue({ deleted: true });
 });
 afterEach(async () => {
   await flushCompletions(true);

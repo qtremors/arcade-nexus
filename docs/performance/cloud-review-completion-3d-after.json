@@ -1,0 +1,634 @@
+{
+  "date": "2026-10-15T03:55:47.339Z",
+  "browser": "151.0.7922.173",
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "logicalCpus": 3,
+  "availableParallelism": 2,
+  "operatingSystem": "linux 6.18.44 x64",
+  "hostMemoryBytes": 10452496384,
+  "targetDevice": "12th-generation Intel i7, integrated graphics",
+  "declaredPower": "unknown",
+  "viewport": [
+    1920,
+    1080
+  ],
+  "canvasCss": "1920×1080 for 3D; 1620×1080 for 3:2 games",
+  "dpr": 1,
+  "warmupSeconds": 5,
+  "sampleSeconds": 2,
+  "reentryCycles": 10,
+  "plannedCases": [
+    {
+      "slug": "prism-rush",
+      "mode": "classic",
+      "scenario": "normal"
+    },
+    {
+      "slug": "prism-rush",
+      "mode": "classic",
+      "scenario": "late-run"
+    },
+    {
+      "slug": "stellar-flight",
+      "mode": "endless",
+      "scenario": "normal"
+    },
+    {
+      "slug": "stellar-flight",
+      "mode": "endless",
+      "scenario": "late-run"
+    }
+  ],
+  "completed": true,
+  "build": "Vite development server; engine + game, no React shell",
+  "softwareRequested": true,
+  "headless": true,
+  "notes": "Scripted normal-mode play; auto-reset on game over. Engine + game, not full console or worst-case stress. Native hardware acceptance requires a headed browser and declared display/GPU.",
+  "results": [
+    {
+      "slug": "prism-rush",
+      "mode": "classic",
+      "scenario": "normal",
+      "fixture": "Seeded first-run state",
+      "frames": 27,
+      "wallMs": 2000,
+      "averageFps": 13.9,
+      "medianFrameMs": 66.7,
+      "p95FrameMs": 116.6,
+      "slowFramesOver33ms": 27,
+      "resets": 0,
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "buffer": [
+        1920,
+        1080
+      ],
+      "score": 118,
+      "error": null,
+      "hardware": {
+        "software": true,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "probeRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36",
+        "logicalCpus": 3,
+        "deviceMemoryGiB": 8,
+        "display": {
+          "width": 1920,
+          "height": 1080,
+          "colorDepth": 24,
+          "dpr": 1
+        },
+        "contextAntialiasing": true
+      },
+      "renderInfo": {
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "quality": "1080p · full scene detail",
+        "width": 1920,
+        "height": 1080
+      },
+      "renderSubmitMs": {
+        "average": 0.61,
+        "p95": 1.1
+      },
+      "drawCalls": {
+        "average": 9,
+        "max": 9
+      },
+      "triangles": {
+        "average": 881.7,
+        "max": 890
+      },
+      "gpuResources": {
+        "geometries": 9,
+        "textures": 1
+      },
+      "afterDestroyGpuResources": {
+        "geometries": 0,
+        "textures": 0
+      },
+      "reentry": [
+        {
+          "cycle": 1,
+          "usedHeapBytes": 10732956,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 2,
+          "usedHeapBytes": 10824016,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 3,
+          "usedHeapBytes": 10841452,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 4,
+          "usedHeapBytes": 10867876,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 5,
+          "usedHeapBytes": 10870752,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 6,
+          "usedHeapBytes": 10875008,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 7,
+          "usedHeapBytes": 10885376,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 8,
+          "usedHeapBytes": 11169696,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 9,
+          "usedHeapBytes": 11183652,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 10,
+          "usedHeapBytes": 11204544,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        }
+      ],
+      "pageErrors": []
+    },
+    {
+      "slug": "prism-rush",
+      "mode": "classic",
+      "scenario": "late-run",
+      "fixture": "Validated save at maximum normal-mode speed with three visible gates",
+      "frames": 26,
+      "wallMs": 2000,
+      "averageFps": 13.6,
+      "medianFrameMs": 83.3,
+      "p95FrameMs": 100,
+      "slowFramesOver33ms": 22,
+      "resets": 0,
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "buffer": [
+        1920,
+        1080
+      ],
+      "score": 6659,
+      "error": null,
+      "hardware": {
+        "software": true,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "probeRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36",
+        "logicalCpus": 3,
+        "deviceMemoryGiB": 8,
+        "display": {
+          "width": 1920,
+          "height": 1080,
+          "colorDepth": 24,
+          "dpr": 1
+        },
+        "contextAntialiasing": true
+      },
+      "renderInfo": {
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "quality": "1080p · full scene detail",
+        "width": 1920,
+        "height": 1080
+      },
+      "renderSubmitMs": {
+        "average": 0.8,
+        "p95": 2
+      },
+      "drawCalls": {
+        "average": 9,
+        "max": 9
+      },
+      "triangles": {
+        "average": 836.15,
+        "max": 858
+      },
+      "gpuResources": {
+        "geometries": 9,
+        "textures": 1
+      },
+      "afterDestroyGpuResources": {
+        "geometries": 0,
+        "textures": 0
+      },
+      "reentry": [
+        {
+          "cycle": 1,
+          "usedHeapBytes": 10774840,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 2,
+          "usedHeapBytes": 10869476,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 3,
+          "usedHeapBytes": 10884060,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 4,
+          "usedHeapBytes": 10914728,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 5,
+          "usedHeapBytes": 10917604,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 6,
+          "usedHeapBytes": 10921880,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 7,
+          "usedHeapBytes": 10932224,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 8,
+          "usedHeapBytes": 11215908,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 9,
+          "usedHeapBytes": 11227080,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 10,
+          "usedHeapBytes": 11248608,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        }
+      ],
+      "pageErrors": []
+    },
+    {
+      "slug": "stellar-flight",
+      "mode": "endless",
+      "scenario": "normal",
+      "fixture": "Seeded first-run state",
+      "frames": 15,
+      "wallMs": 2004,
+      "averageFps": 7.9,
+      "medianFrameMs": 133.3,
+      "p95FrameMs": 166.7,
+      "slowFramesOver33ms": 14,
+      "resets": 0,
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "buffer": [
+        1920,
+        1080
+      ],
+      "score": 750,
+      "error": null,
+      "hardware": {
+        "software": true,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "probeRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36",
+        "logicalCpus": 3,
+        "deviceMemoryGiB": 8,
+        "display": {
+          "width": 1920,
+          "height": 1080,
+          "colorDepth": 24,
+          "dpr": 1
+        },
+        "contextAntialiasing": true
+      },
+      "renderInfo": {
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "quality": "1080p · full scene detail",
+        "width": 1920,
+        "height": 1080
+      },
+      "renderSubmitMs": {
+        "average": 1.76,
+        "p95": 3
+      },
+      "drawCalls": {
+        "average": 31.13,
+        "max": 34
+      },
+      "triangles": {
+        "average": 11263.33,
+        "max": 13346
+      },
+      "gpuResources": {
+        "geometries": 29,
+        "textures": 2
+      },
+      "afterDestroyGpuResources": {
+        "geometries": 0,
+        "textures": 0
+      },
+      "reentry": [
+        {
+          "cycle": 1,
+          "usedHeapBytes": 12412520,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 2,
+          "usedHeapBytes": 12498856,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 3,
+          "usedHeapBytes": 12545420,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 4,
+          "usedHeapBytes": 12677392,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 5,
+          "usedHeapBytes": 12721892,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 6,
+          "usedHeapBytes": 12736220,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 7,
+          "usedHeapBytes": 12738152,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 8,
+          "usedHeapBytes": 13084976,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 9,
+          "usedHeapBytes": 13106244,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 10,
+          "usedHeapBytes": 13133716,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        }
+      ],
+      "pageErrors": []
+    },
+    {
+      "slug": "stellar-flight",
+      "mode": "endless",
+      "scenario": "late-run",
+      "fixture": "Densest submitted geometry among twelve seeded position/yaw samples, with boost and turns",
+      "frames": 19,
+      "wallMs": 2000,
+      "averageFps": 10.3,
+      "medianFrameMs": 100,
+      "p95FrameMs": 149.9,
+      "slowFramesOver33ms": 17,
+      "resets": 0,
+      "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+      "buffer": [
+        1920,
+        1080
+      ],
+      "score": 500,
+      "error": null,
+      "hardware": {
+        "software": true,
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "probeRenderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/151.0.0.0 Safari/537.36",
+        "logicalCpus": 3,
+        "deviceMemoryGiB": 8,
+        "display": {
+          "width": 1920,
+          "height": 1080,
+          "colorDepth": 24,
+          "dpr": 1
+        },
+        "contextAntialiasing": true
+      },
+      "renderInfo": {
+        "renderer": "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)",
+        "quality": "1080p · full scene detail",
+        "width": 1920,
+        "height": 1080
+      },
+      "renderSubmitMs": {
+        "average": 1.88,
+        "p95": 6.3
+      },
+      "drawCalls": {
+        "average": 24.37,
+        "max": 25
+      },
+      "triangles": {
+        "average": 7656.53,
+        "max": 9898
+      },
+      "gpuResources": {
+        "geometries": 32,
+        "textures": 2
+      },
+      "afterDestroyGpuResources": {
+        "geometries": 0,
+        "textures": 0
+      },
+      "reentry": [
+        {
+          "cycle": 1,
+          "usedHeapBytes": 12766360,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 2,
+          "usedHeapBytes": 12849160,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 3,
+          "usedHeapBytes": 12887776,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 4,
+          "usedHeapBytes": 13027788,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 5,
+          "usedHeapBytes": 13065736,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 6,
+          "usedHeapBytes": 13065764,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 7,
+          "usedHeapBytes": 13079320,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 8,
+          "usedHeapBytes": 13432476,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 9,
+          "usedHeapBytes": 13445856,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        },
+        {
+          "cycle": 10,
+          "usedHeapBytes": 13467500,
+          "releasedGpuResources": {
+            "geometries": 0,
+            "textures": 0
+          }
+        }
+      ],
+      "pageErrors": []
+    }
+  ],
+  "qualification": {
+    "nativeGpuReported": false,
+    "targetCpuDetected": false,
+    "headed": false,
+    "fullHd": true,
+    "sampleAtLeast60Seconds": false,
+    "powerDeclared": false,
+    "scope": "Engine diagnostic with scripted play and optional validated late-run saves; inspect resets and per-scenario pacing. Full-console, physical input latency, visual quality and thermal acceptance require the manual checklist."
+  }
+}

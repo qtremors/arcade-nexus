@@ -15,6 +15,9 @@ def main():
     )
     args = parser.parse_args()
     checks = [
+        ("backend", ["uv", "run", "python", "../scripts/boundaries.py"]),
+        ("backend", ["uv", "run", "python", "../scripts/contracts.py", "--check"]),
+        ("frontend", ["node", "scripts/check-boundaries.mjs"]),
         ("backend", ["uv", "run", "ruff", "check", ".", "../arcade.py", "../scripts"]),
         ("backend", ["uv", "run", "pytest", "-q"]),
         ("frontend", ["npm", "run", "lint"]),

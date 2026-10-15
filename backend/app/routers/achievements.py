@@ -14,6 +14,7 @@ from app.schemas.achievement import (
     AchievementResponse,
     AchievementSummary,
     AchievementUnlock,
+    AchievementUnlockResponse,
 )
 from app.services.common import get_game
 
@@ -117,7 +118,7 @@ async def get_game_achievements(
     return await achievement_list(current_user.id, db, game_id=game.id, skip=skip, limit=limit)
 
 
-@router.post("/unlock")
+@router.post("/unlock", response_model=AchievementUnlockResponse, response_model_exclude_unset=True)
 async def unlock_achievement(
     unlock_data: AchievementUnlock, current_user: CurrentUser, db: DbSession
 ):

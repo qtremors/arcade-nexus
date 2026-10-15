@@ -40,3 +40,8 @@ class GameResponse(ResponseSchema):
 class GameListResponse(ResponseSchema):
     games: list[GameResponse]
     total: int
+
+
+class GameCategory(ResponseSchema):
+    value: Category
+    label: str

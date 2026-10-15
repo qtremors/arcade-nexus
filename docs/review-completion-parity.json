@@ -1,0 +1,43 @@
+{
+  "recordedAt": "2026-10-15T03:03:11.797757+00:00",
+  "scope": "Temporary before/after comparison of the prior local implementation with the completed simulation/rendering and Flight-policy extraction; not native pixels or human gameplay certification. Duplicate baseline source was removed after the comparison.",
+  "result": "passed",
+  "checks": 14,
+  "canvas": {
+    "gameModes": 13,
+    "seed": 1234,
+    "stepsPerMode": 900,
+    "deltaMs": 16,
+    "sampleEverySteps": 60,
+    "sampledDrawingCommandTraces": 195,
+    "assertions": "Every step compares the update return value and complete save; sampled frames compare canvas calls and property values. JSDOM proxy contexts; Math.random fixed at 0.5 for cosmetic effects.",
+    "slugs": [
+      "snake",
+      "breakout",
+      "merge-2048",
+      "tetris",
+      "asteroids"
+    ]
+  },
+  "flight": {
+    "seeds": [
+      1,
+      1234,
+      56789
+    ],
+    "stepsPerSeed": 3600,
+    "deltaMs": 16,
+    "assertions": "Every step compares return value and complete durable state under declared steering/boost/camera/contract/ship/navigation/route input."
+  },
+  "baselineFileSha256": {
+    "snake/Snake.ts": "b3bdabc65454d8980ed481694eaf1900860a737ebb4150180220d5fcf0bdd51d",
+    "breakout/Breakout.ts": "7bf0855b8cb1975e67bebc9cb942b57300fe321fdd7e35318eabc4de3d5c606b",
+    "merge-2048/Merge2048.ts": "d645013867ec5ac449ead14fb089c46cd8d4821169188b809222cb6a164e2b5e",
+    "tetris/Tetris.ts": "1d06e15893966a69386f30ca4e84132ddc6dc5b1cbe1223e1436c26267429d35",
+    "asteroids/Asteroids.ts": "acfe3c45c1a2cebf85829e4b431dd4119fae113a59812cbe451af82ae23ff044",
+    "stellar-flight/SpaceJourney.ts": "8aae271b2ac40b1b1079b94cd32fe8a3329964e08634604118604281e3fbd60d"
+  },
+  "finalLogSha256": "872095a131c90f209c69b93b9141fbb6d73a7589a13ea19679b9653481b872f2",
+  "finalTreeReferenceSha256": "0c1fe7128d1288989cdee26c9e799f3126caf1b3dee1532fe8df44dbbf0d3702",
+  "notes": "The temporary comparison covers the extraction stage. Later counter/lifecycle/contract hardening and renderer-retention cleanup are covered by final regressions. The final-tree digest is a reference, not the digest of the temporary comparison harness."
+}

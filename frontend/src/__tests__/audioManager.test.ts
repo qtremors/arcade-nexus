@@ -38,6 +38,12 @@ beforeEach(async () => {
   vi.resetModules();
   ({ useSettingsStore } = await import("../stores/settingsStore"));
   const { AudioManager } = await import("../sdk/AudioManager");
+  AudioManager.configure({
+    readPreferences: () => useSettingsStore.getState(),
+    subscribe: (callback) => useSettingsStore.subscribe(callback),
+    setVolume: (value) => useSettingsStore.getState().setVolume(value),
+    setMuted: (value) => useSettingsStore.getState().setMuted(value),
+  });
   audio = AudioManager.getInstance();
   contexts.length = 0;
   vi.useFakeTimers();

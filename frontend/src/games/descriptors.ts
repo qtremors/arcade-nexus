@@ -1,29 +1,7 @@
-import { z } from "zod";
-import catalog from "../../../catalog.json";
+import { getGameDefinition } from "./catalog";
 import type { GameInstance } from "../sdk/GameSDK";
 import { getExperience } from "./experience";
 
-const schema = z.record(
-  z.string(),
-  z.object({
-    title: z.string(),
-    rulesVersion: z.number().int().positive(),
-    scoreUnit: z.string(),
-    difficulty: z.boolean(),
-    modes: z
-      .array(
-        z.object({
-          id: z.string(),
-          label: z.string(),
-          ranking: z.enum(["points", "time"]).default("points"),
-          rankingSince: z.number().int().positive().default(1),
-        }),
-      )
-      .min(1),
-    config: z.record(z.string(), z.unknown()),
-  }),
-);
-const definitions = schema.parse(catalog);
 const loaders: Record<string, () => Promise<GameInstance>> = {
   tetris: async () => new (await import("./tetris/Tetris")).TetrisGame(),
   asteroids: async () =>
@@ -40,14 +18,33 @@ const loaders: Record<string, () => Promise<GameInstance>> = {
   "stellar-flight": async () =>
     new (await import("./stellar-flight/StellarFlight")).StellarFlightGame(),
 };
+const codecs: Record<
+  string,
+  () => Promise<{
+    parseState: (state: Record<string, unknown>) => Record<string, unknown>;
+    decodeSave: (
+      save: import("../contracts/saves").SaveEnvelope,
+    ) => import("../contracts/saves").SaveEnvelope;
+  }>
+> = {
+  snake: () => import("./snake/codec"),
+  "raptor-run": () => import("./raptor-run/codec"),
+  breakout: () => import("./breakout/codec"),
+  "merge-2048": () => import("./merge-2048/codec"),
+  tetris: () => import("./tetris/codec"),
+  asteroids: () => import("./asteroids/codec"),
+  "prism-rush": () => import("./prism-rush/codec"),
+  "stellar-flight": () => import("./stellar-flight/codec"),
+};
 export function getDescriptor(slug: string) {
-  if (!definitions[slug] || !loaders[slug])
+  if (!loaders[slug])
     throw new Error("This game is not bundled with Arcade Nexus");
   return {
-    ...definitions[slug],
+    ...getGameDefinition(slug),
     slug,
     experience: getExperience(slug),
     load: loaders[slug],
+    codec: codecs[slug],
   };
 }
-export const gameSlugs = Object.keys(definitions);
+export { gameSlugs } from "./catalog";

@@ -1,0 +1,28 @@
+{
+  "recordedAt": "2026-10-14T23:27:08.892Z",
+  "scope": "Entry script plus every module preload emitted by Vite; excludes lazy route chunks, CSS and fonts. Gzip is an independent size estimate, not a measured transfer or launch time.",
+  "assets": [
+    {
+      "file": "/assets/index-CwsKcB8e.js",
+      "bytes": 304639,
+      "gzipBytes": 97325
+    },
+    {
+      "file": "/assets/react-DB-4Zxce.js",
+      "bytes": 8529,
+      "gzipBytes": 3280
+    },
+    {
+      "file": "/assets/schemas-lj5mpc2Q.js",
+      "bytes": 92680,
+      "gzipBytes": 25965
+    },
+    {
+      "file": "/assets/client-ClykJFOj.js",
+      "bytes": 53964,
+      "gzipBytes": 19702
+    }
+  ],
+  "totalBytes": 459812,
+  "totalGzipBytes": 146272
+}

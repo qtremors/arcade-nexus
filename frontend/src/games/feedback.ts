@@ -1,5 +1,4 @@
-import { AudioManager } from "../sdk/AudioManager";
-import { useSettingsStore } from "../stores/settingsStore";
+import { gameEffects } from "../sdk/RuntimePorts";
 
 /** Cosmetic effects never enter a game's saved simulation state. */
 export class GameFeedback {
@@ -32,7 +31,7 @@ export class GameFeedback {
       } else this.labels.push({ x, y, color, text: label, life: 0.8 });
       this.labels = this.labels.slice(-12);
     }
-    if (useSettingsStore.getState().reducedMotion) return;
+    if (gameEffects.reducedMotion()) return;
     for (let i = 0; i < 10; i++) {
       const angle = (i / 10) * Math.PI * 2;
       this.particles.push({
@@ -48,7 +47,7 @@ export class GameFeedback {
     this.labels = this.labels.slice(-12);
   }
   sound(cue: "hit" | "collect" | "jump" | "miss"): void {
-    AudioManager.getInstance().playGameCue(cue);
+    gameEffects.sound(cue);
   }
   update(milliseconds: number): void {
     const dt = milliseconds / 1000;
@@ -65,7 +64,7 @@ export class GameFeedback {
   }
   render(ctx: CanvasRenderingContext2D): void {
     ctx.save();
-    if (!useSettingsStore.getState().reducedMotion)
+    if (!gameEffects.reducedMotion())
       for (const p of this.particles) {
         ctx.globalAlpha = Math.min(1, p.life / 0.2);
         ctx.fillStyle = p.color;
@@ -76,9 +75,7 @@ export class GameFeedback {
     for (const label of this.labels) {
       ctx.globalAlpha = Math.min(1, label.life / 0.2);
       ctx.fillStyle = label.color;
-      const offset = useSettingsStore.getState().reducedMotion
-        ? 0
-        : (0.8 - label.life) * 32;
+      const offset = gameEffects.reducedMotion() ? 0 : (0.8 - label.life) * 32;
       ctx.fillText(label.text, label.x, label.y - offset);
     }
     ctx.restore();
@@ -87,4 +84,17 @@ export class GameFeedback {
     this.particles = [];
     this.labels = [];
   }
+}
+
+/** Adapt application-owned audio/preferences and ephemeral feedback to pure rules. */
+export function simulationEffects(
+  feedback: GameFeedback,
+): import("./simulationEffects").SimulationEffects {
+  return {
+    reducedMotion: () => gameEffects.reducedMotion(),
+    update: (dt) => feedback.update(dt),
+    sound: (cue) => feedback.sound(cue),
+    burst: (x, y, color, label) => feedback.burst(x, y, color, label),
+    clear: () => feedback.clear(),
+  };
 }

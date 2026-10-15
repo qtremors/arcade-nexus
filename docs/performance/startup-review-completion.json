@@ -1,0 +1,30 @@
+{
+  "recordedAt": "2026-10-15T03:57:24.698Z",
+  "scope": "Vite production entry script plus all module preloads; excludes lazy route/game chunks, CSS and fonts. Independent Node zlib.gzipSync default-compression sizes, using the same method as the earlier implementation report; not measured transfer or launch time.",
+  "node": "v24.19.0",
+  "zlib": "1.3.2.1-motley-3246f1b",
+  "assets": [
+    {
+      "file": "/assets/index-CJwG0KKO.js",
+      "bytes": 304812,
+      "gzipBytes": 97361
+    },
+    {
+      "file": "/assets/react-DB-4Zxce.js",
+      "bytes": 8529,
+      "gzipBytes": 3280
+    },
+    {
+      "file": "/assets/schemas-lj5mpc2Q.js",
+      "bytes": 92680,
+      "gzipBytes": 25965
+    },
+    {
+      "file": "/assets/client-BdZI2GQH.js",
+      "bytes": 54125,
+      "gzipBytes": 19764
+    }
+  ],
+  "totalBytes": 460146,
+  "totalGzipBytes": 146370
+}

@@ -6,7 +6,7 @@ from sqlalchemy.dialects.sqlite import insert
 
 from app.dependencies import DbSession
 from app.models.game import Category, Game
-from app.schemas.game import GameCreate, GameListResponse, GameResponse
+from app.schemas.game import GameCategory, GameCreate, GameListResponse, GameResponse
 from app.services.common import get_game as find_game
 
 router = APIRouter()
@@ -36,8 +36,8 @@ async def list_games(
     return GameListResponse(games=games, total=total)
 
 
-@router.get("/categories")
-async def list_categories() -> list[dict[str, str]]:
+@router.get("/categories", response_model=list[GameCategory])
+async def list_categories():
     return [{"value": category.value, "label": category.value.title()} for category in Category]
 
 

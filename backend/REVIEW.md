@@ -1,5 +1,7 @@
 # Backend review and patch record
 
+For the subsequent implemented review work, see [REVIEW_FOLLOWUP.md](../docs/REVIEW_FOLLOWUP.md).
+
 Historical review record. For current contracts and validation, see [DEVELOPMENT.md](../DEVELOPMENT.md) and [the deep review](../docs/DEEP_REVIEW.md).
 
 Branch: ag-dev. Starting commit: 95312de. Scope: every original source, model, schema, router, configuration, dependency, and test file under backend. The frontend was read only to preserve its request/response expectations.
@@ -65,9 +67,9 @@ Existing frontend endpoints and response fields remain. New response fields are 
 
 Intentional changes: requesting player data without a selected profile returns 409; game metadata creation requires ALLOW_GAME_CREATION; invalid/oversized data returns validation errors; achievement score thresholds are enforced; inactive games are hidden from current library/achievement lists. Historical progress is preserved.
 
-The browser integration is not complete merely because the backend accepts profile/session identities. The frontend still needs to send X-Profile-ID and reuse session UUIDs before cross-tab isolation and retry deduplication are guaranteed.
+The browser integration is not complete merely because the backend accepts profile/session identities. The later frontend integration sends X-Profile-ID and reuses session UUIDs; cross-tab isolation and retry deduplication are covered in the current regression suite.
 
-The frontend follow-up implements full simulation saves, validated versioned game state, actual jump and flight measurements, automatic pause, and result submission recovery. Browser launching, bundled frontend serving, executable packaging, and scheduled backups remain follow-up work. Existing ORM hard-delete cascades remain: the application retires games and soft-deletes profiles; a future permanent-delete feature must define its data retention explicitly.
+The frontend follow-up implements full simulation saves, validated versioned game state, actual jump and flight measurements, automatic pause, and result submission recovery. Browser launching, bundled frontend serving and scheduled backups were subsequently implemented; executable packaging remains a future product decision. Existing ORM hard-delete cascades remain: the application retires games and soft-deletes profiles; a future permanent-delete feature must define its data retention explicitly.
 
 Known legacy schema adoption covers the checked-in v1.4.1 layout. Earlier schemas missing columns and corrupt rows require deliberate repair. Manual downgrades remove UUID session identities; restore a backup to retain the complete newer representation.
 

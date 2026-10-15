@@ -34,7 +34,7 @@ it.each([true, false])(
       update: () => true,
       render: () => {},
     };
-    const engine = new GameEngine();
+    const engine = new GameEngine({ reportMeasurement: recordMeasurement });
     await engine.init(canvas, game, { slug: "test", title: "Test" });
     expect(getContext).toHaveBeenCalledWith("2d", {
       alpha: false,
@@ -62,7 +62,7 @@ it.each([60, 75, 120, 144, 165, 240])(
       update: vi.fn(() => true),
       render: vi.fn(),
     };
-    const engine = new GameEngine();
+    const engine = new GameEngine({ reportMeasurement: recordMeasurement });
     await engine.init(
       {
         width: 0,

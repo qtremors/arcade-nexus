@@ -16,13 +16,12 @@ from sqlalchemy.engine import Connection, make_url
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
-    async_sessionmaker,
     create_async_engine,
 )
 from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import StaticPool
 
-from app.config import BACKEND_DIR, get_settings
+from app.config import BACKEND_DIR
 
 
 class Base(DeclarativeBase):
@@ -43,11 +42,6 @@ def make_engine(database_url: str, *, debug: bool = False) -> AsyncEngine:
         cursor.close()
 
     return db_engine
-
-
-settings = get_settings()
-engine = make_engine(settings.DATABASE_URL, debug=settings.DEBUG)
-AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False, autoflush=False)
 
 
 async def get_db(request: Request) -> AsyncIterator[AsyncSession]:
@@ -154,7 +148,7 @@ def migrate(connection: Connection) -> None:
     command.upgrade(config, "head")
 
 
-async def init_db(db_engine: AsyncEngine = engine) -> None:
+async def init_db(db_engine: AsyncEngine) -> None:
     database = db_engine.url.database
     if database and database != ":memory:":
         Path(database).parent.mkdir(parents=True, exist_ok=True)

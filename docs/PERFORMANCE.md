@@ -1,5 +1,16 @@
 # Full HD game performance
 
+## Review completion diagnostic — 2026-10-15
+
+[The all-mode endurance report](performance/cloud-review-completion-endurance.json) was recorded before the final R16 cleanup: all 17 catalog modes plus declared Prism/Flight late-run cases completed without runtime/page errors, with five-second warm-up, 60-second samples and ten reentries per case (190 total). This is headless SwiftShader on cloud Linux, normal difficulty, isolated engine/game fixtures, full detail and antialiasing.
+
+The 2D averages were 59–60 FPS; Prism normal/late-run both averaged 13.1 FPS, and Flight normal/late-run averaged 9.9/11.5 FPS. Software 3D remains below 60 FPS. These are diagnostics, without native performance/power acceptance or an equivalent-build before/after speed comparison.
+
+That run's post-disposal counters were Prism 0 geometries/1 texture and Flight 1 geometry/1 texture; post-GC JS heap rose approximately 0.66–0.94 MB across ten entries. Follow-up reachability probes traced real retention to Three r186's shared lighting texture and Flight sprite geometry. The fix releases their renderer listeners through public APIs while preserving shader code, cache identity and canvas reuse. The [same probe after the fix](performance/renderer-lifetime-after.json) collected every tested game, engine and canvas object.
+
+[All four affected 3D scenarios were rerun after cleanup](performance/cloud-review-completion-3d-after.json), using five-second warm-up, two-second samples and forty total reentries. Every disposal reported **zero geometries and textures**, with zero runtime/page errors. This shorter run verifies resource/runner behavior; it is not a comparable FPS sample. The full browser regressions also guard collection and zero GPU counters. Native GPU/process memory, power/thermals, full-console frame pacing and physical input latency remain H1 in [PLAYTEST.md](PLAYTEST.md). [VALIDATION.md](VALIDATION.md) records the complete check results.
+
+
 The current target is **1080p, medium-or-better graphics, 60 FPS**, including integrated-graphics laptops. The games never silently lower resolution or remove visible scene detail under load. Rendering is capped at 60 FPS to avoid unnecessary work on high-refresh laptop displays. Native hardware acceptance remains pending.
 
 The latest combined regression results are in [VALIDATION.md](VALIDATION.md). The subsequent backup, storage and keyboard review is in [RELIABILITY.md](RELIABILITY.md).

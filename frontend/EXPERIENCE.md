@@ -1,5 +1,7 @@
 # Console experience standard
 
+For the subsequent implemented review work, see [REVIEW_FOLLOWUP.md](../docs/REVIEW_FOLLOWUP.md).
+
 Historical review record. For current contracts and validation, see [DEVELOPMENT.md](../DEVELOPMENT.md) and [the deep review](../docs/DEEP_REVIEW.md).
 
 Arcade Nexus is a local browser console. The quality target covers the whole journey: choosing a player, browsing, launching, learning controls, playing, pausing, saving and returning. Reliability checks establish whether behavior works; they do not establish whether a game is enjoyable or finished.
@@ -22,7 +24,7 @@ Sound is synthesized locally and follows volume/mute preferences. Optional effec
 
 ## Release bar and further work
 
-A console release needs sustained human playtesting, a settled art direction, tuned difficulty and replay goals, stronger audio composition, and measured frame pacing on supported hardware. Authored sprite/animation assets and richer flight environments can raise the visual ceiling further. Controller-only text entry needs an on-screen keyboard. Physical controller testing, native GPU testing and platform/browser certification remain open.
+A console release needs sustained human playtesting, a settled art direction, tuned difficulty and replay goals, stronger audio composition, and measured frame pacing on supported hardware. Authored sprite/animation assets and richer flight environments can raise the visual ceiling further. The subsequently implemented on-screen keyboard supports controller-only text entry. Physical controller testing, native GPU testing and platform/browser certification remain open.
 
 Review future changes against these concrete criteria:
 

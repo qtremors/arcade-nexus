@@ -22,6 +22,7 @@ const record: ModeRecord = {
   difficulty: "normal",
   rules_version: 1,
   high_score: 100,
+  best_time_ms: null,
 };
 const open = () =>
   render(

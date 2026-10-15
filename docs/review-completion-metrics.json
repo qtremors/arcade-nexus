@@ -1,0 +1,95 @@
+{
+  "recordedAt": "2026-10-15T03:57:24.480188+00:00",
+  "baseCommit": "183ae27",
+  "scope": "Local uncommitted completion snapshot. Production TS/Python, styles, catalog and limits; physical lines include comments/whitespace. Excludes tests, builds and dependencies.",
+  "frontendProductionModules": 150,
+  "backendApplicationModules": 51,
+  "stylesheets": 12,
+  "sourceSha256": "0c1fe7128d1288989cdee26c9e799f3126caf1b3dee1532fe8df44dbbf0d3702",
+  "openapi": {
+    "operations": 45,
+    "nonemptySuccessJsonSchema": 42,
+    "emptySuccessJsonSchema": 0,
+    "withoutSuccessJsonSchema": 3,
+    "generatedComponents": 59
+  },
+  "files": {
+    "frontend/src/hooks/useGameSession.ts": 349,
+    "frontend/src/hooks/useSessionRuntime.ts": 260,
+    "frontend/src/hooks/useRunCompletion.ts": 74,
+    "frontend/src/components/GameCanvas.tsx": 127,
+    "frontend/src/components/SessionHistoryModal.tsx": 303,
+    "frontend/src/hooks/useSessionHistory.ts": 145,
+    "backend/app/routers/data.py": 103,
+    "backend/app/routers/progress.py": 206,
+    "backend/app/routers/stats.py": 118,
+    "frontend/src/api/client.ts": 18,
+    "frontend/src/games/stellar-flight/SpaceJourney.ts": 474,
+    "frontend/src/console.css": 1139,
+    "frontend/src/games/snake/Snake.ts": 49,
+    "frontend/src/games/raptor-run/RaptorRun.ts": 54,
+    "frontend/src/games/breakout/Breakout.ts": 42,
+    "frontend/src/games/merge-2048/Merge2048.ts": 63,
+    "frontend/src/games/tetris/Tetris.ts": 39,
+    "frontend/src/games/asteroids/Asteroids.ts": 41
+  },
+  "validation": {
+    "recordedAt": "2026-10-15T03:57:25.624457+00:00",
+    "fullCommand": "python scripts/check.py --browser",
+    "fullCommandPassed": true,
+    "backendTests": 121,
+    "frontendTests": 225,
+    "frontendTestFiles": 31,
+    "browserCases": 48,
+    "browserCaseScope": "46 console journeys plus 2 isolated engine/renderer collection regressions",
+    "browserMinutes": 7.3,
+    "fullLogSha256": "4d29734d219dd776523dd2b9bd6382656f8b7d941a9e2cf3cab9f1f3176eb535",
+    "diagnostics": {
+      "beforeFinalResourceFix": {
+        "cases": 19,
+        "catalogModes": 17,
+        "lateRunCases": 2,
+        "warmupSeconds": 5,
+        "sampleSeconds": 60,
+        "reentries": 190,
+        "path": "performance/cloud-review-completion-endurance.json"
+      },
+      "afterResourceFix": {
+        "cases": 4,
+        "warmupSeconds": 5,
+        "sampleSeconds": 2,
+        "reentries": 40,
+        "postDisposalGeometries": 0,
+        "postDisposalTextures": 0,
+        "path": "performance/cloud-review-completion-3d-after.json"
+      },
+      "runtimeErrors": 0,
+      "pageErrors": 0,
+      "nativeGpuQualified": false
+    },
+    "lifetimeProbe": {
+      "cyclesPerGame": 10,
+      "slugs": [
+        "prism-rush",
+        "stellar-flight"
+      ],
+      "beforeRetainedCanvasesPerGame": 10,
+      "afterRetainedGames": 0,
+      "afterRetainedEngines": 0,
+      "afterRetainedCanvases": 0,
+      "path": "performance/renderer-lifetime-after.json"
+    },
+    "advisories": {
+      "frontendKnownVulnerabilities": 0,
+      "backendRuntimePackages": 28,
+      "backendRuntimeKnownVulnerabilities": 0,
+      "backendRuntimeSkippedPackages": 0
+    },
+    "externalAcceptance": [
+      "H1: native GPU/power/thermal/latency",
+      "H2: physical controllers/platforms",
+      "H3: actual zoom and assistive technology",
+      "H4: unfamiliar-player playtesting"
+    ]
+  }
+}
