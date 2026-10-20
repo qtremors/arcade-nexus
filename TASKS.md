@@ -1,6 +1,8 @@
 # Arcade Nexus Task Backlog
 
-> **Version:** 0.5.3 | **Last Updated:** 2026-10-20
+> **Version:** 0.5.4 | **Last Updated:** 2026-10-20
+
+6 open tasks: 2 Windows baseline bugs and 4 hardware or human acceptance tasks.
 
 Only unfinished work is listed. Acceptance must be recorded on the actual named devices or with the relevant people; software-rendered automation does not close these items.
 

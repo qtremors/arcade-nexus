@@ -28,7 +28,9 @@ JSON exports can contain player names, progress, preferences, saves, and pending
 
 ## 6. Data removal and limitations
 
-Profiles can be managed through the console. To remove all retained data, stop the server and remove the selected database and its backups, then clear storage for the console's browser origin and any exported files you no longer need. Profile deletion alone does not remove previously created snapshots or exports. Local storage is not encrypted by the application.
+Deleting a profile in the console deactivates it; its name remains reserved and its progress remains in the database. It does not erase that player's stored data or previously created snapshots and exports.
+
+To remove all retained data, stop the server and remove the selected database and its backups, then clear storage for the console's browser origin and any exported files you no longer need. Local storage is not encrypted by the application.
 
 ## 7. Source and policy changes
 
@@ -36,4 +38,4 @@ The source is available for inspection on [GitHub](https://github.com/qtremors/a
 
 ---
 
-[Back to README](README.md)
+<p align="center"><a href="README.md">Back to README</a></p>

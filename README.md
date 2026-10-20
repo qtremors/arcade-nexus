@@ -12,6 +12,9 @@
   <img src="https://img.shields.io/badge/License-TSL-red" alt="Tremors Source License" />
 </p>
 
+> [!NOTE]
+> **Local by default:** Games, profiles, and progress stay on your computer. Normal play works offline after setup; the browser connects to the local server.
+
 ## Why Arcade Nexus
 
 Arcade Nexus is a local browser-based console for short desktop play sessions. Eight bundled games share keyboard and controller controls, local player profiles, recovery saves, and household records. Assets and fonts are bundled; normal play works without Internet access after setup.
@@ -74,7 +77,15 @@ The database lives in the platform's ArcadeNexus user-data directory. An existin
 
 ## Credits
 
-Built by [Tremors](https://github.com/qtremors) with [React](https://react.dev/), [Three.js](https://threejs.org/), [FastAPI](https://fastapi.tiangolo.com/), [SQLAlchemy](https://www.sqlalchemy.org/), [SQLite](https://sqlite.org/), [Vite](https://vite.dev/), and the libraries listed in the project manifests. Each dependency remains subject to its own license.
+Arcade Nexus is built by [Tremors](https://github.com/qtremors). Thanks to the maintainers of:
+
+- [React](https://react.dev/), [React Router](https://reactrouter.com/), [Zustand](https://zustand.docs.pmnd.rs/), [Zod](https://zod.dev/), and [Axios](https://axios-http.com/) for the console and browser data flow.
+- [Three.js](https://threejs.org/), [Motion](https://motion.dev/), and [Lucide](https://lucide.dev/) for rendering, animation, and icons.
+- [FastAPI](https://fastapi.tiangolo.com/), [Pydantic](https://docs.pydantic.dev/), [SQLAlchemy](https://www.sqlalchemy.org/), [Alembic](https://alembic.sqlalchemy.org/), and [SQLite](https://sqlite.org/) for the local server and persistence.
+- [Vite](https://vite.dev/), [Vitest](https://vitest.dev/), [Playwright](https://playwright.dev/), and [uv](https://docs.astral.sh/uv/) for development and verification.
+- [Rajdhani](https://fonts.google.com/specimen/Rajdhani), [JetBrains Mono](https://www.jetbrains.com/lp/mono/), [Press Start 2P](https://fonts.google.com/specimen/Press+Start+2P), and [Fontsource](https://fontsource.org/) for bundled typography. The website's Rajdhani license is included with its [font assets](docs/assets/rajdhani-license.txt).
+
+The project manifests and lockfiles list the complete dependencies. Each project remains the property of its respective authors and is used under its own license.
 
 ## For developers
 
@@ -82,7 +93,7 @@ Architecture, setup, configuration, game integration, save compatibility, testin
 
 ## License
 
-Arcade Nexus is source-available under the **Tremors Source License (TSL)**. Attribution is required; commercial use requires written permission. Read [LICENSE.md](LICENSE.md).
+Arcade Nexus is source-available under the **Tremors Source License (TSL) Version 2.0**. Attribution is required; commercial use requires written permission. Read [LICENSE.md](LICENSE.md).
 
 ---
 

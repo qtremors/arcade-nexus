@@ -2,7 +2,7 @@
 
 > Architecture, implementation contracts, verification, and maintenance guidance.
 
-**Version:** 0.5.3 | **Last Updated:** 2026-10-20
+**Version:** 0.5.4 | **Last Updated:** 2026-10-20
 **Scope:** Local console development. All developer documentation belongs in this file; `docs/` contains only the public static website.
 
 ---
@@ -13,11 +13,16 @@
 - [Technology Stack](#technology-stack)
 - [Project Structure](#project-structure)
 - [Setup and Runtime](#setup-and-runtime)
+- [Runtime Flow](#runtime-flow)
 - [Feature Ownership](#feature-ownership)
+- [Feature Modules](#feature-modules)
+- [Naming Conventions](#naming-conventions)
 - [Game Integration](#game-integration)
 - [Data and API Contracts](#data-and-api-contracts)
 - [Database and Recovery](#database-and-recovery)
 - [Configuration](#configuration)
+- [Security and Privacy Practices](#security-and-privacy-practices)
+- [Error Handling](#error-handling)
 - [UI and Accessibility](#ui-and-accessibility)
 - [Testing and Verification](#testing-and-verification)
 - [Performance and Hardware Acceptance](#performance-and-hardware-acceptance)
@@ -25,7 +30,7 @@
 - [Versioning and Maintenance](#versioning-and-maintenance)
 - [Troubleshooting](#troubleshooting)
 - [Current Verification](#current-verification---2026-10-20)
-- [Historical Verification](#historical-verification)
+- [Feedback](#feedback)
 
 ---
 
@@ -131,6 +136,17 @@ For development, run `python arcade.py --dev`. Vite serves `http://127.0.0.1:517
 
 Startup creates the application-owned engine, migrates the database, synchronizes the catalog, and starts backup scheduling. Shutdown cancels owned background work and closes resources. CLI migration and seed entry points create their own engine instead of relying on an imported process-global connection.
 
+## Runtime Flow
+
+1. **Launch:** `arcade.py` checks prerequisites and the fixed port, then starts the local backend. Production serves the built frontend from the same origin; development adds Vite's API proxy.
+2. **Startup:** The backend migrates storage, synchronizes the bundled catalog, and owns the backup scheduler. The browser loads the shell, preferences, and local profile selection.
+3. **Play:** Session coordination captures the player identity, loads a game factory and codec on demand, and connects the engine's input, audio, rendering, and measurement ports.
+4. **Recovery:** Checkpoints preserve restorable game state independently of manual slots. Terminal results enter the completion queue before delivery to the server.
+5. **Completion:** The backend commits an immutable receipt, progress, playtime, qualified awards, and matching recovery deletion atomically. The browser reconciles the receipt and refreshes the relevant views.
+6. **Exit:** Game teardown releases callbacks and rendering resources. Server shutdown cancels background work and disposes its database engine.
+
+---
+
 ## Feature Ownership
 
 - `app` owns composition, routing, root error recovery, and shell navigation. Application wiring may consume feature modules.
@@ -144,6 +160,38 @@ Startup creates the application-owned engine, migrates the database, synchronize
 `frontend/scripts/check-boundaries.mjs` parses static imports, re-exports, type imports, and lazy imports, checks ownership rules, and rejects local import cycles. `scripts/boundaries.py` checks backend, SDK, session-panel, and benchmark boundaries. These checks run locally through `scripts/check.py`.
 
 Use focused names and real responsibility boundaries. File length can identify a review target; splitting a cohesive simulation or creating unnecessary forwarding layers is not a substitute for improving ownership.
+
+## Feature Modules
+
+Paths below are relative to `frontend/src/features`. Shared persistence and networking remain in `shared` and `api`; feature modules coordinate their use.
+
+| Module | Responsibility | Main entry points |
+| --- | --- | --- |
+| `home` | Continue, recent games, and the daily challenge. | `Dashboard.tsx` |
+| `catalog` | Library, store browsing, search, favorites, and game cards. | `Library.tsx`, `Store.tsx`, `public.ts` |
+| `profiles` | Player creation, selection, editing, and profile presentation. | `Profile.tsx`, `components/` |
+| `progress` | Mode records, household comparisons, awards, and session history. | `Progress.tsx`, `Achievements.tsx`, `public.ts` |
+| `session` | Launch, engine lifetime, pause/results, checkpoints, and save-slot UI. | `GamePlayer.tsx`, `hooks/`, `components/` |
+| `backups` | Portable export/import, validation previews, and server snapshots. | `AutomaticBackups.tsx`, `public.ts` |
+| `settings` | Preferences, controls, local diagnostics, and data management. | `Settings.tsx`, `components/SystemMenu.tsx` |
+
+## Naming Conventions
+
+Follow the owning module's existing conventions rather than renaming unrelated files.
+
+| Kind | Convention | Example |
+| --- | --- | --- |
+| React components and game classes | PascalCase file and exported type. | `GamePlayer.tsx`, `StellarFlight.ts` |
+| React hooks | camelCase with a `use` prefix. | `useConfirmation.tsx` |
+| Services, adapters, and utilities | Descriptive camelCase names. | `sessionQueue.ts`, `recovery.ts` |
+| Feature and game directories | Lowercase names; use the existing hyphenated style for multiword directories. | `features/session`, `games/merge-2048` |
+| Feature entry points | Export only the cross-feature contract through `public.ts`. | `features/progress/public.ts` |
+| Frontend tests | Co-located `__tests__`, with `.test.ts` or `.test.tsx`. | `sessionLifecycle.test.tsx` |
+| Python modules and tests | `snake_case`; tests begin with `test_`. | `legacy_sessions.py`, `test_progress.py` |
+
+Use `on` for component event callbacks, `handle` for local event handlers, and `is`/`has` for boolean queries where these fit the existing API. Name mutations for their effect, such as `create`, `update`, `delete`, or `restore`. Wire field names follow the generated API contract; adapters own conversion to frontend domain types.
+
+---
 
 ## Game Integration
 
@@ -181,11 +229,25 @@ Generated schema types live in `frontend/src/contracts/api.generated.ts`; domain
 
 Local player requests carry `X-Profile-ID`. Activation is per browser tab, and profiles are selectors for a trusted household, not Internet authentication. Mutations invalidate older profile-list responses so delayed responses cannot undo a newer selection. Lists and activation keep their own request-generation ownership.
 
+### Profile Identity and Deletion
+
+An explicit unknown or inactive `X-Profile-ID` returns 404; the server never substitutes another player. Older clients without the header use the backend's selected profile. If none is selected, player endpoints return 409 instead of creating a player implicitly.
+
+Profile deletion is a soft deletion: the profile becomes inactive, its username stays reserved, and its progress remains stored. If the deleted profile was selected, the backend selects another active profile when available. Removing a game from a player's library removes membership only, preserving saves and statistics.
+
+### Atomic Completion and Legacy Clients
+
 `POST /api/stats/{slug}/start` reserves a session UUID. Local play may continue through a temporary backend outage. `POST /api/progress/{slug}/complete` atomically commits the immutable result, playtime, qualified awards, and mode record. An identical retry replays the stored receipt; a conflicting reuse of the UUID is rejected.
 
 The completion queue persists before delivery, retries temporary failures with bounded backoff, and retains permanent failures for explicit retry/export. Cross-tab reconciliation and a retry lock prevent independent tabs from replacing newer retry state. Queue metadata is separate from the HTTP payload.
 
 Terminal results delete only matching recovery in the same transaction. Continuing a save starts a new session and does not reopen an already completed UUID or count earlier playtime twice. Results, recovery, and outstanding reservations have shared identity mappings during backup restore.
+
+Legacy `POST /api/stats/{slug}/session` and `POST /api/stats/{slug}/score` endpoints remain supported. Legacy session completion records playtime separately from score submission; it does not replace the current atomic completion contract. Reusing a start UUID does not increment the session count again. A session UUID belongs to one profile and game.
+
+Without a UUID, legacy session completion finishes the most recent unfinished session for that player/game, or creates a standalone completed session for an active game. Such requests cannot reliably deduplicate retries or distinguish concurrent tabs. A reserved session may finish after a game is retired; new starts and save writes require an active game. Retired-game history and saves remain readable, and saves can still be deleted.
+
+### History and Ranking
 
 History filters and sorting apply before pagination and return the real matching total. Date filters are timezone-aware with an exclusive end bound. Household records compare compatible modes/difficulties/rules. Achievement summaries use bounded aggregate queries instead of reading all award rows.
 
@@ -195,6 +257,14 @@ SQLite uses foreign keys, WAL, a ten-second busy timeout, and application-owned 
 
 Default data lives in the platform's ArcadeNexus user-data directory. An existing `backend/arcade_nexus.db` takes precedence for compatibility. `DATA_DIR` chooses the default storage directory; `DATABASE_URL` explicitly selects a SQLite file. Relative paths and `.env` resolve against `backend`, independent of launch working directory.
 
+| Platform | Default data directory |
+| --- | --- |
+| Windows | `%LOCALAPPDATA%/ArcadeNexus` |
+| macOS | `~/Library/Application Support/ArcadeNexus` |
+| Linux | `~/.local/share/ArcadeNexus`, respecting `XDG_DATA_HOME`. |
+
+### Migrations and Restoration
+
 Startup runs Alembic migrations before catalog synchronization. The baseline adopts only a complete compatible legacy schema. Pre-upgrade backups use SQLite's backup API, include committed WAL contents, and never overwrite earlier attempts. Failed schema upgrades roll back. Manual migration commands run from the repository root:
 
 ```bash
@@ -203,7 +273,17 @@ uv run --directory backend alembic history
 uv run --directory backend python -m app.seed
 ```
 
+If legacy rows violate new constraints, preserve the database and its pre-upgrade backup, then investigate the rejected rows. Do not stamp an incomplete schema or discard progress to bypass validation. Make an additional backup before attempting a manual downgrade.
+
+### Manual Saves and Recovery
+
+There are five manual slots per player/game. `POST /api/saves/{slug}` creates or atomically replaces a slot while retaining its database ID and original creation time. `PUT /api/saves/{slug}/{slot}` requires an existing slot; omitted optional metadata retains its value, while explicit `null` clears it. Timestamps are returned in UTC.
+
+Save `data` is limited to 100 KiB of serialized UTF-8 JSON and must contain finite JSON values. The thumbnail field is a string limited to 512,000 characters. Ordinary mutation request bodies default to a separate 1 MiB limit, including streamed bodies. Portable import and preview requests use a 20 MiB limit instead. Game codecs remain responsible for semantic state validation.
+
 Recovery is separate from five manual slots. Snapshots occur every five seconds and on pause/exit. Writes serialize per player/game, coalesce queued snapshots, preserve newer run identity, and keep deletes ordered. Save envelope format 2 contains game, mode, rules version, difficulty, configuration, RNG-containing state, score, timestamp, and originating session UUID. Format 1 receives compatibility defaults. Game codecs validate framing and state before the current run is replaced.
+
+### Portable Exports and Server Snapshots
 
 Export takes a consistent database snapshot in a fixed nine SELECT queries and includes retired-game history. Browser export adds live preferences, pending results, and recoveries, including in-memory fallbacks after storage failures. Import adds player copies and preserves existing players; preview uses the same semantic validation without writing. The portable JSON limit is 20 MiB.
 
@@ -220,12 +300,40 @@ Before replacing a database file, stop every backend process and preserve the cu
 | `FRONTEND_DIR` | Optional built frontend directory served by FastAPI. |
 | `DEBUG` | Development detail; false by default. |
 | `ALLOWED_HOSTS`, `CORS_ORIGINS` | Local request and browser-origin protections. |
+| `ALLOW_GAME_CREATION` | Disabled by default. Enables development-only game metadata creation; it does not install game modules, and catalog sync deactivates entries absent from the bundled catalog. |
+| `MAX_REQUEST_BYTES` | Ordinary mutation-body limit in bytes, default 1,048,576. Import and preview have their own 20 MiB limit. |
 | `AUTO_BACKUP_ENABLED` | Enable rotating server snapshots. |
 | `BACKUP_RETENTION`, `BACKUP_INTERVAL_HOURS` | Snapshot count and interval. |
 | `ARCADE_BACKEND_URL` | Vite's local proxy destination. |
 | `CHROMIUM_PATH` | Optional browser executable for local diagnostics. |
 
 Use `backend/.env.example` and `backend/app/config.py` for accepted formats and validation. Keep `.env`, databases, credentials, and generated local reports out of Git. Shared browser-visible version metadata comes from `version.json`; avoid environment overrides when checking version alignment.
+
+## Security and Privacy Practices
+
+- **Local access:** Keep the default loopback host. Profiles select household players; they do not authenticate local programs or make an exposed server safe for Internet use.
+- **Browser requests:** Trusted hosts and CORS origins are explicit. Mutation requests with an unapproved `Origin` are rejected; the API's own origin is accepted. Player requests use `X-Profile-ID` without authentication cookies.
+- **Validation:** Request schemas reject unexpected fields, non-finite save values, and oversized bodies. Browser measurements and scores remain client-controlled; these checks are not an anti-cheat system.
+- **Data retention:** Profile deletion deactivates the player without purging progress. Exports and snapshots may contain personal player names and saves. Local data is not encrypted by the application; see [PRIVACY.md](PRIVACY.md) for removal and sharing guidance.
+- **Diagnostics:** Performance measurements remain local unless exported. Avoid adding remote telemetry or including full save payloads, database contents, or credentials in error messages.
+- **Dependencies and assets:** Use locked dependencies and retain bundled asset notices. Normal gameplay uses local assets after setup; dependency installation and external links require network access.
+
+## Error Handling
+
+Backend services raise `ServiceError` for expected domain failures; routers and application handlers translate them to HTTP responses. Keep transaction and rollback ownership in the service/database layer. Shared handlers return these established responses:
+
+| Condition | Response |
+| --- | --- |
+| Invalid request fields or save data | 422 with field location, message, and type, without echoing the rejected payload. |
+| Unknown or inactive explicit profile | 404; missing selection for a player request returns 409. |
+| Conflicting immutable completion or database constraint | 409 without exposing SQL statements. |
+| Request body above its limit | 413, including when the body arrives in chunks. |
+| SQLite busy/locked after the configured wait | 503 with `Retry-After: 1`. |
+| Other database operational failure | 500 with a generic client message and local diagnostic logging. |
+
+Frontend features present recoverable failures through their existing status, toast, and confirmation flows. The completion queue retries temporary failures with bounded backoff and retains permanent failures for explicit retry or export. Storage failures preserve live values and expose export options. Root error recovery offers backup export before reload; do not silently reset a player's progress to recover from an exception.
+
+---
 
 ## UI and Accessibility
 
@@ -263,6 +371,14 @@ Playwright needs a browser installed once with `npx playwright install chromium`
 Run affected checks while iterating, then the full local gate before a release milestone. Run resource-heavy commands serially. Tests should cover behavior and failure boundaries rather than duplicate implementation details. Hosted CI/CD is outside scope.
 
 ## Performance and Hardware Acceptance
+
+### Rendering Policy
+
+The target is sustained 60 FPS at Full HD with the existing scene detail, including on integrated-graphics laptops. This is an acceptance target, not a claim that native hardware acceptance is complete. Drawing buffers fit within 1920 x 1080 while preserving the game's aspect ratio: 16:9 games use 1920 x 1080, and 3:2 games use 1620 x 1080. Performance pressure must not silently reduce resolution or remove visible scene detail.
+
+Simulation remains fixed at 60 Hz with bounded catch-up; rendering is capped at 60 FPS. High-refresh displays whose rate is not divisible by 60 can have uneven presentation intervals. Pause cancels periodic work and resume starts a fresh loop without counting paused time. Three-dimensional renderers request the low-power GPU preference, which is a browser hint rather than a guarantee of adapter choice.
+
+### Measurements and Acceptance
 
 Settings records bounded local measurements for initialization, average FPS, frame-interval p50/p95, drawing-buffer dimensions, and graphics profile. Export samples when comparing devices. Measurement storage is local, bounded, validated, and not telemetry.
 
@@ -305,9 +421,7 @@ python scripts/version.py --check
 
 The synchronization script updates frontend manifest/lock metadata, backend project/lock metadata, and document version headers. The backend reads the shared metadata at runtime. Dependency versions are unaffected. Each milestone is one commit with `vX.Y.Z: Title Case Summary`; change versions only when requested.
 
-Keep changelog entries concise, user-facing, and limited to verified completed behavior. Preserve historical entries. Keep the backlog limited to unfinished work, using stable IDs and explicit location/current/change/acceptance fields. Document concrete exceptions and known limits without marking unperformed hardware checks complete.
-
-Before rebuilding history, preserve both branch tips and all refs in a recoverable bundle. Verify the resulting tree against the prepared source, inspect each commit's scope, and verify versions and dates. Reconstructed commit timestamps are scheduling metadata; they are not dates on which the retained historical test evidence was produced. Merge/publication is a separate user action.
+Keep changelog entries concise and specific to completed work. List every commit version in sequence and describe its actual additions or fixes. Distinguish implementation, test coverage, and tooling changes without claiming new gameplay behavior for verification work. Keep uncommitted changes under Unreleased until they belong to a version commit. Preserve historical entries. Keep the backlog limited to unfinished work, using stable IDs and explicit location/current/change/acceptance fields. Document concrete exceptions and known limits without marking unperformed hardware checks complete.
 
 ## Troubleshooting
 
@@ -328,14 +442,10 @@ The real-server browser run passed 47 of 48 cases. The Prism Rush save/resume ca
 
 Backend tests reported 110 passes and 11 failures in both the unchanged baseline and the reorganized source. Windows SQLite URL/path handling and the static-server API fallback are tracked in TASKS as BUG-0001 and BUG-0002. Those existing behaviors were deliberately retained during this structural work. Consequently the complete `scripts/check.py` gate does not pass on this Windows baseline; these records do not declare a release ready or close H1-H4.
 
-## Historical Verification
+## Feedback
 
-The pre-reset source baseline was commit `004813ff33a4711d71fd42c12d7ea8223c2caa44`. Its review records reported 121 backend tests, 225 frontend tests, and 48 browser cases, alongside ownership, generated-contract, lint, type, build, and software-rendering checks. Those are historical results from the previous tree, not fresh acceptance of a later refactor.
-
-That review closed reproduced software findings R1-R16 and architecture recommendations A1-A8: backup identities/reservations, malformed snapshots, profile races, launcher shutdown, controller/focus routing, audio idling, stale records, atomic recovery deletion, legacy save configuration, numeric bounds, pure codecs, generated contracts, session ownership, simulation/rendering separation, style ownership, and renderer retention.
-
-The former narrative reviews and raw measurement snapshots remain recoverable in the preserved pre-reset history. Their historical counts, source digests, advisory results, and software-renderer measurements must not be presented as current measurements. This file carries the maintained contracts and outstanding H1-H4 acceptance work forward.
+Report reproducible bugs and propose focused changes through [GitHub Issues](https://github.com/qtremors/arcade-nexus/issues). Include the application version, OS/browser, affected game and mode, steps, expected result, and actual result. Attach only the smallest relevant diagnostic excerpt; review exports for player names and other personal data before sharing them. Track accepted unfinished work in [TASKS.md](TASKS.md).
 
 ---
 
-[Back to README](README.md)
+<p align="center"><a href="README.md">Back to README</a></p>

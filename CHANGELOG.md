@@ -1,160 +1,233 @@
 # Arcade Nexus Changelog
 
 > **Project:** Arcade Nexus
-> **Version:** 0.5.3
+> **Version:** 0.5.4
 > **Last Updated:** 2026-10-20
 
 ---
 
+## [0.5.4] - 2026-10-20
+
+- **Documentation**: Clarified profile data retention and local operation, and expanded project credits.
+- **Version History**: Listed every version in sequence with a concrete summary of its implementation, tests, or tooling.
+
 ## [0.5.3] - 2026-09-26
 
-- Added a responsive project website with game filtering, setup instructions, and bundled assets.
+- **Website**: Added a responsive project website with game filtering, setup instructions, and bundled assets.
 
 ## [0.5.2] - 2026-09-26
 
-- Added the consolidated developer handbook, privacy guidance, unfinished-work backlog, and source setup documentation.
+- **Documentation**: Added the consolidated developer handbook, privacy guidance, unfinished-work backlog, and source setup documentation.
+
+## [0.5.1] - 2026-09-25
+
+- **Developer Tooling**: Added ownership and import-cycle checks, API contract generation, local verification, startup measurements, and performance diagnostics.
 
 ## [0.5.0] - 2026-09-25
 
-- Added browser journeys for gameplay, catalog flows, accessibility, numeric safeguards, and renderer cleanup.
+- **Browser Tests**: Added journeys for game browsing, gameplay, accessibility, numeric safeguards, and rendering-resource cleanup.
 
 ## [0.4.9] - 2026-09-23
 
-- Added isolated real-server browser journeys for sessions, saves, result delivery, history, and backup data.
+- **Browser Tests**: Added isolated real-server journeys for sessions, manual save slots, and backup data flows.
+
+## [0.4.8] - 2026-09-23
+
+- **Console Tests**: Added coverage for application routes, crash recovery, backup flows, and progress-page presentation.
+
+## [0.4.7] - 2026-09-21
+
+- **Recovery Tests**: Added coverage for session lifecycle, checkpoints, result retries, save compatibility, local state, performance history, and modal focus.
+
+## [0.4.6] - 2026-09-21
+
+- **Game Regression Tests**: Added coverage for game rules, numeric limits, Flight audio and HUD behavior, and rendering-resource disposal.
+
+## [0.4.5] - 2026-09-21
+
+- **Save Restoration Tests**: Added deterministic simulation and restoration coverage, including saved random state and Flight journeys.
+
+## [0.4.4] - 2026-09-20
+
+- **Runtime Tests**: Added regression coverage for browser API adapters, audio, engine timing, graphics resources, input, and menu navigation.
+
+## [0.4.3] - 2026-09-20
+
+- **Data Integrity Tests**: Added regression coverage for completion receipts, history, achievements, backup restoration, and snapshot retention.
+
+## [0.4.2] - 2026-09-14
+
+- **Storage Tests**: Added regression coverage for API setup, catalog synchronization, configuration, database upgrades, player isolation, and save slots.
 
 ## [0.4.1] - 2026-09-14
 
-- Connected the console shell, lazy feature routes, startup, and root recovery while retaining the existing visual styles.
+- **Console**: Connected the console shell, lazy feature routes, startup, and root recovery while retaining the existing visual styles.
 
 ## [0.4.0] - 2026-09-11
 
-- Bundled game artwork, textures, and the original Flight model for local play.
+- **Local Assets**: Bundled game artwork, textures, and the original Flight model for local play.
 
 ## [0.3.9] - 2026-09-11
 
-- Added volume, motion, remapping, retry, backup, and local diagnostic controls.
+- **Settings**: Added volume, motion, remapping, retry, backup, and local diagnostic controls.
 
 ## [0.3.8] - 2026-09-11
 
-- Added browser-inclusive backup export, restore previews, and server-snapshot management.
+- **Backups**: Added browser-inclusive backup export, restore previews, and server-snapshot management.
 
 ## [0.3.7] - 2026-09-09
 
-- Added local player setup, switching, profile editing, and player history.
+- **Players**: Added local player setup, switching, profile editing, and player history.
 
 ## [0.3.6] - 2026-09-09
 
-- Added progress, household comparisons, awards, and paginated filtered history.
+- **Progress**: Added progress, household comparisons, awards, and paginated filtered history.
 
 ## [0.3.5] - 2026-09-08
 
-- Added the Home page with Continue, recently played games, and a daily challenge.
+- **Home**: Added the Home page with Continue, recently played games, and a daily challenge.
 
 ## [0.3.4] - 2026-09-08
 
-- Added game browsing, search, favorites, and featured-game presentation.
+- **Catalog**: Added game browsing, search, favorites, and featured-game presentation.
 
 ## [0.3.3] - 2026-09-07
 
-- Added session launch, pause, results, and save-slot presentation.
+- **Sessions**: Added session launch, pause, results, and save-slot presentation.
 
 ## [0.3.2] - 2026-09-07
 
-- Added run ownership, checkpoints, completion delivery, records, slots, and named session commands.
+- **Sessions**: Added run ownership, checkpoints, completion delivery, records, slots, and named session commands.
 
 ## [0.3.1] - 2026-09-07
 
-- Added shared notifications, confirmations, focus management, and controller text entry.
+- **Console Controls**: Added shared notifications, confirmations, focus management, and controller text entry.
 
 ## [0.3.0] - 2026-09-05
 
-- Added lazy game loading, validated restore preflight, recovery snapshots, and retryable results.
+- **Recovery**: Added lazy game loading, validated restore preflight, recovery snapshots, and retryable results.
 
 ## [0.2.9] - 2026-09-05
 
-- Connected Stellar Flight's existing simulation, scenes, cameras, audio, and launch guide.
+- **Stellar Flight**: Connected Stellar Flight's existing simulation, scenes, cameras, audio, and launch guide.
+
+## [0.2.8] - 2026-09-03
+
+- **Stellar Flight**: Added sky and world construction, asteroid rendering, HUD, audio, and rendering-resource cleanup.
 
 ## [0.2.7] - 2026-09-03
 
-- Added restorable Flight exploration, race progress, contracts, surveys, and ship progression.
+- **Stellar Flight**: Added restorable Flight exploration, race progress, contracts, surveys, and ship progression.
+
+## [0.2.6] - 2026-09-02
+
+- **Stellar Flight**: Added procedural universe, ship, route, course, and steering foundations.
 
 ## [0.2.5] - 2026-09-02
 
-- Added the Prism Rush three-lane highway, authored rhythms, shields, and saves.
+- **Prism Rush**: Added the Prism Rush three-lane highway, authored rhythms, shields, and saves.
 
 ## [0.2.4] - 2026-09-01
 
-- Added Asteroids with inertial flight, wrapping rocks, hulls, and escalating waves.
+- **Asteroids**: Added Asteroids with inertial flight, wrapping rocks, hulls, and escalating waves.
 
 ## [0.2.3] - 2026-09-01
 
-- Added Tetris with hold, ghost landing, deterministic bags, and 40-line Sprint.
+- **Neon Tetris**: Added Tetris with hold, ghost landing, deterministic bags, and 40-line Sprint.
 
 ## [0.2.2] - 2026-09-01
 
-- Added 2048 modes, deterministic undo, daily puzzles, and a semantic board reader.
+- **Merge 2048**: Added 2048 modes, deterministic undo, daily puzzles, and a semantic board reader.
 
 ## [0.2.1] - 2026-08-31
 
-- Added Neon Breakout campaigns, arcade pickups, medals, and save compatibility.
+- **Neon Breakout**: Added Neon Breakout campaigns, arcade pickups, medals, and save compatibility.
 
 ## [0.2.0] - 2026-08-31
 
-- Added Raptor Run obstacle phrases, biomes, deterministic saves, and rendering.
+- **Raptor Run**: Added Raptor Run obstacle phrases, biomes, deterministic saves, and rendering.
 
 ## [0.1.9] - 2026-08-29
 
-- Added Neon Snake with classic, maze, sprint, and bonus modes and restorable state.
+- **Neon Snake**: Added Neon Snake with classic, maze, sprint, and bonus modes and restorable state.
+
+## [0.1.8] - 2026-08-29
+
+- **Save Compatibility**: Added reusable save-codec validation and migration support, game feedback, and simulation-effect interfaces.
 
 ## [0.1.7] - 2026-08-20
 
-- Added visibility-aware connection checks, local performance measurements, and runtime wiring.
+- **Local Diagnostics**: Added visibility-aware connection checks, local performance measurements, and runtime wiring.
 
 ## [0.1.6] - 2026-08-20
 
-- Added shared local player, favorite, and preference state with validated controls.
+- **Preferences**: Added shared local player, favorite, and preference state with validated controls.
 
 ## [0.1.5] - 2026-08-20
 
-- Added fixed-step gameplay, pause lifecycle, and shared audio runtime capabilities.
+- **Game Runtime**: Added fixed-step gameplay, pause lifecycle, and shared audio runtime capabilities.
 
 ## [0.1.4] - 2026-08-19
 
-- Added keyboard, controller, and accessible menu navigation adapters.
+- **Input**: Added keyboard, controller, and accessible menu navigation adapters.
+
+## [0.1.3] - 2026-08-19
+
+- **Runtime Utilities**: Added seeded randomness, Full HD canvas helpers, graphics diagnostics, and shared lighting-resource cleanup.
 
 ## [0.1.2] - 2026-08-17
 
-- Connected browser-facing profile, game, save, result, and backup clients to typed responses.
+- **Local API**: Connected browser-facing profile, game, save, result, and backup clients to typed responses.
 
 ## [0.1.1] - 2026-08-17
 
-- Added application startup, catalog synchronization, request protections, and the local source launcher.
+- **Startup**: Added application startup, catalog synchronization, request protections, and the local source launcher.
 
 ## [0.1.0] - 2026-08-16
 
-- Added completion, household records, history, achievements, and backup endpoints.
+- **Progress API**: Added completion, household records, history, achievements, and backup endpoints.
 
 ## [0.0.9] - 2026-08-16
 
-- Added local player, game catalog, favorite, and manual-save endpoints.
+- **Local API**: Added local player, game catalog, favorite, and manual-save endpoints.
 
 ## [0.0.8] - 2026-08-16
 
-- Added portable backup transfer, player-copy restoration, and rotating server snapshots.
+- **Backups**: Added portable backup transfer, player-copy restoration, and rotating server snapshots.
 
 ## [0.0.7] - 2026-08-10
 
-- Added replayable completion receipts, compatible legacy sessions, and filtered history.
+- **Session History**: Added replayable completion receipts, compatible legacy sessions, and filtered history.
+
+## [0.0.6] - 2026-08-10
+
+- **Data Validation**: Added request and response schemas for player data, games, saves, sessions, and portable backups.
+
+## [0.0.5] - 2026-07-28
+
+- **Database Upgrades**: Added versioned migrations for the existing schema, durable session identities, measurements, and progress.
+
+## [0.0.4] - 2026-07-28
+
+- **Player Data**: Added database models for players, libraries, saves, statistics, sessions, achievements, and progress.
+
+## [0.0.3] - 2026-07-27
+
+- **Database Setup**: Added SQLite configuration, connection management, and backups before schema upgrades.
+
+## [0.0.2] - 2026-07-27
+
+- **Shared Contracts**: Added the game catalog, numeric gameplay limits, save formats, and typed runtime interfaces.
 
 ## [0.0.1] - 2026-07-27
 
-- Established the source project, locked dependencies, and synchronized version metadata.
+- **Project Setup**: Established the source project, locked dependencies, and synchronized version metadata.
 
 ---
 
 ## Legacy History
 
-The original entries below are preserved from before the repository's version reset.
+The archived `1.0.0` through `1.4.1` entries and their original Unreleased notes belong to the previous history, before numbering restarted at `0.0.1`. They are preserved verbatim for reference and are not later versions in the current sequence.
 
 <details>
 <summary>Original changelog</summary>
